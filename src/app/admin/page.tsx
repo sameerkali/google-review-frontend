@@ -16,7 +16,7 @@ interface Toast {
 
 /* ─── Validation helpers ─────────────────────────────────── */
 const validators: Record<string, (v: string) => string | null> = {
-  email: (v) => v && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? "Invalid email address" : null,
+  email: (v) => !v?.trim() ? "Email is required" : !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? "Invalid email address" : null,
   phone: (v) => v && !/^\+?[\d\s\-().]{7,}$/.test(v) ? "Invalid phone number" : null,
   googleReviewUrl: (v) => v && !v.startsWith("http") ? "Must be a valid URL starting with http" : null,
   price: (v) => v && isNaN(Number(v)) ? "Must be a number" : null,
@@ -93,7 +93,11 @@ const TABS: Tab[] = ["overview", "businesses", "plans", "hardware", "reviews", "
 /* ─── Toast system ───────────────────────────────────────── */
 function ToastContainer({ toasts, dismiss }: { toasts: Toast[]; dismiss: (id: number) => void }) {
   return (
-    <div className="fixed bottom-4 right-4 z-50 flex flex-col-reverse gap-2 pointer-events-none max-w-[calc(100vw-2rem)]">
+    <div
+      className="fixed bottom-4 right-4 z-50 flex flex-col-reverse gap-2 pointer-events-none max-w-[calc(100vw-2rem)]"
+      role="status"
+      aria-live="polite"
+    >
       {toasts.map((t) => (
         <div
           key={t.id}
@@ -124,6 +128,7 @@ function ToastContainer({ toasts, dismiss }: { toasts: Toast[]; dismiss: (id: nu
           <button
             className="ml-2 cursor-pointer opacity-60 hover:opacity-100"
             onClick={() => dismiss(t.id)}
+            aria-label="Dismiss notification"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -157,6 +162,9 @@ export default function Admin() {
   const [loginErr, setLoginErr] = useState("");
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [wizardKey, setWizardKey] = useState(0);
+  const openWizard = useCallback(() => { setWizardKey((k) => k + 1); setWizardOpen(true); }, []);
   const toastId = useRef(0);
 
   const toast = useCallback((kind: Toast["kind"], msg: string) => {
@@ -190,9 +198,12 @@ export default function Admin() {
     }
   }, [token, toast]);
 
+  const [authChecked, setAuthChecked] = useState(false);
   useEffect(() => {
     const t = localStorage.getItem("admin_token");
     if (t) { setToken(t); refresh(t); }
+    setAuthChecked(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const login = async (e: React.FormEvent) => {
@@ -239,6 +250,16 @@ export default function Admin() {
     toast("info", "Signed out");
   };
 
+  /* Avoid flashing the login form before we've checked localStorage for an
+     existing session — that swap is a jarring full-page layout shift. */
+  if (!authChecked) {
+    return (
+      <main className="min-h-screen flex items-center justify-center bg-zinc-950">
+        <Spinner size="md" />
+      </main>
+    );
+  }
+
   /* ─── Login screen ────────────────────────────────────── */
   if (!token) {
     return (
@@ -282,7 +303,7 @@ export default function Admin() {
               }`}
             />
             {loginErr && (
-              <p className="flex items-center gap-1.5 text-xs text-red-400 mt-1">
+              <p role="alert" className="flex items-center gap-1.5 text-xs text-red-400 mt-1">
                 <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
                 </svg>
@@ -308,6 +329,15 @@ export default function Admin() {
   return (
     <div className="min-h-screen bg-zinc-950 flex">
       <ToastContainer toasts={toasts} dismiss={dismissToast} />
+      <OnboardWizard
+        key={wizardKey}
+        open={wizardOpen}
+        onClose={() => setWizardOpen(false)}
+        token={token}
+        hardwareList={data.h || []}
+        onRefresh={refresh}
+        toast={toast}
+      />
 
       {sidebarOpen && (
         <div className="fixed inset-0 bg-black/60 z-20 lg:hidden" onClick={() => setSidebarOpen(false)} />
@@ -372,6 +402,7 @@ export default function Admin() {
             <button
               onClick={() => setSidebarOpen(true)}
               className="lg:hidden rounded-lg p-2 text-zinc-500 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer"
+              aria-label="Open navigation menu"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
@@ -400,23 +431,15 @@ export default function Admin() {
         </header>
 
         <main className="flex-1 p-5 sm:p-6 lg:p-8">
-          {tab === "overview" && <OverviewTab ov={data.ov} loading={dataLoading} />}
+          {tab === "overview" && (
+            <OverviewTab ov={data.ov} loading={dataLoading} onOnboard={openWizard} />
+          )}
           {tab === "businesses" && (
             <ListTab
               title="Business Management"
               rows={data.b || []}
               cols={["_id", "name", "email", "phone", "status"]}
-              onAdd={(body) =>
-                create(
-                  "business",
-                  { ...body, serial: body.code, code: undefined },
-                  (created) =>
-                    created.hardwareCreated || created.hardwareAssigned
-                      ? `Business created — QR code "${body.code}" is ready to scan`
-                      : "Business created (no hardware code linked yet — link one from the Hardware tab)"
-                )
-              }
-              addFields={["name", "email", "phone", "address", "googleReviewUrl", "code"]}
+              onAddClick={openWizard}
               loading={dataLoading}
               toast={toast}
             />
@@ -463,7 +486,7 @@ export default function Admin() {
 }
 
 /* ─── Overview Tab ───────────────────────────────────────── */
-function OverviewTab({ ov, loading }: { ov?: Row; loading: boolean }) {
+function OverviewTab({ ov, loading, onOnboard }: { ov?: Row; loading: boolean; onOnboard: () => void }) {
   const cards = [
     { label: "Total Businesses", value: ov?.businesses },
     { label: "Active Businesses", value: ov?.activeBusinesses },
@@ -473,9 +496,20 @@ function OverviewTab({ ov, loading }: { ov?: Row; loading: boolean }) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-lg font-semibold text-white">Platform Overview</h2>
-        <p className="text-sm text-zinc-500 mt-0.5">Real-time summary of your QR review platform</p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-white">Platform Overview</h2>
+          <p className="text-sm text-zinc-500 mt-0.5">Real-time summary of your QR review platform</p>
+        </div>
+        <button
+          onClick={onOnboard}
+          className="flex items-center justify-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 px-4 py-2.5 text-sm font-semibold text-zinc-950 transition-all duration-150 cursor-pointer shrink-0"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+          </svg>
+          Onboard New Business
+        </button>
       </div>
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {cards.map(({ label, value }) => (
@@ -556,34 +590,45 @@ const REQUIRED_FIELDS: Record<string, boolean> = {
 };
 
 function ListTab({
-  title, rows, cols, onAdd, addFields, loading, toast,
+  title, rows, cols, onAdd, addFields, loading, toast, onAddClick,
 }: {
   title: string;
   rows: Row[];
   cols: string[];
-  onAdd: (b: any) => Promise<boolean>;
-  addFields: string[];
+  onAdd?: (b: any) => Promise<boolean>;
+  addFields?: string[];
   loading: boolean;
   toast: (kind: Toast["kind"], msg: string) => void;
+  /** When provided, "Add New" calls this instead of toggling the built-in inline form
+      (used by the Businesses tab to launch the guided onboarding wizard). */
+  onAddClick?: () => void;
 }) {
-  const emptyForm = Object.fromEntries(addFields.map((f) => [f, FIELD_OPTIONS[f]?.[0] || ""]));
+  const fields = addFields || [];
+  const emptyForm = Object.fromEntries(fields.map((f) => [f, FIELD_OPTIONS[f]?.[0] || ""]));
   const [form, setForm] = useState<Record<string, string>>(emptyForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
 
+  const validateField = (f: string, value: Record<string, string>) => {
+    const errs = validate([f], value);
+    setErrors((prev) => ({ ...prev, [f]: errs[f] || "" }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const errs = validate(addFields, form);
+    const errs = validate(fields, form);
     setErrors(errs);
-    if (Object.keys(errs).length > 0) {
+    setTouched(Object.fromEntries(fields.map((f) => [f, true])));
+    if (Object.keys(errs).some((f) => errs[f])) {
       toast("error", "Please fix the form errors before submitting");
       return;
     }
     setSaving(true);
-    const ok = await onAdd(form);
+    const ok = await onAdd!(form);
     setSaving(false);
-    if (ok) { setForm(emptyForm); setShowForm(false); }
+    if (ok) { setForm(emptyForm); setErrors({}); setTouched({}); setShowForm(false); }
   };
 
   return (
@@ -594,21 +639,21 @@ function ListTab({
           <p className="text-sm text-zinc-500 mt-0.5">{rows.length} record{rows.length !== 1 ? "s" : ""} total</p>
         </div>
         <button
-          onClick={() => { setShowForm((v) => !v); setErrors({}); }}
+          onClick={onAddClick || (() => { setShowForm((v) => !v); setErrors({}); setTouched({}); })}
           className="flex items-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition-all duration-150 cursor-pointer"
         >
-          <svg className={`w-4 h-4 transition-transform duration-200 ${showForm ? "rotate-45" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <svg className={`w-4 h-4 transition-transform duration-200 ${showForm && !onAddClick ? "rotate-45" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
           </svg>
-          {showForm ? "Cancel" : "Add New"}
+          {showForm && !onAddClick ? "Cancel" : "Add New"}
         </button>
       </div>
 
-      {showForm && (
+      {showForm && !onAddClick && (
         <form onSubmit={handleSubmit} className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6 space-y-4" noValidate>
           <h3 className="text-sm font-semibold text-white">New Record</h3>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {addFields.map((f) => (
+            {fields.map((f) => (
               <div key={f} className="space-y-1.5">
                 <label htmlFor={`field-${f}`} className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
                   {FIELD_LABELS[f] || f}
@@ -619,9 +664,11 @@ function ListTab({
                     id={`field-${f}`}
                     value={form[f] || FIELD_OPTIONS[f][0]}
                     onChange={(e) => {
-                      setForm({ ...form, [f]: e.target.value });
-                      if (errors[f]) setErrors({ ...errors, [f]: "" });
+                      const next = { ...form, [f]: e.target.value };
+                      setForm(next);
+                      if (touched[f]) validateField(f, next);
                     }}
+                    onBlur={() => { setTouched((t) => ({ ...t, [f]: true })); validateField(f, form); }}
                     className={`w-full rounded-xl border px-4 py-2.5 text-sm text-white bg-zinc-800 outline-none transition-all duration-200 focus:ring-1 ${
                       errors[f]
                         ? "border-red-500/60 focus:border-red-500 focus:ring-red-500/20"
@@ -639,9 +686,12 @@ function ListTab({
                     placeholder={FIELD_LABELS[f] || f}
                     value={form[f] || ""}
                     onChange={(e) => {
-                      setForm({ ...form, [f]: e.target.value });
-                      if (errors[f]) setErrors({ ...errors, [f]: "" });
+                      const next = { ...form, [f]: e.target.value };
+                      setForm(next);
+                      if (touched[f]) validateField(f, next);
                     }}
+                    onBlur={() => { setTouched((t) => ({ ...t, [f]: true })); validateField(f, form); }}
+                    aria-invalid={!!errors[f]}
                     className={`w-full rounded-xl border px-4 py-2.5 text-sm text-white bg-zinc-800 placeholder-zinc-600 outline-none transition-all duration-200 focus:ring-1 ${
                       errors[f]
                         ? "border-red-500/60 focus:border-red-500 focus:ring-red-500/20"
@@ -650,7 +700,7 @@ function ListTab({
                   />
                 )}
                 {errors[f] && (
-                  <p className="flex items-center gap-1 text-xs text-red-400">
+                  <p role="alert" className="flex items-center gap-1 text-xs text-red-400">
                     <svg className="w-3 h-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
                     </svg>
@@ -670,7 +720,7 @@ function ListTab({
             </button>
             <button
               type="button"
-              onClick={() => { setShowForm(false); setErrors({}); setForm(emptyForm); }}
+              onClick={() => { setShowForm(false); setErrors({}); setTouched({}); setForm(emptyForm); }}
               className="rounded-xl border border-zinc-700 px-5 py-2.5 text-sm font-medium text-zinc-400 hover:text-white hover:border-zinc-600 transition-all duration-150 cursor-pointer"
             >
               Cancel
@@ -797,25 +847,9 @@ function SimulatorTab({ toast }: { toast: (kind: Toast["kind"], msg: string) => 
   const [verifyErr, setVerifyErr] = useState("");
   const [reviewUrl, setReviewUrl] = useState("");
   const [bizName, setBizName] = useState("");
-  const [copied, setCopied] = useState(false);
   const [verifying, setVerifying] = useState(false);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  // Store the pending URL in a ref so the effect always reads the latest value
-  const pendingUrl = useRef("");
 
   const baseUrl = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
-
-  // Draw the QR AFTER React has committed the canvas to the DOM
-  useEffect(() => {
-    if (!reviewUrl || !canvasRef.current) return;
-    QRCode.toCanvas(canvasRef.current, reviewUrl, {
-      width: 240,
-      margin: 2,
-      color: { dark: "#000000", light: "#ffffff" },
-    }).catch(() => {
-      toast("error", "Failed to render QR code");
-    });
-  }, [reviewUrl]);
 
   const generate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -831,8 +865,6 @@ function SimulatorTab({ toast }: { toast: (kind: Toast["kind"], msg: string) => 
       // Verify the serial actually exists + is assigned to a business
       const result = await api<{ business: { name: string }; suggestion: string | null }>(`/r/${encodeURIComponent(trimmed)}`);
       const url = `${baseUrl}/r/${encodeURIComponent(trimmed)}`;
-      pendingUrl.current = url;
-      // Setting state triggers re-render → canvas appears → useEffect draws the QR
       setReviewUrl(url);
       setBizName(result.business?.name || "");
       toast("success", `QR generated for "${result.business?.name}" — scan or open the link!`);
@@ -844,13 +876,6 @@ function SimulatorTab({ toast }: { toast: (kind: Toast["kind"], msg: string) => 
     } finally {
       setVerifying(false);
     }
-  };
-
-  const copyLink = async () => {
-    await navigator.clipboard.writeText(reviewUrl);
-    setCopied(true);
-    toast("info", "Link copied to clipboard");
-    setTimeout(() => setCopied(false), 2500);
   };
 
   return (
@@ -944,55 +969,518 @@ function SimulatorTab({ toast }: { toast: (kind: Toast["kind"], msg: string) => 
       )}
 
       {/* Success: QR result */}
-      {reviewUrl && !verifyErr && (
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6 space-y-5">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-white">QR Code for <span className="text-emerald-400">{bizName}</span></h3>
-            <span className="flex items-center gap-1.5 text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-full px-2.5 py-0.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-              Verified
-            </span>
-          </div>
-          <div className="flex flex-col sm:flex-row items-start gap-6">
-            {/* Canvas renders the QR code */}
-            <div className="bg-white p-3 rounded-2xl shadow-lg shrink-0">
-              <canvas ref={canvasRef} className="block" />
-            </div>
-            <div className="space-y-4 flex-1">
-              <div className="space-y-1.5">
-                <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Review URL</p>
-                <code className="block text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2 break-all">
-                  {reviewUrl}
-                </code>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={copyLink}
-                  className="flex items-center gap-2 rounded-xl border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-400 hover:text-white hover:border-zinc-600 transition-all duration-150 cursor-pointer"
-                >
-                  {copied ? (
-                    <><svg className="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> Copied!</>
-                  ) : (
-                    <><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" /></svg> Copy Link</>
-                  )}
-                </button>
-                <button
-                  onClick={() => window.open(reviewUrl, "_blank", "noopener,noreferrer")}
-                  className="flex items-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition-all duration-150 cursor-pointer"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
-                  </svg>
-                  Open Review Page
-                </button>
-              </div>
-              <p className="text-xs text-zinc-600">
-                Scan the QR with your phone camera or tap "Open Review Page" to test the customer experience.
-              </p>
-            </div>
-          </div>
+      {reviewUrl && !verifyErr && <QrCard reviewUrl={reviewUrl} businessName={bizName} toast={toast} />}
+    </div>
+  );
+}
+
+/* ─── QR Card (shared: QR Simulator + Onboarding Wizard) ────────────── */
+function QrCard({
+  reviewUrl, businessName, toast, badgeLabel = "Verified", compact = false,
+}: {
+  reviewUrl: string;
+  businessName: string;
+  toast: (kind: Toast["kind"], msg: string) => void;
+  badgeLabel?: string;
+  /** Force a stacked layout — the row split relies on a viewport-width
+      breakpoint, which is wrong inside a narrow container like a modal. */
+  compact?: boolean;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [copied, setCopied] = useState(false);
+
+  // Draw the QR AFTER React has committed the canvas to the DOM
+  useEffect(() => {
+    if (!reviewUrl || !canvasRef.current) return;
+    QRCode.toCanvas(canvasRef.current, reviewUrl, {
+      width: 240,
+      margin: 2,
+      color: { dark: "#000000", light: "#ffffff" },
+    }).catch(() => toast("error", "Failed to render QR code"));
+  }, [reviewUrl, toast]);
+
+  const copyLink = () => {
+    navigator.clipboard
+      .writeText(reviewUrl)
+      .then(() => {
+        setCopied(true);
+        toast("info", "Link copied to clipboard");
+        setTimeout(() => setCopied(false), 2500);
+      })
+      .catch(() => toast("error", "Could not copy to clipboard"));
+  };
+
+  return (
+    <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6 space-y-5">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-sm font-semibold text-white truncate">QR Code for <span className="text-emerald-400">{businessName}</span></h3>
+        <span className="flex items-center gap-1.5 text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-full px-2.5 py-0.5 shrink-0">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+          {badgeLabel}
+        </span>
+      </div>
+      <div className={`flex flex-col gap-6 ${compact ? "items-center text-center" : "items-start sm:flex-row sm:text-left"}`}>
+        {/* Canvas renders the QR code */}
+        <div className="bg-white p-3 rounded-2xl shadow-lg shrink-0">
+          <canvas ref={canvasRef} className="block" />
         </div>
-      )}
+        <div className="space-y-4 flex-1 min-w-0">
+          <div className="space-y-1.5">
+            <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Review URL</p>
+            <code className="block text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2 break-all">
+              {reviewUrl}
+            </code>
+          </div>
+          <div className={`flex flex-wrap gap-2 ${compact ? "justify-center" : ""}`}>
+            <button
+              onClick={copyLink}
+              className="flex items-center gap-2 rounded-xl border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-400 hover:text-white hover:border-zinc-600 transition-all duration-150 cursor-pointer"
+            >
+              {copied ? (
+                <><svg className="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> Copied!</>
+              ) : (
+                <><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" /></svg> Copy Link</>
+              )}
+            </button>
+            <button
+              onClick={() => window.open(reviewUrl, "_blank", "noopener,noreferrer")}
+              className="flex items-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition-all duration-150 cursor-pointer"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+              </svg>
+              Open Review Page
+            </button>
+          </div>
+          <p className="text-xs text-zinc-600">
+            Scan the QR with your phone camera or tap &quot;Open Review Page&quot; to test the customer experience.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Onboarding Wizard ──────────────────────────────────────────────
+   Single guided flow that replaces the old "register hardware, then
+   business, then hunt for its ID to add reviews" 3-tab process: business
+   details → QR code → review suggestions → the QR is generated immediately. */
+type WizardStep = "details" | "code" | "reviews" | "success";
+
+const WIZARD_STEPS: { key: WizardStep; label: string }[] = [
+  { key: "details", label: "Details" },
+  { key: "code", label: "QR Code" },
+  { key: "reviews", label: "Reviews" },
+];
+
+const DETAIL_FIELDS: { f: string; label: string; required?: boolean }[] = [
+  { f: "name", label: "Business Name", required: true },
+  { f: "email", label: "Email Address", required: true },
+  { f: "phone", label: "Phone Number" },
+  { f: "address", label: "Address" },
+  { f: "googleReviewUrl", label: "Google Review URL" },
+];
+
+function slugifyCode(name: string): string {
+  const base = name.toUpperCase().replace(/[^A-Z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 24);
+  return base || "BUSINESS";
+}
+
+function OnboardWizard({
+  open, onClose, token, hardwareList, onRefresh, toast,
+}: {
+  open: boolean;
+  onClose: () => void;
+  token: string;
+  hardwareList: Row[];
+  onRefresh: () => Promise<void>;
+  toast: (kind: Toast["kind"], msg: string) => void;
+}) {
+  const emptyDetails: Record<string, string> = { name: "", email: "", phone: "", address: "", googleReviewUrl: "" };
+  const [step, setStep] = useState<WizardStep>("details");
+  const [details, setDetails] = useState<Record<string, string>>(emptyDetails);
+  const [detailErrors, setDetailErrors] = useState<Record<string, string>>({});
+  const [detailTouched, setDetailTouched] = useState<Record<string, boolean>>({});
+  // The code field is either what the admin typed, or — until they touch it —
+  // a suggestion derived from the business name. Derived at render time
+  // (not synced via an effect) so there's nothing to keep in sync.
+  const [codeInput, setCodeInput] = useState("");
+  const [codeTouched, setCodeTouched] = useState(false);
+  const [reviews, setReviews] = useState<string[]>([""]);
+  const [submitting, setSubmitting] = useState(false);
+  const [serverError, setServerError] = useState("");
+  const [result, setResult] = useState<{ businessName: string; reviewUrl: string } | null>(null);
+
+  const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
+  const availableHardware = hardwareList.filter((h) => h.status === "available").slice(0, 6);
+
+  const suggestedCode = (() => {
+    if (!details.name.trim()) return "";
+    const base = slugifyCode(details.name);
+    const existing = new Set(hardwareList.map((h) => h.serial));
+    let candidate = base;
+    let n = 2;
+    while (existing.has(candidate)) { candidate = `${base}-${n}`; n++; }
+    return candidate;
+  })();
+  const code = codeTouched ? codeInput : suggestedCode;
+
+  const setCode = (v: string) => { setCodeInput(v); setCodeTouched(true); };
+
+  const resetAll = () => {
+    setStep("details");
+    setDetails(emptyDetails);
+    setDetailErrors({});
+    setDetailTouched({});
+    setCodeInput("");
+    setCodeTouched(false);
+    setReviews([""]);
+    setServerError("");
+    setResult(null);
+  };
+
+  if (!open) return null;
+
+  const detailFieldNames = DETAIL_FIELDS.map((d) => d.f);
+
+  const validateDetailField = (f: string, values: Record<string, string>) => {
+    const errs = validate([f], values);
+    setDetailErrors((prev) => ({ ...prev, [f]: errs[f] || "" }));
+  };
+
+  const goToCode = () => {
+    const errs = validate(detailFieldNames, details);
+    setDetailErrors(errs);
+    setDetailTouched(Object.fromEntries(detailFieldNames.map((f) => [f, true])));
+    if (Object.values(errs).some(Boolean)) return;
+    setServerError("");
+    setStep("code");
+  };
+
+  const addReview = () => setReviews((r) => (r.length >= 5 ? r : [...r, ""]));
+  const removeReview = (i: number) => setReviews((r) => r.filter((_, idx) => idx !== i));
+  const updateReview = (i: number, v: string) => setReviews((r) => r.map((x, idx) => (idx === i ? v : x)));
+
+  const finish = async () => {
+    setSubmitting(true);
+    setServerError("");
+    try {
+      const created = await api<Row>("/admin/business", {
+        method: "POST",
+        token,
+        body: {
+          name: details.name.trim(),
+          email: details.email.trim(),
+          phone: details.phone.trim() || undefined,
+          address: details.address.trim() || undefined,
+          googleReviewUrl: details.googleReviewUrl.trim() || undefined,
+          serial: code.trim() || undefined,
+        },
+      });
+
+      const texts = reviews.map((r) => r.trim()).filter(Boolean);
+      let failedReviews = 0;
+      for (const reviewText of texts) {
+        try {
+          await api("/admin/review-suggestions", { method: "POST", token, body: { businessId: created._id, reviewText } });
+        } catch {
+          failedReviews++;
+        }
+      }
+      if (failedReviews > 0) {
+        toast("error", `Business created, but ${failedReviews} review suggestion${failedReviews > 1 ? "s" : ""} failed to save — add ${failedReviews > 1 ? "them" : "it"} again from the Reviews tab`);
+      }
+
+      await onRefresh();
+      setResult({
+        businessName: created.name,
+        reviewUrl: code.trim() ? `${baseUrl}/r/${encodeURIComponent(code.trim())}` : "",
+      });
+      setStep("success");
+    } catch (e: any) {
+      const msg: string = e.message || "Something went wrong. Please try again.";
+      if (/email/i.test(msg)) {
+        setStep("details");
+        setDetailErrors((prev) => ({ ...prev, email: "This email is already registered to another business" }));
+        setDetailTouched((prev) => ({ ...prev, email: true }));
+      }
+      setServerError(msg);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const stepIndex = WIZARD_STEPS.findIndex((s) => s.key === step);
+
+  return (
+    <div
+      className="fixed inset-0 z-40 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+      onKeyDown={(e) => { if (e.key === "Escape" && !submitting) onClose(); }}
+      onClick={(e) => { if (e.target === e.currentTarget && !submitting) onClose(); }}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="wizard-title"
+        className="w-full max-w-lg rounded-2xl border border-zinc-800 bg-zinc-900 shadow-2xl max-h-[90vh] flex flex-col"
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800 shrink-0">
+          <div>
+            <h2 id="wizard-title" className="text-sm font-semibold text-white">
+              {step === "success" ? "Business Onboarded" : "Onboard New Business"}
+            </h2>
+            {step !== "success" && (
+              <p className="text-xs text-zinc-500 mt-0.5">
+                Step {stepIndex + 1} of {WIZARD_STEPS.length} — {WIZARD_STEPS[stepIndex].label}
+              </p>
+            )}
+          </div>
+          <button
+            onClick={() => !submitting && onClose()}
+            aria-label="Close onboarding wizard"
+            disabled={submitting}
+            className="rounded-lg p-1.5 text-zinc-500 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Progress bar */}
+        {step !== "success" && (
+          <div className="flex gap-1.5 px-6 pt-4 shrink-0">
+            {WIZARD_STEPS.map((s, i) => (
+              <div
+                key={s.key}
+                className={`h-1 flex-1 rounded-full transition-colors duration-300 ${i <= stepIndex ? "bg-emerald-500" : "bg-zinc-800"}`}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Body */}
+        <div className="px-6 py-5 space-y-4 overflow-y-auto">
+          {serverError && step !== "success" && (
+            <div role="alert" className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300 flex items-start gap-2">
+              <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+              </svg>
+              <span>{serverError}</span>
+            </div>
+          )}
+
+          {step === "details" && (
+            <div className="space-y-4">
+              {DETAIL_FIELDS.map(({ f, label, required }, i) => (
+                <div key={f} className="space-y-1.5">
+                  <label htmlFor={`wiz-${f}`} className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
+                    {label}{required && <span className="text-red-400 ml-1">*</span>}
+                  </label>
+                  <input
+                    id={`wiz-${f}`}
+                    autoFocus={i === 0}
+                    type={f === "email" ? "email" : "text"}
+                    value={details[f]}
+                    onChange={(e) => {
+                      const next = { ...details, [f]: e.target.value };
+                      setDetails(next);
+                      if (detailTouched[f]) validateDetailField(f, next);
+                    }}
+                    onBlur={() => { setDetailTouched((t) => ({ ...t, [f]: true })); validateDetailField(f, details); }}
+                    aria-invalid={!!detailErrors[f]}
+                    placeholder={f === "googleReviewUrl" ? "https://maps.google.com/..." : label}
+                    className={`w-full rounded-xl border px-4 py-2.5 text-sm text-white bg-zinc-800 placeholder-zinc-600 outline-none transition-all duration-200 focus:ring-1 ${
+                      detailErrors[f]
+                        ? "border-red-500/60 focus:border-red-500 focus:ring-red-500/20"
+                        : "border-zinc-700 focus:border-emerald-500/50 focus:ring-emerald-500/15"
+                    }`}
+                  />
+                  {detailErrors[f] && <p role="alert" className="text-xs text-red-400">{detailErrors[f]}</p>}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {step === "code" && (
+            <div className="space-y-4">
+              <p className="text-sm text-zinc-400">
+                This code goes on the physical QR stand, table tent, or NFC tag for{" "}
+                <span className="text-white font-medium">{details.name || "this business"}</span>.
+              </p>
+              <div className="space-y-1.5">
+                <label htmlFor="wiz-code" className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
+                  Hardware Serial / Code
+                </label>
+                <input
+                  id="wiz-code"
+                  autoFocus
+                  type="text"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  placeholder="e.g. CAFE-DELHI"
+                  className="w-full rounded-xl border border-zinc-700 px-4 py-2.5 text-sm text-white bg-zinc-800 placeholder-zinc-600 outline-none transition-all duration-200 focus:ring-1 focus:border-emerald-500/50 focus:ring-emerald-500/15 font-mono"
+                />
+                <p className="text-xs text-zinc-600">
+                  {codeTouched
+                    ? "Doesn't need to exist yet — it's set up automatically when you finish."
+                    : "Suggested from the business name — edit it if you already have a physical code."}
+                </p>
+              </div>
+              {availableHardware.length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Or use unassigned hardware already in stock</p>
+                  <div className="flex flex-wrap gap-2">
+                    {availableHardware.map((h) => (
+                      <button
+                        key={h._id}
+                        type="button"
+                        onClick={() => setCode(h.serial)}
+                        className={`rounded-lg border px-3 py-1.5 text-xs font-mono transition-colors cursor-pointer ${
+                          code === h.serial
+                            ? "border-emerald-500 bg-emerald-500/10 text-emerald-400"
+                            : "border-zinc-700 text-zinc-400 hover:border-zinc-600 hover:text-white"
+                        }`}
+                      >
+                        {h.serial} <span className="text-zinc-600">· {h.type}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {step === "reviews" && (
+            <div className="space-y-4">
+              <p className="text-sm text-zinc-400">
+                Pre-written reviews shown to customers after they scan — optional, but they significantly increase conversion. You can add more later too.
+              </p>
+              {reviews.map((r, i) => (
+                <div key={i} className="flex gap-2 items-start">
+                  <textarea
+                    autoFocus={i === 0}
+                    value={r}
+                    onChange={(e) => updateReview(i, e.target.value)}
+                    rows={2}
+                    placeholder={`Suggestion ${i + 1}, e.g. "Great coffee and quick service!"`}
+                    className="flex-1 rounded-xl border border-zinc-700 px-4 py-2.5 text-sm text-white bg-zinc-800 placeholder-zinc-600 outline-none transition-all duration-200 focus:ring-1 focus:border-emerald-500/50 focus:ring-emerald-500/15 resize-none"
+                  />
+                  {reviews.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeReview(i)}
+                      aria-label={`Remove suggestion ${i + 1}`}
+                      className="mt-1 rounded-lg p-2 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer shrink-0"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              ))}
+              {reviews.length < 5 && (
+                <button
+                  type="button"
+                  onClick={addReview}
+                  className="flex items-center gap-1.5 text-xs font-medium text-emerald-400 hover:text-emerald-300 transition-colors cursor-pointer"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                  </svg>
+                  Add another suggestion
+                </button>
+              )}
+            </div>
+          )}
+
+          {step === "success" && result && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3">
+                <div className="w-8 h-8 rounded-full bg-emerald-500/15 flex items-center justify-center shrink-0">
+                  <svg className="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <p className="text-sm text-emerald-300">
+                  <span className="font-semibold">{result.businessName}</span> is set up and ready to collect reviews.
+                </p>
+              </div>
+              {result.reviewUrl ? (
+                <QrCard reviewUrl={result.reviewUrl} businessName={result.businessName} toast={toast} badgeLabel="Ready" compact />
+              ) : (
+                <p className="text-sm text-zinc-400">
+                  No QR code was linked yet — assign hardware to this business anytime from the Hardware tab.
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center gap-3 px-6 py-4 border-t border-zinc-800 shrink-0">
+          {step === "details" && (
+            <button
+              onClick={goToCode}
+              className="ml-auto flex items-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 px-5 py-2.5 text-sm font-semibold text-zinc-950 transition-all duration-150 cursor-pointer"
+            >
+              Continue
+            </button>
+          )}
+          {step === "code" && (
+            <>
+              <button
+                onClick={() => setStep("details")}
+                className="rounded-xl border border-zinc-700 px-5 py-2.5 text-sm font-medium text-zinc-400 hover:text-white hover:border-zinc-600 transition-all duration-150 cursor-pointer"
+              >
+                Back
+              </button>
+              <button
+                onClick={() => setStep("reviews")}
+                className="ml-auto flex items-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 px-5 py-2.5 text-sm font-semibold text-zinc-950 transition-all duration-150 cursor-pointer"
+              >
+                Continue
+              </button>
+            </>
+          )}
+          {step === "reviews" && (
+            <>
+              <button
+                onClick={() => setStep("code")}
+                disabled={submitting}
+                className="rounded-xl border border-zinc-700 px-5 py-2.5 text-sm font-medium text-zinc-400 hover:text-white hover:border-zinc-600 transition-all duration-150 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Back
+              </button>
+              <button
+                onClick={finish}
+                disabled={submitting}
+                className="ml-auto flex items-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-60 px-5 py-2.5 text-sm font-semibold text-zinc-950 transition-all duration-150 cursor-pointer disabled:cursor-not-allowed"
+              >
+                {submitting ? <><Spinner /> Creating…</> : "Finish & Generate QR"}
+              </button>
+            </>
+          )}
+          {step === "success" && (
+            <>
+              <button
+                onClick={resetAll}
+                className="rounded-xl border border-zinc-700 px-5 py-2.5 text-sm font-medium text-zinc-400 hover:text-white hover:border-zinc-600 transition-all duration-150 cursor-pointer"
+              >
+                Onboard Another
+              </button>
+              <button
+                onClick={onClose}
+                className="ml-auto flex items-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 px-5 py-2.5 text-sm font-semibold text-zinc-950 transition-all duration-150 cursor-pointer"
+              >
+                Done
+              </button>
+            </>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
