@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { AlertIcon } from "../_lib/icons";
+import { useEscapeKey } from "../_lib/useEscapeKey";
 import { Spinner } from "./Loaders";
 
 /* Shared confirmation modal for destructive actions (delete business, delete
@@ -17,6 +18,7 @@ export function ConfirmDialog({
   onCancel: () => void;
 }) {
   const [busy, setBusy] = useState(false);
+  useEscapeKey(onCancel, open && !busy);
   if (!open) return null;
 
   const handleConfirm = async () => {
@@ -31,7 +33,6 @@ export function ConfirmDialog({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
-      onKeyDown={(e) => { if (e.key === "Escape" && !busy) onCancel(); }}
       onClick={(e) => { if (e.target === e.currentTarget && !busy) onCancel(); }}
     >
       <div role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" className="w-full max-w-sm rounded-2xl border border-zinc-800 bg-zinc-900 shadow-2xl p-6 space-y-4">

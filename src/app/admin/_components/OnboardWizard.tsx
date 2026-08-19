@@ -5,6 +5,7 @@ import { api } from "@/lib/api";
 import type { Row, ToastFn } from "../_lib/types";
 import { validate } from "../_lib/validators";
 import { AlertIcon, CheckIcon, CloseIcon, PlusIcon } from "../_lib/icons";
+import { useEscapeKey } from "../_lib/useEscapeKey";
 import { Spinner } from "./Loaders";
 import { QrCard } from "./QrCard";
 
@@ -56,7 +57,7 @@ export function OnboardWizard({
   const [reviews, setReviews] = useState<string[]>([""]);
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState("");
-  const [result, setResult] = useState<{ businessName: string; reviewUrl: string } | null>(null);
+  const [result, setResult] = useState<{ businessName: string; reviewUrl: string; codeNotConfirmed?: boolean } | null>(null);
 
   const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
   const availableHardware = hardwareList.filter((h) => h.status === "available").slice(0, 6);
@@ -85,6 +86,8 @@ export function OnboardWizard({
     setServerError("");
     setResult(null);
   };
+
+  useEscapeKey(onClose, open && !submitting);
 
   if (!open) return null;
 
@@ -139,9 +142,15 @@ export function OnboardWizard({
       }
 
       await onRefresh();
+      // Don't celebrate a QR that isn't actually live — only show it once the
+      // server confirms the code was assigned or created, not just because a
+      // code was typed (e.g. an out-of-date backend can silently no-op this).
+      const trimmedCode = code.trim();
+      const linkConfirmed = Boolean(created.hardwareAssigned || created.hardwareCreated);
       setResult({
         businessName: created.name,
-        reviewUrl: code.trim() ? `${baseUrl}/r/${encodeURIComponent(code.trim())}` : "",
+        reviewUrl: trimmedCode && linkConfirmed ? `${baseUrl}/r/${encodeURIComponent(trimmedCode)}` : "",
+        codeNotConfirmed: Boolean(trimmedCode) && !linkConfirmed,
       });
       setStep("success");
     } catch (e) {
@@ -162,7 +171,6 @@ export function OnboardWizard({
   return (
     <div
       className="fixed inset-0 z-40 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
-      onKeyDown={(e) => { if (e.key === "Escape" && !submitting) onClose(); }}
       onClick={(e) => { if (e.target === e.currentTarget && !submitting) onClose(); }}
     >
       <div
@@ -347,6 +355,14 @@ export function OnboardWizard({
               </div>
               {result.reviewUrl ? (
                 <QrCard reviewUrl={result.reviewUrl} businessName={result.businessName} toast={toast} badgeLabel="Ready" compact />
+              ) : result.codeNotConfirmed ? (
+                <div role="alert" className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-300 flex items-start gap-2">
+                  <AlertIcon className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>
+                    The business was created, but the server didn&apos;t confirm the QR code was linked — it may be
+                    running an older version. Open <strong>View QR</strong> on the Businesses tab to link it manually.
+                  </span>
+                </div>
               ) : (
                 <p className="text-sm text-zinc-400">
                   No QR code was linked yet — assign hardware to this business anytime from the Businesses tab.

@@ -5,6 +5,7 @@ import { api } from "@/lib/api";
 import type { Row, ToastFn } from "../_lib/types";
 import { HARDWARE_STATUS_OPTIONS } from "../_lib/validators";
 import { CloseIcon } from "../_lib/icons";
+import { useEscapeKey } from "../_lib/useEscapeKey";
 import { Spinner } from "./Loaders";
 
 /* Full edit for a hardware/QR record: rename its serial, change type/status,
@@ -29,6 +30,7 @@ export function HardwareEditModal({
   const [businessId, setBusinessId] = useState(linkedId || "");
   const [serialErr, setSerialErr] = useState("");
   const [saving, setSaving] = useState(false);
+  useEscapeKey(onClose, !!hardware && !saving);
 
   if (!hardware) return null;
 
@@ -60,7 +62,6 @@ export function HardwareEditModal({
   return (
     <div
       className="fixed inset-0 z-40 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
-      onKeyDown={(e) => { if (e.key === "Escape" && !saving) onClose(); }}
       onClick={(e) => { if (e.target === e.currentTarget && !saving) onClose(); }}
     >
       <div role="dialog" aria-modal="true" aria-labelledby="hw-edit-title" className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900 shadow-2xl">

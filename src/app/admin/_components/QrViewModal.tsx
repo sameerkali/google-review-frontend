@@ -4,6 +4,7 @@ import { useState } from "react";
 import { api } from "@/lib/api";
 import type { Row, ToastFn } from "../_lib/types";
 import { CloseIcon } from "../_lib/icons";
+import { useEscapeKey } from "../_lib/useEscapeKey";
 import { Spinner } from "./Loaders";
 import { QrCard } from "./QrCard";
 import { ConfirmDialog } from "./ConfirmDialog";
@@ -38,6 +39,7 @@ export function QrViewModal({
   const [codeTouched, setCodeTouched] = useState(false);
   const [linking, setLinking] = useState(false);
   const [confirmUnlink, setConfirmUnlink] = useState(false);
+  useEscapeKey(onClose, !!business && !confirmUnlink);
 
   if (!business) return null;
 
@@ -82,7 +84,6 @@ export function QrViewModal({
   return (
     <div
       className="fixed inset-0 z-40 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
-      onKeyDown={(e) => { if (e.key === "Escape") onClose(); }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div role="dialog" aria-modal="true" aria-labelledby="qr-view-title" className="w-full max-w-lg rounded-2xl border border-zinc-800 bg-zinc-900 shadow-2xl max-h-[90vh] flex flex-col">

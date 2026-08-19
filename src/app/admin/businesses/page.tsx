@@ -104,7 +104,7 @@ export default function BusinessesPage() {
       <ConfirmDialog
         open={!!deleteBusiness}
         title="Delete this business?"
-        message={`"${deleteBusiness?.name}" and its review-suggestion pool will be permanently removed. Any linked hardware will stay assigned to it in name only — unlink it first from the QR view if you plan to reuse that code.`}
+        message={`"${deleteBusiness?.name}" and its review-suggestion pool will be permanently removed. Any linked QR code will be freed back to available stock.`}
         confirmLabel="Delete"
         onConfirm={confirmDelete}
         onCancel={() => setDeleteBusiness(null)}

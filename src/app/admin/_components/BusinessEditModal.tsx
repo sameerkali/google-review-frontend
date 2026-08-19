@@ -5,6 +5,7 @@ import { api } from "@/lib/api";
 import type { Row, ToastFn } from "../_lib/types";
 import { BUSINESS_STATUS_OPTIONS, validate } from "../_lib/validators";
 import { AlertIcon, CloseIcon } from "../_lib/icons";
+import { useEscapeKey } from "../_lib/useEscapeKey";
 import { Spinner } from "./Loaders";
 
 const FIELDS: { f: string; label: string; required?: boolean }[] = [
@@ -35,6 +36,7 @@ export function BusinessEditModal({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [serverError, setServerError] = useState("");
+  useEscapeKey(onClose, !!business && !saving);
 
   if (!business) return null;
 
@@ -73,7 +75,6 @@ export function BusinessEditModal({
   return (
     <div
       className="fixed inset-0 z-40 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
-      onKeyDown={(e) => { if (e.key === "Escape" && !saving) onClose(); }}
       onClick={(e) => { if (e.target === e.currentTarget && !saving) onClose(); }}
     >
       <div role="dialog" aria-modal="true" aria-labelledby="biz-edit-title" className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900 shadow-2xl max-h-[90vh] flex flex-col">
