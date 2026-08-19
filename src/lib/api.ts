@@ -1,4 +1,13 @@
-const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
+const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+
+export class ApiError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+  }
+}
 
 export async function api<T>(path: string, opts: { method?: string; body?: unknown; token?: string } = {}) {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
@@ -9,6 +18,6 @@ export async function api<T>(path: string, opts: { method?: string; body?: unkno
     body: opts.body ? JSON.stringify(opts.body) : undefined,
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error((data as { error?: string }).error || `HTTP ${res.status}`);
+  if (!res.ok) throw new ApiError((data as { error?: string }).error || `HTTP ${res.status}`, res.status);
   return data as T;
 }
