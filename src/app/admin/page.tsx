@@ -23,7 +23,14 @@ const validators: Record<string, (v: string) => string | null> = {
   name: (v) => !v?.trim() ? "Name is required" : null,
   serial: (v) => !v?.trim() ? "Serial / Code is required" : null,
   code: (v) => !v?.trim() ? "QR Code is required" : null,
-  billingType: (v) => !["monthly", "annually", "one-time"].includes(v) ? 'Use "monthly", "annually", or "one-time"' : null,
+  billingType: (v) => !["monthly", "annually", "one_time"].includes(v) ? 'Use "monthly", "annually", or "one_time"' : null,
+  type: (v) => !["QR", "NFC"].includes(v) ? 'Use "QR" or "NFC"' : null,
+};
+
+/* ─── Fields rendered as a <select> instead of free text ─────────── */
+const FIELD_OPTIONS: Record<string, string[]> = {
+  type: ["QR", "NFC"],
+  billingType: ["monthly", "annually", "one_time"],
 };
 
 function validate(fields: string[], form: Record<string, string>): Record<string, string> {
@@ -86,7 +93,7 @@ const TABS: Tab[] = ["overview", "businesses", "plans", "hardware", "reviews", "
 /* ─── Toast system ───────────────────────────────────────── */
 function ToastContainer({ toasts, dismiss }: { toasts: Toast[]; dismiss: (id: number) => void }) {
   return (
-    <div className="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none">
+    <div className="fixed bottom-4 right-4 z-50 flex flex-col-reverse gap-2 pointer-events-none max-w-[calc(100vw-2rem)]">
       {toasts.map((t) => (
         <div
           key={t.id}
@@ -209,10 +216,14 @@ export default function Admin() {
     }
   };
 
-  const create = async (kind: string, body: Record<string, any>): Promise<boolean> => {
+  const create = async (
+    kind: string,
+    body: Record<string, any>,
+    successMsg?: (created: Row) => string
+  ): Promise<boolean> => {
     try {
-      await api("/admin/" + kind, { method: "POST", body, token });
-      toast("success", "Created successfully");
+      const created = await api<Row>("/admin/" + kind, { method: "POST", body, token });
+      toast("success", successMsg ? successMsg(created) : "Created successfully");
       await refresh();
       return true;
     } catch (x: any) {
@@ -392,9 +403,19 @@ export default function Admin() {
           {tab === "overview" && <OverviewTab ov={data.ov} loading={dataLoading} />}
           {tab === "businesses" && (
             <ListTab
+              title="Business Management"
               rows={data.b || []}
-              cols={["name", "email", "phone", "status"]}
-              onAdd={(body) => create("business", { ...body, serial: body.code, code: undefined })}
+              cols={["_id", "name", "email", "phone", "status"]}
+              onAdd={(body) =>
+                create(
+                  "business",
+                  { ...body, serial: body.code, code: undefined },
+                  (created) =>
+                    created.hardwareCreated || created.hardwareAssigned
+                      ? `Business created — QR code "${body.code}" is ready to scan`
+                      : "Business created (no hardware code linked yet — link one from the Hardware tab)"
+                )
+              }
               addFields={["name", "email", "phone", "address", "googleReviewUrl", "code"]}
               loading={dataLoading}
               toast={toast}
@@ -402,6 +423,7 @@ export default function Admin() {
           )}
           {tab === "plans" && (
             <ListTab
+              title="Plan Management"
               rows={data.p || []}
               cols={["name", "billingType", "price"]}
               onAdd={(body) => create("plans", body)}
@@ -412,6 +434,7 @@ export default function Admin() {
           )}
           {tab === "hardware" && (
             <ListTab
+              title="Hardware Management"
               rows={data.h || []}
               cols={["type", "serial", "status"]}
               onAdd={(body) => create("hardware", { items: [body] })}
@@ -422,6 +445,7 @@ export default function Admin() {
           )}
           {tab === "reviews" && (
             <ListTab
+              title="Review Suggestion Management"
               rows={data.s || []}
               cols={["businessId", "reviewText", "status"]}
               onAdd={(body) => create("review-suggestions", body)}
@@ -519,7 +543,7 @@ const FIELD_LABELS: Record<string, string> = {
   address: "Address",
   googleReviewUrl: "Google Review URL",
   code: "Hardware Serial / Code",
-  billingType: "Billing Type (monthly / annually / one-time)",
+  billingType: "Billing Type",
   price: "Price",
   type: "Hardware Type",
   serial: "Serial Number",
@@ -532,8 +556,9 @@ const REQUIRED_FIELDS: Record<string, boolean> = {
 };
 
 function ListTab({
-  rows, cols, onAdd, addFields, loading, toast,
+  title, rows, cols, onAdd, addFields, loading, toast,
 }: {
+  title: string;
   rows: Row[];
   cols: string[];
   onAdd: (b: any) => Promise<boolean>;
@@ -541,7 +566,8 @@ function ListTab({
   loading: boolean;
   toast: (kind: Toast["kind"], msg: string) => void;
 }) {
-  const [form, setForm] = useState<Record<string, string>>({});
+  const emptyForm = Object.fromEntries(addFields.map((f) => [f, FIELD_OPTIONS[f]?.[0] || ""]));
+  const [form, setForm] = useState<Record<string, string>>(emptyForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -557,14 +583,14 @@ function ListTab({
     setSaving(true);
     const ok = await onAdd(form);
     setSaving(false);
-    if (ok) { setForm({}); setShowForm(false); }
+    if (ok) { setForm(emptyForm); setShowForm(false); }
   };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-white capitalize">{cols[0]} Management</h2>
+          <h2 className="text-lg font-semibold text-white">{title}</h2>
           <p className="text-sm text-zinc-500 mt-0.5">{rows.length} record{rows.length !== 1 ? "s" : ""} total</p>
         </div>
         <button
@@ -588,21 +614,41 @@ function ListTab({
                   {FIELD_LABELS[f] || f}
                   {REQUIRED_FIELDS[f] && <span className="text-red-400 ml-1">*</span>}
                 </label>
-                <input
-                  id={`field-${f}`}
-                  type={f === "email" ? "email" : f === "price" ? "number" : "text"}
-                  placeholder={FIELD_LABELS[f] || f}
-                  value={form[f] || ""}
-                  onChange={(e) => {
-                    setForm({ ...form, [f]: e.target.value });
-                    if (errors[f]) setErrors({ ...errors, [f]: "" });
-                  }}
-                  className={`w-full rounded-xl border px-4 py-2.5 text-sm text-white bg-zinc-800 placeholder-zinc-600 outline-none transition-all duration-200 focus:ring-1 ${
-                    errors[f]
-                      ? "border-red-500/60 focus:border-red-500 focus:ring-red-500/20"
-                      : "border-zinc-700 focus:border-emerald-500/50 focus:ring-emerald-500/15"
-                  }`}
-                />
+                {FIELD_OPTIONS[f] ? (
+                  <select
+                    id={`field-${f}`}
+                    value={form[f] || FIELD_OPTIONS[f][0]}
+                    onChange={(e) => {
+                      setForm({ ...form, [f]: e.target.value });
+                      if (errors[f]) setErrors({ ...errors, [f]: "" });
+                    }}
+                    className={`w-full rounded-xl border px-4 py-2.5 text-sm text-white bg-zinc-800 outline-none transition-all duration-200 focus:ring-1 ${
+                      errors[f]
+                        ? "border-red-500/60 focus:border-red-500 focus:ring-red-500/20"
+                        : "border-zinc-700 focus:border-emerald-500/50 focus:ring-emerald-500/15"
+                    }`}
+                  >
+                    {FIELD_OPTIONS[f].map((opt) => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    id={`field-${f}`}
+                    type={f === "email" ? "email" : f === "price" ? "number" : "text"}
+                    placeholder={FIELD_LABELS[f] || f}
+                    value={form[f] || ""}
+                    onChange={(e) => {
+                      setForm({ ...form, [f]: e.target.value });
+                      if (errors[f]) setErrors({ ...errors, [f]: "" });
+                    }}
+                    className={`w-full rounded-xl border px-4 py-2.5 text-sm text-white bg-zinc-800 placeholder-zinc-600 outline-none transition-all duration-200 focus:ring-1 ${
+                      errors[f]
+                        ? "border-red-500/60 focus:border-red-500 focus:ring-red-500/20"
+                        : "border-zinc-700 focus:border-emerald-500/50 focus:ring-emerald-500/15"
+                    }`}
+                  />
+                )}
                 {errors[f] && (
                   <p className="flex items-center gap-1 text-xs text-red-400">
                     <svg className="w-3 h-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -624,7 +670,7 @@ function ListTab({
             </button>
             <button
               type="button"
-              onClick={() => { setShowForm(false); setErrors({}); setForm({}); }}
+              onClick={() => { setShowForm(false); setErrors({}); setForm(emptyForm); }}
               className="rounded-xl border border-zinc-700 px-5 py-2.5 text-sm font-medium text-zinc-400 hover:text-white hover:border-zinc-600 transition-all duration-150 cursor-pointer"
             >
               Cancel
@@ -633,13 +679,31 @@ function ListTab({
         </form>
       )}
 
-      <DataTable rows={rows} cols={cols} loading={loading} />
+      <DataTable rows={rows} cols={cols} loading={loading} toast={toast} />
     </div>
   );
 }
 
+/* Populated Mongoose refs (e.g. businessId) arrive as full objects, not ids —
+   render something human-readable instead of the default "[object Object]". */
+function cellText(value: unknown): string {
+  if (value == null) return "—";
+  if (typeof value === "object") {
+    const obj = value as Row;
+    return obj.name || obj._id || JSON.stringify(obj);
+  }
+  return String(value);
+}
+
 /* ─── Data Table ─────────────────────────────────────────── */
-function DataTable({ rows, cols, loading }: { rows: Row[]; cols: string[]; loading: boolean }) {
+function DataTable({
+  rows, cols, loading, toast,
+}: {
+  rows: Row[];
+  cols: string[];
+  loading: boolean;
+  toast?: (kind: Toast["kind"], msg: string) => void;
+}) {
   if (loading) {
     return (
       <div className="rounded-2xl border border-zinc-800 overflow-hidden">
@@ -676,7 +740,7 @@ function DataTable({ rows, cols, loading }: { rows: Row[]; cols: string[]; loadi
           <tr className="bg-zinc-900 border-b border-zinc-800">
             {cols.map((c) => (
               <th key={c} className="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider whitespace-nowrap">
-                {c.replace(/([A-Z])/g, " $1").trim()}
+                {c === "_id" ? "ID" : c.replace(/([A-Z])/g, " $1").trim()}
               </th>
             ))}
           </tr>
@@ -685,7 +749,21 @@ function DataTable({ rows, cols, loading }: { rows: Row[]; cols: string[]; loadi
           {rows.map((row, i) => (
             <tr key={i} className="border-b border-zinc-800 hover:bg-zinc-900/60 transition-colors duration-100">
               {cols.map((c) => (
-                <td key={c} className="px-4 py-3 text-zinc-300 whitespace-nowrap max-w-xs truncate">
+                <td
+                  key={c}
+                  className={`px-4 py-3 text-zinc-300 whitespace-nowrap max-w-xs truncate ${c === "_id" ? "font-mono text-xs cursor-pointer hover:text-emerald-400" : ""}`}
+                  title={c === "_id" ? "Click to copy" : undefined}
+                  onClick={
+                    c === "_id" && row[c]
+                      ? () => {
+                          navigator.clipboard
+                            .writeText(String(row[c]))
+                            .then(() => toast?.("info", "Business ID copied to clipboard"))
+                            .catch(() => toast?.("error", "Could not copy to clipboard"));
+                        }
+                      : undefined
+                  }
+                >
                   {c === "status" ? (
                     <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium border ${
                       String(row[c]) === "active"
@@ -697,10 +775,10 @@ function DataTable({ rows, cols, loading }: { rows: Row[]; cols: string[]; loadi
                       <span className={`w-1.5 h-1.5 rounded-full ${
                         String(row[c]) === "active" ? "bg-emerald-400" : String(row[c]) === "assigned" ? "bg-blue-400" : "bg-zinc-500"
                       }`} />
-                      {String(row[c] ?? "—")}
+                      {cellText(row[c])}
                     </span>
                   ) : (
-                    String(row[c] ?? "—")
+                    cellText(row[c])
                   )}
                 </td>
               ))}
