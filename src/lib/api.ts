@@ -1,4 +1,4 @@
-const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+const BASE = /*process.env.NEXT_PUBLIC_API_URL ||  */ "http://localhost:5001";
 
 export class ApiError extends Error {
   status: number;
