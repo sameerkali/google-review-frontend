@@ -3,31 +3,32 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 
+type Suggestion = { id: string; text: string };
 type BizData = {
   business: { name: string; logoUrl?: string; googleReviewUrl: string };
-  suggestion: string | null;
+  suggestions: Suggestion[];
   hardware: { code: string };
 };
 
 export default function ReviewPage({ params }: { params: Promise<{ code: string }> }) {
-  const [code, setCode] = useState<string>("");
+  const [code, setCode] = useState("");
   const [data, setData] = useState<BizData | null>(null);
   const [error, setError] = useState("");
-  const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [googleUrlError, setGoogleUrlError] = useState("");
 
   useEffect(() => {
     params.then(({ code: c }) => {
       setCode(c);
       load(c);
     });
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const load = async (c: string) => {
     try {
       const result = await api<BizData>(`/r/${c}`);
       setData(result);
-      // fire scan event
       void api("/analytics", { method: "POST", body: { code: c } });
     } catch {
       setError("This QR code is not recognised. Please try again.");
@@ -36,15 +37,12 @@ export default function ReviewPage({ params }: { params: Promise<{ code: string 
     }
   };
 
-  const handleCopy = async () => {
-    if (!data?.suggestion) return;
-    await navigator.clipboard.writeText(data.suggestion);
-    setCopied(true);
+  const handleCopy = async (s: Suggestion) => {
+    await navigator.clipboard.writeText(s.text);
+    setCopiedId(s.id);
     void api("/copy", { method: "POST", body: { code } });
-    setTimeout(() => setCopied(false), 2500);
+    setTimeout(() => setCopiedId(null), 2500);
   };
-
-  const [googleUrlError, setGoogleUrlError] = useState("");
 
   const handleGoogle = () => {
     setGoogleUrlError("");
@@ -53,21 +51,12 @@ export default function ReviewPage({ params }: { params: Promise<{ code: string 
       setGoogleUrlError("No Google Review URL has been set for this business.");
       return;
     }
-    // Ensure the URL has a protocol — without it the link is treated as a relative path.
-    if (!/^https?:\/\//i.test(url)) {
-      url = "https://" + url;
-    }
-    // Basic URL sanity check
-    try {
-      new URL(url);
-    } catch {
+    if (!/^https?:\/\//i.test(url)) url = "https://" + url;
+    try { new URL(url); } catch {
       setGoogleUrlError("The Google Review URL saved for this business is invalid. Please ask the business owner to update it.");
       return;
     }
     void api("/open-google", { method: "POST", body: { code } });
-    // Use an anchor click instead of window.open — share.google links require a
-    // genuine top-level navigation (as if the user clicked a real link). window.open
-    // with noopener/noreferrer creates a popup context that Google rejects.
     const a = document.createElement("a");
     a.href = url;
     a.target = "_blank";
@@ -89,7 +78,6 @@ export default function ReviewPage({ params }: { params: Promise<{ code: string 
     return (
       <div className="min-h-screen flex items-center justify-center bg-zinc-950 p-6">
         <div className="text-center space-y-3">
-          <div className="text-4xl">🔍</div>
           <p className="text-zinc-300 text-lg font-medium">QR Code Not Found</p>
           <p className="text-zinc-500 text-sm">{error}</p>
         </div>
@@ -97,46 +85,47 @@ export default function ReviewPage({ params }: { params: Promise<{ code: string 
     );
   }
 
-  const { business, suggestion } = data;
+  const { business, suggestions } = data;
 
   return (
     <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center p-6">
-      <div className="w-full max-w-sm space-y-6">
-        {/* Business card */}
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6 text-center space-y-3">
-          {business.logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={business.logoUrl}
-              alt={business.name}
-              className="h-16 w-16 rounded-full object-cover mx-auto"
-            />
-          ) : (
-            <div className="h-16 w-16 rounded-full bg-emerald-500/20 flex items-center justify-center mx-auto">
-              <span className="text-2xl font-bold text-emerald-400">
-                {business.name.charAt(0).toUpperCase()}
-              </span>
-            </div>
-          )}
-          <div>
-            <h1 className="text-xl font-semibold text-zinc-100">{business.name}</h1>
-            <p className="text-sm text-zinc-500">We&apos;d love your feedback!</p>
-          </div>
+      <div className="w-full max-w-sm space-y-4">
+
+        {/* Business card — name only */}
+        <div className="rounded-2xl border border-zinc-800 bg-zinc-900 px-6 py-5 text-center">
+          <h1 className="text-xl font-semibold text-zinc-100">{business.name}</h1>
+          <p className="text-sm text-zinc-500 mt-1">We&apos;d love your feedback!</p>
         </div>
 
-        {/* Suggested review */}
-        {suggestion && (
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4 space-y-3">
-            <p className="text-xs text-zinc-500 uppercase tracking-widest font-medium">
-              Suggested review
-            </p>
-            <p className="text-zinc-200 text-sm leading-relaxed">{suggestion}</p>
-            <button
-              onClick={handleCopy}
-              className="w-full rounded-xl py-2.5 text-sm font-medium transition-all border border-zinc-700 text-zinc-300 hover:border-emerald-500 hover:text-emerald-400 active:scale-95"
-            >
-              {copied ? "✓ Copied!" : "Copy review text"}
-            </button>
+        {/* All reviews in one box, one row each with inline copy button */}
+        {suggestions.length > 0 && (
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-900 overflow-hidden">
+            <div className="px-4 py-3 border-b border-zinc-800">
+              <p className="text-xs text-zinc-500 uppercase tracking-widest font-medium">Suggested reviews</p>
+            </div>
+            {suggestions.map((s, i) => {
+              const isCopied = copiedId === s.id;
+              return (
+                <div
+                  key={s.id}
+                  className={`flex items-center gap-3 px-4 py-4${
+                    i < suggestions.length - 1 ? " border-b border-zinc-800" : ""
+                  }`}
+                >
+                  <p className="flex-1 text-zinc-200 text-sm leading-relaxed min-w-0">{s.text}</p>
+                  <button
+                    onClick={() => handleCopy(s)}
+                    className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-medium transition-all duration-150 cursor-pointer border ${
+                      isCopied
+                        ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
+                        : "border-zinc-700 text-zinc-400 hover:border-emerald-500 hover:text-emerald-400"
+                    }`}
+                  >
+                    {isCopied ? "✓ Copied" : "Copy"}
+                  </button>
+                </div>
+              );
+            })}
           </div>
         )}
 
@@ -163,7 +152,7 @@ export default function ReviewPage({ params }: { params: Promise<{ code: string 
           </div>
         )}
 
-        <p className="text-center text-xs text-zinc-600">Powered by QR Review Platform</p>
+        <p className="text-center text-xs text-zinc-600">Powered by QR Expendifii.com</p>
       </div>
     </div>
   );
