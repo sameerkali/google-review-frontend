@@ -98,10 +98,11 @@ function AdminShell({ children }: { children: React.ReactNode }) {
                 href={href}
                 prefetch
                 onClick={() => setSidebarOpen(false)}
-                className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150 cursor-pointer text-left ${
+                aria-current={active ? "page" : undefined}
+                className={`w-full flex items-center gap-3 rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors duration-150 cursor-pointer text-left outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40 ${
                   active
-                    ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20"
-                    : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800"
+                    ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/20"
+                    : "border-transparent text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800"
                 }`}
               >
                 <span className={active ? "text-emerald-400" : "text-zinc-600"}>

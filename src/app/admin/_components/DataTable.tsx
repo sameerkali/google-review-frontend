@@ -72,57 +72,88 @@ export function DataTable({
     );
   }
 
+  const copyCell = (c: string, row: Row) => {
+    if (c !== "_id" || !row[c]) return undefined;
+    return () => {
+      navigator.clipboard
+        .writeText(String(row[c]))
+        .then(() => toast?.("info", "ID copied to clipboard"))
+        .catch(() => toast?.("error", "Could not copy to clipboard"));
+    };
+  };
+
+  const cellLabel = (c: string) => (c === "_id" ? "ID" : c.replace(/([A-Z])/g, " $1").trim());
+
+  const cellContent = (c: string, row: Row) =>
+    c === "status" ? (
+      <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium border ${STATUS_TONE[String(row[c])] || "bg-zinc-800 text-zinc-400 border-zinc-700"}`}>
+        <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[String(row[c])] || "bg-zinc-500"}`} />
+        {cellText(row[c])}
+      </span>
+    ) : (
+      cellText(row[c])
+    );
+
   return (
-    <div className="rounded-2xl border border-zinc-800 overflow-x-auto">
-      <table className="w-full text-left text-sm">
-        <thead>
-          <tr className="bg-zinc-900 border-b border-zinc-800">
+    <>
+      {/* Card layout — small screens, where a wide table would force horizontal scrolling */}
+      <div className="space-y-3 sm:hidden">
+        {rows.map((row, i) => (
+          <div key={row._id ?? i} className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4 space-y-2.5">
             {cols.map((c) => (
-              <th key={c} className="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider whitespace-nowrap">
-                {c === "_id" ? "ID" : c.replace(/([A-Z])/g, " $1").trim()}
-              </th>
-            ))}
-            {renderActions && <th className="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-right">Actions</th>}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, i) => (
-            <tr key={row._id ?? i} className="border-b border-zinc-800 hover:bg-zinc-900/60 transition-colors duration-100">
-              {cols.map((c) => (
-                <td
-                  key={c}
-                  className={`px-4 py-3 text-zinc-300 whitespace-nowrap max-w-xs truncate ${c === "_id" ? "font-mono text-xs cursor-pointer hover:text-emerald-400" : ""}`}
-                  title={c === "_id" ? "Click to copy" : undefined}
-                  onClick={
-                    c === "_id" && row[c]
-                      ? () => {
-                          navigator.clipboard
-                            .writeText(String(row[c]))
-                            .then(() => toast?.("info", "ID copied to clipboard"))
-                            .catch(() => toast?.("error", "Could not copy to clipboard"));
-                        }
-                      : undefined
-                  }
+              <div key={c} className="flex items-start justify-between gap-3">
+                <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider shrink-0 pt-0.5">{cellLabel(c)}</span>
+                <span
+                  className={`text-sm text-zinc-200 text-right wrap-break-word min-w-0 ${c === "_id" ? "font-mono text-xs cursor-pointer hover:text-emerald-400" : ""}`}
+                  onClick={copyCell(c, row)}
                 >
-                  {c === "status" ? (
-                    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium border ${STATUS_TONE[String(row[c])] || "bg-zinc-800 text-zinc-400 border-zinc-700"}`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[String(row[c])] || "bg-zinc-500"}`} />
-                      {cellText(row[c])}
-                    </span>
-                  ) : (
-                    cellText(row[c])
-                  )}
-                </td>
+                  {cellContent(c, row)}
+                </span>
+              </div>
+            ))}
+            {renderActions && (
+              <div className="flex items-center justify-end gap-1.5 pt-2 border-t border-zinc-800">{renderActions(row)}</div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Table layout — sm and up */}
+      <div className="hidden sm:block rounded-2xl border border-zinc-800 overflow-x-auto">
+        <table className="w-full text-left text-sm">
+          <thead>
+            <tr className="bg-zinc-900 border-b border-zinc-800">
+              {cols.map((c) => (
+                <th key={c} className="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider whitespace-nowrap">
+                  {cellLabel(c)}
+                </th>
               ))}
-              {renderActions && (
-                <td className="px-4 py-3 text-right whitespace-nowrap">
-                  <div className="flex items-center justify-end gap-1.5">{renderActions(row)}</div>
-                </td>
-              )}
+              {renderActions && <th className="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-right">Actions</th>}
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {rows.map((row, i) => (
+              <tr key={row._id ?? i} className="border-b border-zinc-800 hover:bg-zinc-900/60 transition-colors duration-100">
+                {cols.map((c) => (
+                  <td
+                    key={c}
+                    className={`px-4 py-3 text-zinc-300 whitespace-nowrap max-w-xs truncate ${c === "_id" ? "font-mono text-xs cursor-pointer hover:text-emerald-400" : ""}`}
+                    title={c === "_id" ? "Click to copy" : undefined}
+                    onClick={copyCell(c, row)}
+                  >
+                    {cellContent(c, row)}
+                  </td>
+                ))}
+                {renderActions && (
+                  <td className="px-4 py-3 text-right whitespace-nowrap">
+                    <div className="flex items-center justify-end gap-1.5">{renderActions(row)}</div>
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }

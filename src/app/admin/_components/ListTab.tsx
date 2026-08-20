@@ -8,7 +8,7 @@ import { Spinner } from "./Loaders";
 import { DataTable } from "./DataTable";
 
 export function ListTab({
-  title, rows, cols, onAdd, addFields, loading, toast, onAddClick, renderActions,
+  title, rows, cols, onAdd, addFields, loading, toast, onAddClick, renderActions, secondaryAction,
 }: {
   title: string;
   rows: Row[];
@@ -21,6 +21,8 @@ export function ListTab({
       (used by the Businesses tab to launch the guided onboarding wizard). */
   onAddClick?: () => void;
   renderActions?: (row: Row) => React.ReactNode;
+  /** Optional secondary header button (e.g. "Upload JSON" on the Reviews tab). */
+  secondaryAction?: { label: string; icon: React.ReactNode; onClick: () => void };
 }) {
   const fields = addFields || [];
   const emptyForm = Object.fromEntries(fields.map((f) => [f, FIELD_OPTIONS[f]?.[0] || ""]));
@@ -52,18 +54,29 @@ export function ListTab({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-lg font-semibold text-white">{title}</h2>
           <p className="text-sm text-zinc-500 mt-0.5">{rows.length} record{rows.length !== 1 ? "s" : ""} total</p>
         </div>
-        <button
-          onClick={onAddClick || (() => { setShowForm((v) => !v); setErrors({}); setTouched({}); })}
-          className="flex items-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition-all duration-150 cursor-pointer"
-        >
-          <PlusIcon className={`w-4 h-4 transition-transform duration-200 ${showForm && !onAddClick ? "rotate-45" : ""}`} strokeWidth={2} />
-          {showForm && !onAddClick ? "Cancel" : "Add New"}
-        </button>
+        <div className="flex items-center gap-2">
+          {secondaryAction && (
+            <button
+              onClick={secondaryAction.onClick}
+              className="flex items-center gap-2 rounded-xl border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-300 hover:text-white hover:border-zinc-600 transition-all duration-150 cursor-pointer"
+            >
+              {secondaryAction.icon}
+              {secondaryAction.label}
+            </button>
+          )}
+          <button
+            onClick={onAddClick || (() => { setShowForm((v) => !v); setErrors({}); setTouched({}); })}
+            className="flex items-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition-all duration-150 cursor-pointer"
+          >
+            <PlusIcon className={`w-4 h-4 transition-transform duration-200 ${showForm && !onAddClick ? "rotate-45" : ""}`} strokeWidth={2} />
+            {showForm && !onAddClick ? "Cancel" : "Add New"}
+          </button>
+        </div>
       </div>
 
       {showForm && !onAddClick && (
