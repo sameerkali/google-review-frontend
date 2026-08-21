@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAdmin } from "../_lib/context";
 import type { Row } from "../_lib/types";
@@ -9,7 +10,7 @@ import { ListTab } from "../_components/ListTab";
 import { QrViewModal } from "../_components/QrViewModal";
 import { BusinessEditModal } from "../_components/BusinessEditModal";
 import { ConfirmDialog } from "../_components/ConfirmDialog";
-import { EyeIcon, PencilIcon, TrashIcon } from "../_lib/icons";
+import { EyeIcon, HardwareIcon, PencilIcon, TrashIcon } from "../_lib/icons";
 
 function hasLinkedHardware(business: Row, hardwareList: Row[]): boolean {
   return hardwareList.some((h) => {
@@ -20,6 +21,7 @@ function hasLinkedHardware(business: Row, hardwareList: Row[]): boolean {
 }
 
 export default function BusinessesPage() {
+  const router = useRouter();
   const { data, token, toast, openWizard, refresh } = useAdmin();
   const hardware = (data.h as Row[]) || [];
   const plans = (data.p as Row[]) || [];
@@ -70,6 +72,11 @@ export default function BusinessesPage() {
           onPageChange: list.setPage,
           limit: list.limit,
           onLimitChange: list.changeLimit,
+        }}
+        secondaryAction={{
+          label: "Hardware Stock",
+          icon: <HardwareIcon className="w-4 h-4" />,
+          onClick: () => router.push("/admin/hardware"),
         }}
         renderActions={(row) => (
           <>

@@ -35,12 +35,13 @@ function slugifyCode(name: string): string {
 }
 
 export function OnboardWizard({
-  open, onClose, token, hardwareList, onRefresh, toast,
+  open, onClose, token, hardwareList, plans, onRefresh, toast,
 }: {
   open: boolean;
   onClose: () => void;
   token: string;
   hardwareList: Row[];
+  plans: Row[];
   onRefresh: () => Promise<void>;
   toast: ToastFn;
 }) {
@@ -49,6 +50,7 @@ export function OnboardWizard({
   const [details, setDetails] = useState<Record<string, string>>(emptyDetails);
   const [detailErrors, setDetailErrors] = useState<Record<string, string>>({});
   const [detailTouched, setDetailTouched] = useState<Record<string, boolean>>({});
+  const [planId, setPlanId] = useState("");
   // The code field is either what the admin typed, or — until they touch it —
   // a suggestion derived from the business name. Derived at render time
   // (not synced via an effect) so there's nothing to keep in sync.
@@ -82,6 +84,7 @@ export function OnboardWizard({
     setDetailTouched({});
     setCodeInput("");
     setCodeTouched(false);
+    setPlanId("");
     setReviews([""]);
     setServerError("");
     setResult(null);
@@ -125,6 +128,7 @@ export function OnboardWizard({
           address: details.address.trim() || undefined,
           googleReviewUrl: details.googleReviewUrl.trim() || undefined,
           serial: code.trim() || undefined,
+          planId: planId || undefined,
         },
       });
 
@@ -251,6 +255,23 @@ export function OnboardWizard({
                   {detailErrors[f] && <p role="alert" className="text-xs text-red-400">{detailErrors[f]}</p>}
                 </div>
               ))}
+              <div className="space-y-1.5">
+                <label htmlFor="wiz-plan" className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
+                  Plan
+                </label>
+                <select
+                  id="wiz-plan"
+                  value={planId}
+                  onChange={(e) => setPlanId(e.target.value)}
+                  className="w-full rounded-xl border border-zinc-700 px-4 py-2.5 text-sm text-white bg-zinc-800 outline-none transition-all duration-200 focus:ring-1 focus:border-emerald-500/50 focus:ring-emerald-500/15"
+                >
+                  <option value="">— none yet —</option>
+                  {plans.map((p) => <option key={p._id} value={p._id}>{p.name} · ₹{p.price}{p.billingType === "monthly" ? "/mo" : p.billingType === "annually" ? "/yr" : ""}</option>)}
+                </select>
+                {!plans.length && (
+                  <p className="text-xs text-zinc-600">No plans set up yet — add one from the Plans tab, or leave this business unassigned for now.</p>
+                )}
+              </div>
             </div>
           )}
 
@@ -350,7 +371,8 @@ export function OnboardWizard({
                   <CheckIcon className="w-4 h-4 text-emerald-400" />
                 </div>
                 <p className="text-sm text-emerald-300">
-                  <span className="font-semibold">{result.businessName}</span> is set up and ready to collect reviews.
+                  <span className="font-semibold">{result.businessName}</span> is set up and ready to collect reviews
+                  {planId && plans.find((p) => p._id === planId) ? <> on the <span className="font-semibold">{plans.find((p) => p._id === planId)?.name}</span> plan</> : "."}
                 </p>
               </div>
               {result.reviewUrl ? (

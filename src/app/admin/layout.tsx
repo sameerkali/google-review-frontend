@@ -10,11 +10,15 @@ import { OnboardWizard } from "./_components/OnboardWizard";
 import { FullPageSpinner, Spinner } from "./_components/Loaders";
 import { LogoutIcon, MenuIcon, RefreshIcon, ShieldIcon, TAB_ICONS } from "./_lib/icons";
 
-const NAV: { href: string; key: keyof typeof TAB_ICONS; label: string }[] = [
+const NAV: { href: string; key: keyof typeof TAB_ICONS; label: string; hidden?: boolean }[] = [
   { href: "/admin/overview", key: "overview", label: "Overview" },
   { href: "/admin/businesses", key: "businesses", label: "Businesses" },
   { href: "/admin/plans", key: "plans", label: "Plans" },
-  { href: "/admin/hardware", key: "hardware", label: "Hardware" },
+  // Not a primary tab — hardware is a support detail of a business, not a
+  // peer concern. Reachable via the "Hardware Stock" link on the Businesses
+  // tab; kept here (hidden) so the page still gets the right header title
+  // and sidebar highlight when visited directly.
+  { href: "/admin/hardware", key: "hardware", label: "Hardware", hidden: true },
   { href: "/admin/reviews", key: "reviews", label: "Reviews" },
   { href: "/admin/analytics", key: "analytics", label: "Analytics" },
 ];
@@ -61,6 +65,7 @@ function AdminShell({ children }: { children: React.ReactNode }) {
         onClose={closeWizard}
         token={token}
         hardwareList={(data.h as Row[]) || []}
+        plans={(data.p as Row[]) || []}
         onRefresh={refresh}
         toast={toast}
       />
@@ -88,7 +93,7 @@ function AdminShell({ children }: { children: React.ReactNode }) {
         </div>
 
         <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-          {NAV.map(({ href, key, label }) => {
+          {NAV.filter((n) => !n.hidden).map(({ href, key, label }) => {
             const Icon = TAB_ICONS[key];
             const active = activeKey === key;
             return (
