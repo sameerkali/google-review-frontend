@@ -4,7 +4,8 @@ import { useState } from "react";
 import { api } from "@/lib/api";
 import type { Row, ToastFn } from "../_lib/types";
 import { validate } from "../_lib/validators";
-import { AlertIcon, CheckIcon, CloseIcon, PlusIcon } from "../_lib/icons";
+import { AlertIcon, CheckIcon, CloseIcon, CopyIcon, PlusIcon } from "../_lib/icons";
+import { generatePassword } from "../_lib/generatePassword";
 import { useEscapeKey } from "../_lib/useEscapeKey";
 import { Spinner } from "./Loaders";
 import { QrCard } from "./QrCard";
@@ -51,6 +52,7 @@ export function OnboardWizard({
   const [detailErrors, setDetailErrors] = useState<Record<string, string>>({});
   const [detailTouched, setDetailTouched] = useState<Record<string, boolean>>({});
   const [planId, setPlanId] = useState("");
+  const [portalPassword, setPortalPassword] = useState("");
   // The code field is either what the admin typed, or — until they touch it —
   // a suggestion derived from the business name. Derived at render time
   // (not synced via an effect) so there's nothing to keep in sync.
@@ -60,6 +62,7 @@ export function OnboardWizard({
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState("");
   const [result, setResult] = useState<{ businessName: string; reviewUrl: string; codeNotConfirmed?: boolean } | null>(null);
+  const [copiedCreds, setCopiedCreds] = useState(false);
 
   const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
   const availableHardware = hardwareList.filter((h) => h.status === "available").slice(0, 6);
@@ -85,6 +88,7 @@ export function OnboardWizard({
     setCodeInput("");
     setCodeTouched(false);
     setPlanId("");
+    setPortalPassword("");
     setReviews([""]);
     setServerError("");
     setResult(null);
@@ -129,6 +133,7 @@ export function OnboardWizard({
           googleReviewUrl: details.googleReviewUrl.trim() || undefined,
           serial: code.trim() || undefined,
           planId: planId || undefined,
+          password: portalPassword.trim() || undefined,
         },
       });
 
@@ -272,6 +277,31 @@ export function OnboardWizard({
                   <p className="text-xs text-zinc-600">No plans set up yet — add one from the Plans tab, or leave this business unassigned for now.</p>
                 )}
               </div>
+              <div className="space-y-1.5">
+                <label htmlFor="wiz-password" className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
+                  Business Portal Password
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    id="wiz-password"
+                    type="text"
+                    value={portalPassword}
+                    onChange={(e) => setPortalPassword(e.target.value)}
+                    placeholder="Leave blank to set up later"
+                    className="flex-1 min-w-0 rounded-xl border border-zinc-700 px-4 py-2.5 text-sm text-white bg-zinc-800 placeholder-zinc-600 outline-none transition-all duration-200 focus:ring-1 focus:border-emerald-500/50 focus:ring-emerald-500/15 font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setPortalPassword(generatePassword())}
+                    className="shrink-0 rounded-xl border border-zinc-700 px-4 py-2.5 text-sm font-medium text-zinc-300 hover:text-white hover:border-zinc-600 transition-all duration-150 cursor-pointer"
+                  >
+                    Generate
+                  </button>
+                </div>
+                <p className="text-xs text-zinc-600">
+                  Lets the business owner log into their own dashboard at /business/login to see their stats and manage reviews. You&apos;ll see this password once more on the next screen — share it with them.
+                </p>
+              </div>
             </div>
           )}
 
@@ -375,6 +405,27 @@ export function OnboardWizard({
                   {planId && plans.find((p) => p._id === planId) ? <> on the <span className="font-semibold">{plans.find((p) => p._id === planId)?.name}</span> plan</> : "."}
                 </p>
               </div>
+              {portalPassword.trim() && (
+                <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-4 space-y-2">
+                  <p className="text-xs font-medium text-blue-300 uppercase tracking-wider">Business Portal Login — share this now</p>
+                  <p className="text-xs text-zinc-500">Shown once — it won&apos;t be displayed again after you close this.</p>
+                  <div className="flex items-center justify-between gap-3 rounded-lg bg-zinc-950 border border-zinc-800 px-3 py-2 font-mono text-xs text-zinc-300">
+                    <span className="truncate">{details.email.trim()} · {portalPassword.trim()}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard
+                          .writeText(`${details.email.trim()} / ${portalPassword.trim()}`)
+                          .then(() => { setCopiedCreds(true); toast("info", "Credentials copied"); setTimeout(() => setCopiedCreds(false), 2500); })
+                          .catch(() => toast("error", "Could not copy to clipboard"));
+                      }}
+                      className="shrink-0 flex items-center gap-1 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                    >
+                      {copiedCreds ? <CheckIcon className="w-3.5 h-3.5 text-emerald-400" /> : <CopyIcon className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+                </div>
+              )}
               {result.reviewUrl ? (
                 <QrCard reviewUrl={result.reviewUrl} businessName={result.businessName} toast={toast} badgeLabel="Ready" compact />
               ) : result.codeNotConfirmed ? (

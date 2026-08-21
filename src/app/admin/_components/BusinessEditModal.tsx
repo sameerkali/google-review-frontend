@@ -5,6 +5,7 @@ import { api } from "@/lib/api";
 import type { Row, ToastFn } from "../_lib/types";
 import { BUSINESS_STATUS_OPTIONS, validate } from "../_lib/validators";
 import { AlertIcon, CloseIcon } from "../_lib/icons";
+import { generatePassword } from "../_lib/generatePassword";
 import { useEscapeKey } from "../_lib/useEscapeKey";
 import { Spinner } from "./Loaders";
 
@@ -40,6 +41,7 @@ export function BusinessEditModal({
   });
   const [status, setStatus] = useState(business?.status || "active");
   const [plan, setPlan] = useState(planId(business));
+  const [newPassword, setNewPassword] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [serverError, setServerError] = useState("");
@@ -66,10 +68,11 @@ export function BusinessEditModal({
           googleReviewUrl: form.googleReviewUrl.trim() || undefined,
           status,
           planId: plan || null,
+          password: newPassword.trim() || undefined,
         },
       });
       await onRefresh();
-      toast("success", "Business updated");
+      toast("success", newPassword.trim() ? "Business updated — portal password changed" : "Business updated");
       onClose();
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Could not update business";
@@ -143,6 +146,32 @@ export function BusinessEditModal({
               <option value="">— none —</option>
               {plans.map((p) => <option key={p._id} value={p._id}>{p.name}</option>)}
             </select>
+          </div>
+
+          <div className="space-y-1.5">
+            <label htmlFor="biz-edit-password" className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
+              Reset Portal Password
+            </label>
+            <div className="flex gap-2">
+              <input
+                id="biz-edit-password"
+                type="text"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Leave blank to keep current password"
+                className="flex-1 min-w-0 rounded-xl border border-zinc-700 px-4 py-2.5 text-sm text-white bg-zinc-800 placeholder-zinc-600 outline-none transition-all duration-200 focus:ring-1 focus:border-emerald-500/50 focus:ring-emerald-500/15 font-mono"
+              />
+              <button
+                type="button"
+                onClick={() => setNewPassword(generatePassword())}
+                className="shrink-0 rounded-xl border border-zinc-700 px-4 py-2.5 text-sm font-medium text-zinc-300 hover:text-white hover:border-zinc-600 transition-all duration-150 cursor-pointer"
+              >
+                Generate
+              </button>
+            </div>
+            {newPassword.trim() && (
+              <p className="text-xs text-amber-400">New password: <span className="font-mono">{newPassword.trim()}</span> — copy it now, it won&apos;t be shown again after saving.</p>
+            )}
           </div>
         </div>
 
