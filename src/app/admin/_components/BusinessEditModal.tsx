@@ -16,10 +16,16 @@ const FIELDS: { f: string; label: string; required?: boolean }[] = [
   { f: "googleReviewUrl", label: "Google Review URL" },
 ];
 
+function planId(business: Row | null): string {
+  const p = business?.planId;
+  return p && typeof p === "object" ? p._id : p || "";
+}
+
 export function BusinessEditModal({
-  business, token, onClose, onRefresh, toast,
+  business, plans, token, onClose, onRefresh, toast,
 }: {
   business: Row | null;
+  plans: Row[];
   token: string;
   onClose: () => void;
   onRefresh: () => Promise<void>;
@@ -33,6 +39,7 @@ export function BusinessEditModal({
     googleReviewUrl: business?.googleReviewUrl || "",
   });
   const [status, setStatus] = useState(business?.status || "active");
+  const [plan, setPlan] = useState(planId(business));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [serverError, setServerError] = useState("");
@@ -58,6 +65,7 @@ export function BusinessEditModal({
           address: form.address.trim() || undefined,
           googleReviewUrl: form.googleReviewUrl.trim() || undefined,
           status,
+          planId: plan || null,
         },
       });
       await onRefresh();
@@ -121,6 +129,19 @@ export function BusinessEditModal({
               className="w-full rounded-xl border border-zinc-700 px-4 py-2.5 text-sm text-white bg-zinc-800 outline-none focus:ring-1 focus:border-emerald-500/50 focus:ring-emerald-500/15"
             >
               {BUSINESS_STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+
+          <div className="space-y-1.5">
+            <label htmlFor="biz-edit-plan" className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Plan</label>
+            <select
+              id="biz-edit-plan"
+              value={plan}
+              onChange={(e) => setPlan(e.target.value)}
+              className="w-full rounded-xl border border-zinc-700 px-4 py-2.5 text-sm text-white bg-zinc-800 outline-none focus:ring-1 focus:border-emerald-500/50 focus:ring-emerald-500/15"
+            >
+              <option value="">— none —</option>
+              {plans.map((p) => <option key={p._id} value={p._id}>{p.name}</option>)}
             </select>
           </div>
         </div>

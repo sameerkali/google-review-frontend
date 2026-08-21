@@ -17,7 +17,6 @@ const NAV: { href: string; key: keyof typeof TAB_ICONS; label: string }[] = [
   { href: "/admin/hardware", key: "hardware", label: "Hardware" },
   { href: "/admin/reviews", key: "reviews", label: "Reviews" },
   { href: "/admin/analytics", key: "analytics", label: "Analytics" },
-  { href: "/admin/simulator", key: "simulator", label: "QR Simulator" },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

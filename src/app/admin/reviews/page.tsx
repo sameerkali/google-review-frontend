@@ -4,9 +4,10 @@ import { useCallback, useEffect, useState } from "react";
 import { useAdmin } from "../_lib/context";
 import type { Row, ToastFn } from "../_lib/types";
 import { DataTable } from "../_components/DataTable";
+import { Pagination } from "../_components/Pagination";
 import { BulkReviewUploadModal } from "../_components/BulkReviewUploadModal";
 import { Spinner } from "../_components/Loaders";
-import { UploadIcon } from "../_lib/icons";
+import { AlertIcon, PlusIcon, UploadIcon } from "../_lib/icons";
 import { api } from "@/lib/api";
 
 // ── Business list ────────────────────────────────────────────────────────────
@@ -23,13 +24,14 @@ interface BizSummary {
 }
 
 function BusinessList({
-  token, toast, onSelect, onBulkOpen, businesses,
+  token, toast, onSelect, onBulkOpen, refreshToken,
 }: {
   token: string;
   toast: ToastFn;
   onSelect: (b: BizSummary) => void;
   onBulkOpen: () => void;
-  businesses: Row[];
+  /** Bumped after a bulk upload so the per-business counts below reflect it. */
+  refreshToken: number;
 }) {
   const [rows, setRows] = useState<BizSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,7 +48,7 @@ function BusinessList({
     }
   }, [token, toast]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(); }, [load, refreshToken]);
 
   const badge = (n: number, color: string) => (
     <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${color}`}>
@@ -144,15 +146,22 @@ function BusinessList({
 // ── Paginated review list for one business ───────────────────────────────────
 
 const PAGE_SIZES = [10, 25, 50, 100];
-const STATUSES = ["", "unused", "reserved", "used"] as const;
+const STATUSES = [
+  { value: "", label: "All statuses" },
+  { value: "unused", label: "Unused" },
+  { value: "reserved", label: "Reserved" },
+  { value: "used", label: "Used" },
+] as const;
 
 function ReviewList({
-  biz, token, toast, onBack,
+  biz, token, toast, onBack, onAdded,
 }: {
   biz: BizSummary;
   token: string;
   toast: ToastFn;
   onBack: () => void;
+  /** Called after a comment is added here, so the business-list counts stay in sync. */
+  onAdded: () => void;
 }) {
   const [rows, setRows]           = useState<Row[]>([]);
   const [loading, setLoading]     = useState(true);
@@ -160,7 +169,12 @@ function ReviewList({
   const [totalPages, setTotalPages] = useState(1);
   const [page, setPage]           = useState(1);
   const [limit, setLimit]         = useState(25);
-  const [status, setStatus]       = useState<typeof STATUSES[number]>("");
+  const [status, setStatus]       = useState<typeof STATUSES[number]["value"]>("");
+
+  const [showAdd, setShowAdd] = useState(false);
+  const [newText, setNewText] = useState("");
+  const [addErr, setAddErr] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -189,21 +203,25 @@ function ReviewList({
 
   // Reset to page 1 when filter/limit changes
   const changeLimit = (v: number) => { setLimit(v); setPage(1); };
-  const changeStatus = (v: typeof STATUSES[number]) => { setStatus(v); setPage(1); };
+  const changeStatus = (v: typeof STATUSES[number]["value"]) => { setStatus(v); setPage(1); };
 
-  const PageBtn = ({ n, disabled, children }: { n?: number; disabled?: boolean; children: React.ReactNode }) => (
-    <button
-      onClick={() => n !== undefined && setPage(n)}
-      disabled={disabled}
-      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 ${
-        n === page
-          ? "bg-emerald-500 text-zinc-950"
-          : "border border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-600"
-      }`}
-    >
-      {children}
-    </button>
-  );
+  const addComment = async () => {
+    if (!newText.trim()) { setAddErr("Comment text is required"); return; }
+    setAddErr("");
+    setSaving(true);
+    try {
+      await api("/admin/review-suggestions", { method: "POST", token, body: { businessId: biz._id, reviewText: newText.trim() } });
+      toast("success", "Comment added");
+      setNewText("");
+      setShowAdd(false);
+      await load();
+      onAdded();
+    } catch (e) {
+      setAddErr(e instanceof Error ? e.message : "Could not add comment");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -227,13 +245,10 @@ function ReviewList({
           {/* Status filter */}
           <select
             value={status}
-            onChange={(e) => changeStatus(e.target.value as typeof STATUSES[number])}
+            onChange={(e) => changeStatus(e.target.value as typeof STATUSES[number]["value"])}
             className="rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-xs text-zinc-300 outline-none focus:border-emerald-500/50 cursor-pointer"
           >
-            <option value="">All statuses</option>
-            <option value="unused">Unused</option>
-            <option value="reserved">Reserved</option>
-            <option value="used">Used</option>
+            {STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
           </select>
 
           {/* Page size */}
@@ -246,8 +261,45 @@ function ReviewList({
               <option key={s} value={s}>{s} per page</option>
             ))}
           </select>
+
+          <button
+            onClick={() => setShowAdd((v) => !v)}
+            className="flex items-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition-all duration-150 cursor-pointer"
+          >
+            <PlusIcon className={`w-4 h-4 transition-transform duration-200 ${showAdd ? "rotate-45" : ""}`} strokeWidth={2} />
+            {showAdd ? "Cancel" : "Add Comment"}
+          </button>
         </div>
       </div>
+
+      {showAdd && (
+        <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6 space-y-3">
+          <label htmlFor="new-comment" className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Comment Text</label>
+          <textarea
+            id="new-comment"
+            value={newText}
+            onChange={(e) => { setNewText(e.target.value); if (addErr) setAddErr(""); }}
+            placeholder="Great coffee and quick service!"
+            rows={3}
+            className={`w-full rounded-xl border px-4 py-2.5 text-sm text-white bg-zinc-800 placeholder-zinc-600 outline-none transition-all duration-200 focus:ring-1 ${
+              addErr ? "border-red-500/60 focus:border-red-500 focus:ring-red-500/20" : "border-zinc-700 focus:border-emerald-500/50 focus:ring-emerald-500/15"
+            }`}
+          />
+          {addErr && (
+            <p role="alert" className="flex items-center gap-1 text-xs text-red-400">
+              <AlertIcon className="w-3 h-3 shrink-0" />
+              {addErr}
+            </p>
+          )}
+          <button
+            onClick={addComment}
+            disabled={saving}
+            className="flex items-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-60 px-5 py-2.5 text-sm font-semibold text-zinc-950 transition-all duration-150 cursor-pointer disabled:cursor-not-allowed"
+          >
+            {saving ? <><Spinner /> Saving…</> : "Save Comment"}
+          </button>
+        </div>
+      )}
 
       <DataTable
         rows={rows}
@@ -256,33 +308,7 @@ function ReviewList({
         toast={toast}
       />
 
-      {/* Pagination */}
-      {!loading && totalPages > 1 && (
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <p className="text-xs text-zinc-500">
-            Page {page} of {totalPages} · {total} result{total !== 1 ? "s" : ""}
-          </p>
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <PageBtn n={page - 1} disabled={page <= 1}>← Prev</PageBtn>
-            {/* Show at most 5 page buttons around current page */}
-            {Array.from({ length: totalPages }, (_, i) => i + 1)
-              .filter((n) => n === 1 || n === totalPages || Math.abs(n - page) <= 2)
-              .reduce<(number | "…")[]>((acc, n, i, arr) => {
-                if (i > 0 && n - (arr[i - 1] as number) > 1) acc.push("…");
-                acc.push(n);
-                return acc;
-              }, [])
-              .map((n, i) =>
-                n === "…" ? (
-                  <span key={`gap-${i}`} className="px-2 text-zinc-600 text-xs">…</span>
-                ) : (
-                  <PageBtn key={n} n={n as number}>{n}</PageBtn>
-                )
-              )}
-            <PageBtn n={page + 1} disabled={page >= totalPages}>Next →</PageBtn>
-          </div>
-        </div>
-      )}
+      {!loading && <Pagination page={page} totalPages={totalPages} total={total} onChange={setPage} />}
     </div>
   );
 }
@@ -293,6 +319,7 @@ export default function ReviewsPage() {
   const { data, token, toast, refresh } = useAdmin();
   const [selected, setSelected] = useState<BizSummary | null>(null);
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [listVersion, setListVersion] = useState(0);
 
   return (
     <>
@@ -302,6 +329,7 @@ export default function ReviewsPage() {
           token={token}
           toast={toast}
           onBack={() => setSelected(null)}
+          onAdded={() => setListVersion((v) => v + 1)}
         />
       ) : (
         <BusinessList
@@ -309,7 +337,7 @@ export default function ReviewsPage() {
           toast={toast}
           onSelect={setSelected}
           onBulkOpen={() => setBulkOpen(true)}
-          businesses={(data.b as Row[]) || []}
+          refreshToken={listVersion}
         />
       )}
       <BulkReviewUploadModal
@@ -317,7 +345,7 @@ export default function ReviewsPage() {
         businesses={(data.b as Row[]) || []}
         token={token}
         onClose={() => setBulkOpen(false)}
-        onRefresh={refresh}
+        onRefresh={async () => { await refresh(); setListVersion((v) => v + 1); }}
         toast={toast}
       />
     </>

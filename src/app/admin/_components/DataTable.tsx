@@ -22,6 +22,9 @@ const STATUS_TONE: Record<string, string> = {
   expired: "bg-red-500/10 text-red-400 border-red-500/20",
   lost: "bg-red-500/10 text-red-400 border-red-500/20",
   damaged: "bg-red-500/10 text-red-400 border-red-500/20",
+  unused: "bg-zinc-700/50 text-zinc-300 border-zinc-600",
+  reserved: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+  used: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
 };
 const STATUS_DOT: Record<string, string> = {
   active: "bg-emerald-400",
@@ -31,6 +34,9 @@ const STATUS_DOT: Record<string, string> = {
   expired: "bg-red-400",
   lost: "bg-red-400",
   damaged: "bg-red-400",
+  unused: "bg-zinc-400",
+  reserved: "bg-amber-400",
+  used: "bg-emerald-400",
 };
 
 export function DataTable({

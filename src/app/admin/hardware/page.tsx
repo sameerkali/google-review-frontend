@@ -4,19 +4,20 @@ import { useState } from "react";
 import { api } from "@/lib/api";
 import { useAdmin } from "../_lib/context";
 import type { Row } from "../_lib/types";
+import { usePaginatedList } from "../_lib/usePaginatedList";
 import { ListTab } from "../_components/ListTab";
 import { HardwareEditModal } from "../_components/HardwareEditModal";
 import { ConfirmDialog } from "../_components/ConfirmDialog";
 import { PencilIcon, TrashIcon } from "../_lib/icons";
 
 export default function HardwarePage() {
-  const { data, dataLoading, token, toast, create, refresh } = useAdmin();
-  const hardwareRaw = (data.h as Row[]) || [];
+  const { data, token, toast, create, refresh } = useAdmin();
   const businesses = (data.b as Row[]) || [];
+  const list = usePaginatedList("/admin/hardware", token, toast);
 
   // Populated assignedBusinessId (an object) → flatten to a plain "business" column
   // the shared DataTable can render, instead of showing raw ids or [object Object].
-  const rows = hardwareRaw.map((h) => ({
+  const rows = list.rows.map((h) => ({
     ...h,
     business: h.assignedBusinessId && typeof h.assignedBusinessId === "object" ? h.assignedBusinessId.name : "—",
   }));
@@ -24,11 +25,15 @@ export default function HardwarePage() {
   const [editHardware, setEditHardware] = useState<Row | null>(null);
   const [deleteHardware, setDeleteHardware] = useState<Row | null>(null);
 
+  // Both the bootstrapped admin data (used for dropdowns elsewhere) and this
+  // page's own paginated slice need to reflect any change made here.
+  const refreshAll = async () => { await Promise.all([refresh(), list.reload()]); };
+
   const confirmDelete = async () => {
     if (!deleteHardware) return;
     try {
       await api(`/admin/hardware/${deleteHardware._id}`, { method: "DELETE", token });
-      await refresh();
+      await refreshAll();
       toast("info", `Hardware "${deleteHardware.serial}" deleted`);
       setDeleteHardware(null);
     } catch (e) {
@@ -42,10 +47,24 @@ export default function HardwarePage() {
         title="Hardware Management"
         rows={rows}
         cols={["type", "serial", "business", "status"]}
-        onAdd={(body) => create("hardware", { items: [body] }).then(Boolean)}
+        onAdd={async (body) => {
+          const created = await create("hardware", { items: [body] });
+          if (created) await list.reload();
+          return Boolean(created);
+        }}
         addFields={["type", "serial"]}
-        loading={dataLoading}
+        loading={list.loading}
         toast={toast}
+        pagination={{
+          search: list.search,
+          onSearchChange: list.changeSearch,
+          page: list.page,
+          totalPages: list.totalPages,
+          total: list.total,
+          onPageChange: list.setPage,
+          limit: list.limit,
+          onLimitChange: list.changeLimit,
+        }}
         renderActions={(row) => (
           <>
             <button
@@ -75,7 +94,7 @@ export default function HardwarePage() {
           businesses={businesses}
           token={token}
           onClose={() => setEditHardware(null)}
-          onRefresh={refresh}
+          onRefresh={refreshAll}
           toast={toast}
         />
       )}

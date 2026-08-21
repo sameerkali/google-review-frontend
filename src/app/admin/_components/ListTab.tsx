@@ -3,12 +3,26 @@
 import { useState } from "react";
 import type { Row, ToastFn } from "../_lib/types";
 import { FIELD_LABELS, FIELD_OPTIONS, REQUIRED_FIELDS, validate } from "../_lib/validators";
-import { AlertIcon, PlusIcon } from "../_lib/icons";
+import { AlertIcon, PlusIcon, SearchIcon } from "../_lib/icons";
 import { Spinner } from "./Loaders";
 import { DataTable } from "./DataTable";
+import { Pagination } from "./Pagination";
+
+const PAGE_SIZES = [10, 25, 50, 100];
+
+export interface PaginationControls {
+  search: string;
+  onSearchChange: (v: string) => void;
+  page: number;
+  totalPages: number;
+  total: number;
+  onPageChange: (page: number) => void;
+  limit: number;
+  onLimitChange: (limit: number) => void;
+}
 
 export function ListTab({
-  title, rows, cols, onAdd, addFields, loading, toast, onAddClick, renderActions, secondaryAction,
+  title, rows, cols, onAdd, addFields, loading, toast, onAddClick, renderActions, secondaryAction, pagination,
 }: {
   title: string;
   rows: Row[];
@@ -23,6 +37,8 @@ export function ListTab({
   renderActions?: (row: Row) => React.ReactNode;
   /** Optional secondary header button (e.g. "Upload JSON" on the Reviews tab). */
   secondaryAction?: { label: string; icon: React.ReactNode; onClick: () => void };
+  /** When provided, renders a search box and page controls, backed by server-side pagination. */
+  pagination?: PaginationControls;
 }) {
   const fields = addFields || [];
   const emptyForm = Object.fromEntries(fields.map((f) => [f, FIELD_OPTIONS[f]?.[0] || ""]));
@@ -57,9 +73,23 @@ export function ListTab({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-lg font-semibold text-white">{title}</h2>
-          <p className="text-sm text-zinc-500 mt-0.5">{rows.length} record{rows.length !== 1 ? "s" : ""} total</p>
+          <p className="text-sm text-zinc-500 mt-0.5">
+            {(pagination?.total ?? rows.length)} record{(pagination?.total ?? rows.length) !== 1 ? "s" : ""} total
+          </p>
         </div>
         <div className="flex items-center gap-2">
+          {pagination && (
+            <div className="relative">
+              <SearchIcon className="w-3.5 h-3.5 text-zinc-600 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                type="text"
+                value={pagination.search}
+                onChange={(e) => pagination.onSearchChange(e.target.value)}
+                placeholder="Search…"
+                className="w-40 sm:w-56 rounded-xl border border-zinc-700 bg-zinc-900 pl-9 pr-3 py-2 text-sm text-white placeholder-zinc-600 outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/15 transition-all duration-200"
+              />
+            </div>
+          )}
           {secondaryAction && (
             <button
               onClick={secondaryAction.onClick}
@@ -158,6 +188,19 @@ export function ListTab({
       )}
 
       <DataTable rows={rows} cols={cols} loading={loading} toast={toast} renderActions={renderActions} />
+
+      {pagination && !loading && (
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <Pagination page={pagination.page} totalPages={pagination.totalPages} total={pagination.total} onChange={pagination.onPageChange} />
+          <select
+            value={pagination.limit}
+            onChange={(e) => pagination.onLimitChange(Number(e.target.value))}
+            className="rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-xs text-zinc-300 outline-none focus:border-emerald-500/50 cursor-pointer self-start sm:self-auto"
+          >
+            {PAGE_SIZES.map((s) => <option key={s} value={s}>{s} per page</option>)}
+          </select>
+        </div>
+      )}
     </div>
   );
 }

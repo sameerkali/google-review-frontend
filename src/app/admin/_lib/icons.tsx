@@ -59,14 +59,6 @@ export function AnalyticsIcon(props: IconProps) {
   );
 }
 
-export function SimulatorIcon(props: IconProps) {
-  return (
-    <svg {...base(props)}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z" />
-    </svg>
-  );
-}
-
 export function PlusIcon(props: IconProps) {
   return (
     <svg {...base({ strokeWidth: 2, ...props })}>
@@ -197,6 +189,14 @@ export function UserIcon(props: IconProps) {
   );
 }
 
+export function SearchIcon(props: IconProps) {
+  return (
+    <svg {...base({ strokeWidth: 2, ...props })}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+    </svg>
+  );
+}
+
 export function UploadIcon(props: IconProps) {
   return (
     <svg {...base({ strokeWidth: 2, ...props })}>
@@ -220,5 +220,4 @@ export const TAB_ICONS = {
   hardware: HardwareIcon,
   reviews: ReviewsIcon,
   analytics: AnalyticsIcon,
-  simulator: SimulatorIcon,
 } as const;

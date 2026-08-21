@@ -1,12 +1,55 @@
 "use client";
 
+import Link from "next/link";
 import { useAdmin } from "../_lib/context";
-import { PlusIcon } from "../_lib/icons";
+import type { Row } from "../_lib/types";
+import { AlertIcon, HardwareIcon, PlusIcon, QrIcon } from "../_lib/icons";
 import { Skeleton } from "../_components/Loaders";
+
+function timeAgo(iso?: string): string {
+  if (!iso) return "";
+  const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
+  if (s < 60) return "just now";
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+  return `${Math.floor(s / 86400)}d ago`;
+}
+
+const EVENT_LABEL: Record<string, string> = { scan: "scanned the QR", google_click: "opened Google Reviews", review_copy: "copied a review" };
+
+function hasLinkedHardware(business: Row, hardwareList: Row[]): boolean {
+  return hardwareList.some((h) => {
+    const assigned = h.assignedBusinessId;
+    const id = assigned && typeof assigned === "object" ? assigned._id : assigned;
+    return id === business._id;
+  });
+}
 
 export default function OverviewPage() {
   const { data, dataLoading, openWizard } = useAdmin();
   const ov = data.ov as Record<string, number> | undefined;
+  const businesses = (data.b as Row[]) || [];
+  const hardware = (data.h as Row[]) || [];
+  const events = ((data.a as Row | undefined)?.rows as Row[] | undefined) || [];
+
+  const businessName = (id: unknown) => businesses.find((b) => b._id === String(id))?.name || "Unknown business";
+
+  const needsAttention = [
+    ...businesses.filter((b) => b.status === "suspended" || b.status === "expired").map((b) => ({ b, reason: `${b.status}` })),
+    ...businesses.filter((b) => b.status === "active" && !hasLinkedHardware(b, hardware)).map((b) => ({ b, reason: "no QR linked yet" })),
+  ].slice(0, 5);
+
+  const hardwareByStatus = {
+    available: hardware.filter((h) => h.status === "available").length,
+    assigned: hardware.filter((h) => h.status === "assigned").length,
+    lost: hardware.filter((h) => h.status === "lost").length,
+    damaged: hardware.filter((h) => h.status === "damaged").length,
+  };
+  const lowStock = hardwareByStatus.available < 3;
+
+  const recentEvents = [...events]
+    .sort((a, b) => new Date(String(b.createdAt)).getTime() - new Date(String(a.createdAt)).getTime())
+    .slice(0, 8);
 
   const cards = [
     { label: "Total Businesses", value: ov?.businesses },
@@ -30,6 +73,7 @@ export default function OverviewPage() {
           Onboard New Business
         </button>
       </div>
+
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {cards.map(({ label, value }) => (
           <div key={label} className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5 space-y-3 hover:border-zinc-700 transition-colors duration-200">
@@ -41,9 +85,94 @@ export default function OverviewPage() {
           </div>
         ))}
       </div>
+
       {!ov && !dataLoading && (
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-8 text-center">
           <p className="text-zinc-500 text-sm">Click Refresh to load data.</p>
+        </div>
+      )}
+
+      {!dataLoading && ov && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Needs attention */}
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                <AlertIcon className="w-4 h-4 text-amber-400" />
+                Needs Attention
+              </h3>
+              <Link href="/admin/businesses" className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors">View all →</Link>
+            </div>
+            {needsAttention.length ? (
+              <ul className="space-y-2.5">
+                {needsAttention.map(({ b, reason }) => (
+                  <li key={b._id} className="flex items-center justify-between gap-3 text-sm">
+                    <span className="text-zinc-200 truncate">{b.name}</span>
+                    <span className="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-full px-2 py-0.5 shrink-0">{reason}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-zinc-500">Nothing needs attention — every active business has a QR linked.</p>
+            )}
+          </div>
+
+          {/* Hardware stock */}
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                <HardwareIcon className="w-4 h-4 text-blue-400" />
+                Hardware Stock
+              </h3>
+              <Link href="/admin/hardware" className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors">View all →</Link>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <p className="text-2xl font-bold text-white">{hardwareByStatus.available}</p>
+                <p className="text-xs text-zinc-500">Available</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-white">{hardwareByStatus.assigned}</p>
+                <p className="text-xs text-zinc-500">Assigned</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-white">{hardwareByStatus.lost}</p>
+                <p className="text-xs text-zinc-500">Lost</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-white">{hardwareByStatus.damaged}</p>
+                <p className="text-xs text-zinc-500">Damaged</p>
+              </div>
+            </div>
+            {lowStock && (
+              <p className="flex items-center gap-1.5 text-xs text-amber-400">
+                <AlertIcon className="w-3.5 h-3.5 shrink-0" />
+                Running low on unassigned stock — register more hardware soon.
+              </p>
+            )}
+          </div>
+
+          {/* Recent activity */}
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5 space-y-4 lg:col-span-2">
+            <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+              <QrIcon className="w-4 h-4 text-emerald-400" />
+              Recent Activity
+            </h3>
+            {recentEvents.length ? (
+              <ul className="divide-y divide-zinc-800">
+                {recentEvents.map((e) => (
+                  <li key={String(e._id)} className="flex items-center justify-between gap-3 py-2.5 text-sm">
+                    <span className="text-zinc-300 truncate">
+                      <span className="text-white font-medium">{businessName(e.businessId)}</span> {EVENT_LABEL[String(e.eventType)] || e.eventType}
+                    </span>
+                    <span className="text-xs text-zinc-600 shrink-0">{timeAgo(String(e.createdAt))}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-zinc-500">No activity yet — scans and clicks will show up here.</p>
+            )}
+          </div>
         </div>
       )}
     </div>

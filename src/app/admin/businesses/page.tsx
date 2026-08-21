@@ -4,6 +4,7 @@ import { useState } from "react";
 import { api } from "@/lib/api";
 import { useAdmin } from "../_lib/context";
 import type { Row } from "../_lib/types";
+import { usePaginatedList } from "../_lib/usePaginatedList";
 import { ListTab } from "../_components/ListTab";
 import { QrViewModal } from "../_components/QrViewModal";
 import { BusinessEditModal } from "../_components/BusinessEditModal";
@@ -19,19 +20,31 @@ function hasLinkedHardware(business: Row, hardwareList: Row[]): boolean {
 }
 
 export default function BusinessesPage() {
-  const { data, dataLoading, token, toast, openWizard, refresh } = useAdmin();
-  const businesses = (data.b as Row[]) || [];
+  const { data, token, toast, openWizard, refresh } = useAdmin();
   const hardware = (data.h as Row[]) || [];
+  const plans = (data.p as Row[]) || [];
+  const list = usePaginatedList("/admin/business", token, toast);
+
+  // Populated planId (an object) → flatten to a plain "plan" column the shared
+  // DataTable can render, instead of showing raw ids or [object Object].
+  const rows = list.rows.map((b) => ({
+    ...b,
+    plan: b.planId && typeof b.planId === "object" ? b.planId.name : "—",
+  }));
 
   const [qrBusiness, setQrBusiness] = useState<Row | null>(null);
   const [editBusiness, setEditBusiness] = useState<Row | null>(null);
   const [deleteBusiness, setDeleteBusiness] = useState<Row | null>(null);
 
+  // Both the bootstrapped admin data (used for dropdowns elsewhere) and this
+  // page's own paginated slice need to reflect any change made here.
+  const refreshAll = async () => { await Promise.all([refresh(), list.reload()]); };
+
   const confirmDelete = async () => {
     if (!deleteBusiness) return;
     try {
       await api(`/admin/business/${deleteBusiness._id}`, { method: "DELETE", token });
-      await refresh();
+      await refreshAll();
       toast("info", `${deleteBusiness.name} deleted`);
       setDeleteBusiness(null);
     } catch (e) {
@@ -43,11 +56,21 @@ export default function BusinessesPage() {
     <>
       <ListTab
         title="Business Management"
-        rows={businesses}
-        cols={["_id", "name", "email", "phone", "status"]}
+        rows={rows}
+        cols={["_id", "name", "email", "phone", "status", "plan"]}
         onAddClick={openWizard}
-        loading={dataLoading}
+        loading={list.loading}
         toast={toast}
+        pagination={{
+          search: list.search,
+          onSearchChange: list.changeSearch,
+          page: list.page,
+          totalPages: list.totalPages,
+          total: list.total,
+          onPageChange: list.setPage,
+          limit: list.limit,
+          onLimitChange: list.changeLimit,
+        }}
         renderActions={(row) => (
           <>
             <button
@@ -85,7 +108,7 @@ export default function BusinessesPage() {
           hardwareList={hardware}
           token={token}
           onClose={() => setQrBusiness(null)}
-          onRefresh={refresh}
+          onRefresh={refreshAll}
           toast={toast}
         />
       )}
@@ -94,9 +117,10 @@ export default function BusinessesPage() {
         <BusinessEditModal
           key={editBusiness._id}
           business={editBusiness}
+          plans={plans}
           token={token}
           onClose={() => setEditBusiness(null)}
-          onRefresh={refresh}
+          onRefresh={refreshAll}
           toast={toast}
         />
       )}

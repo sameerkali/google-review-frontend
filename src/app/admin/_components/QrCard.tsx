@@ -5,7 +5,7 @@ import QRCode from "qrcode";
 import type { ToastFn } from "../_lib/types";
 import { CheckIcon, CopyIcon, ExternalLinkIcon } from "../_lib/icons";
 
-/* ─── QR Card (shared: QR Simulator, Businesses "View QR", Onboarding Wizard) ── */
+/* ─── QR Card (shared: Businesses "View QR", Onboarding Wizard) ── */
 export function QrCard({
   reviewUrl, businessName, toast, badgeLabel = "Verified", compact = false,
 }: {
