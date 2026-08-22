@@ -4,11 +4,12 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { AdminProvider, useAdmin } from "./_lib/context";
-import type { Row } from "./_lib/types";
-import { ToastContainer } from "./_components/Toast";
+import type { Row } from "@/lib/types";
+import { ToastContainer } from "@/components/Toast";
 import { OnboardWizard } from "./_components/OnboardWizard";
-import { FullPageSpinner, Spinner } from "./_components/Loaders";
-import { LogoutIcon, MenuIcon, RefreshIcon, ShieldIcon, TAB_ICONS } from "./_lib/icons";
+import { FullPageSpinner, Spinner } from "@/components/Loaders";
+import { LogoutIcon, MenuIcon, RefreshIcon, ShieldIcon, TAB_ICONS } from "@/components/icons";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const NAV: { href: string; key: keyof typeof TAB_ICONS; label: string; hidden?: boolean }[] = [
   { href: "/admin/overview", key: "overview", label: "Overview" },
@@ -57,7 +58,7 @@ function AdminShell({ children }: { children: React.ReactNode }) {
   const activeLabel = NAV.find((n) => n.key === activeKey)?.label || "Admin";
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex">
+    <div className="min-h-screen bg-background flex">
       <ToastContainer toasts={toasts} dismiss={dismissToast} />
       <OnboardWizard
         key={wizardKey}
@@ -76,18 +77,18 @@ function AdminShell({ children }: { children: React.ReactNode }) {
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 h-full z-30 w-60 bg-zinc-900 border-r border-zinc-800 flex flex-col transition-transform duration-300 lg:translate-x-0 ${
+        className={`fixed top-0 left-0 h-full z-30 w-60 bg-surface border-r border-border flex flex-col transition-transform duration-300 lg:translate-x-0 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="px-5 py-5 border-b border-zinc-800">
+        <div className="px-5 py-5 border-b border-border">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30">
-              <ShieldIcon className="w-4 h-4 text-emerald-400" />
+            <div className="w-8 h-8 rounded-lg bg-brand/20 flex items-center justify-center border border-brand/30">
+              <ShieldIcon className="w-4 h-4 text-brand" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-white">Admin</p>
-              <p className="text-xs text-zinc-500">QR Review Platform</p>
+              <p className="text-sm font-semibold text-fg">Admin</p>
+              <p className="text-xs text-fg-tertiary">QR Review Platform</p>
             </div>
           </div>
         </div>
@@ -103,13 +104,13 @@ function AdminShell({ children }: { children: React.ReactNode }) {
                 prefetch
                 onClick={() => setSidebarOpen(false)}
                 aria-current={active ? "page" : undefined}
-                className={`w-full flex items-center gap-3 rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors duration-150 cursor-pointer text-left outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40 ${
+                className={`w-full flex items-center gap-3 rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors duration-150 cursor-pointer text-left outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
                   active
-                    ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/20"
-                    : "border-transparent text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800"
+                    ? "bg-brand/15 text-brand border-brand/20"
+                    : "border-transparent text-fg-tertiary hover:text-fg hover:bg-surface-inset"
                 }`}
               >
-                <span className={active ? "text-emerald-400" : "text-zinc-600"}>
+                <span className={active ? "text-brand" : "text-fg-quaternary"}>
                   <Icon className="w-4 h-4" />
                 </span>
                 {label}
@@ -118,10 +119,10 @@ function AdminShell({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
-        <div className="px-3 py-4 border-t border-zinc-800">
+        <div className="px-3 py-4 border-t border-border">
           <button
             onClick={() => signOut()}
-            className="w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-500 hover:text-red-400 hover:bg-red-500/8 transition-all duration-150 cursor-pointer"
+            className="w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-fg-tertiary hover:text-danger hover:bg-danger/8 transition-all duration-150 cursor-pointer"
           >
             <LogoutIcon className="w-4 h-4" />
             Sign out
@@ -131,18 +132,18 @@ function AdminShell({ children }: { children: React.ReactNode }) {
 
       {/* Main */}
       <div className="flex-1 flex flex-col min-h-screen lg:ml-60">
-        <header className="sticky top-0 z-10 bg-zinc-950/80 border-b border-zinc-800 px-5 py-3 flex items-center justify-between backdrop-blur-md">
+        <header className="sticky top-0 z-10 bg-background/80 border-b border-border px-5 py-3 flex items-center justify-between backdrop-blur-md">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="lg:hidden rounded-lg p-2 text-zinc-500 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer"
+              className="lg:hidden rounded-lg p-2 text-fg-tertiary hover:text-fg hover:bg-surface-inset transition-colors cursor-pointer"
               aria-label="Open navigation menu"
             >
               <MenuIcon className="w-5 h-5" />
             </button>
             <div>
-              <h1 className="text-sm font-semibold text-white">{activeLabel}</h1>
-              <p className="text-xs text-zinc-600 hidden sm:block">QR Review Platform · Admin Dashboard</p>
+              <h1 className="text-sm font-semibold text-fg">{activeLabel}</h1>
+              <p className="text-xs text-fg-quaternary hidden sm:block">QR Review Platform · Admin Dashboard</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -150,11 +151,12 @@ function AdminShell({ children }: { children: React.ReactNode }) {
             <button
               onClick={() => refresh()}
               disabled={dataLoading}
-              className="flex items-center gap-1.5 rounded-lg border border-zinc-700 px-3 py-1.5 text-xs font-medium text-zinc-400 hover:text-white hover:border-zinc-600 transition-all duration-150 cursor-pointer disabled:opacity-40"
+              className="flex items-center gap-1.5 rounded-lg border border-border-strong px-3 py-1.5 text-xs font-medium text-fg-tertiary hover:text-fg hover:border-fg-quaternary transition-all duration-150 cursor-pointer disabled:opacity-40"
             >
               <RefreshIcon className={`w-3.5 h-3.5 ${dataLoading ? "animate-spin" : ""}`} />
               Refresh
             </button>
+            <ThemeToggle />
           </div>
         </header>
 

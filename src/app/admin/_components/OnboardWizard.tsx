@@ -2,13 +2,15 @@
 
 import { useState } from "react";
 import { api } from "@/lib/api";
-import type { Row, ToastFn } from "../_lib/types";
+import type { Row, ToastFn } from "@/lib/types";
 import { validate } from "../_lib/validators";
-import { AlertIcon, CheckIcon, CloseIcon, CopyIcon, PlusIcon } from "../_lib/icons";
+import { AlertIcon, CheckIcon, CloseIcon, CopyIcon, PlusIcon } from "@/components/icons";
 import { generatePassword } from "../_lib/generatePassword";
-import { useEscapeKey } from "../_lib/useEscapeKey";
-import { Spinner } from "./Loaders";
-import { QrCard } from "./QrCard";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
+import { QrCard } from "@/components/QrCard";
+import { Modal, ModalHeader } from "@/components/ui/Modal";
+import { Button } from "@/components/ui/Button";
+import { Field, Input, Select, Textarea, Label } from "@/components/ui/Input";
 
 /* ─── Onboarding Wizard ──────────────────────────────────────────────
    Single guided flow that replaces the old "register hardware, then
@@ -178,37 +180,19 @@ export function OnboardWizard({
   const stepIndex = WIZARD_STEPS.findIndex((s) => s.key === step);
 
   return (
-    <div
-      className="fixed inset-0 z-40 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
-      onClick={(e) => { if (e.target === e.currentTarget && !submitting) onClose(); }}
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="wizard-title"
-        className="w-full max-w-lg rounded-2xl border border-zinc-800 bg-zinc-900 shadow-2xl max-h-[90vh] flex flex-col"
-      >
+    <Modal open={open} onClose={submitting ? undefined : onClose} maxWidth="lg" labelledBy="wizard-title">
+      <div className="max-h-[85vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800 shrink-0">
-          <div>
-            <h2 id="wizard-title" className="text-sm font-semibold text-white">
-              {step === "success" ? "Business Onboarded" : "Onboard New Business"}
-            </h2>
-            {step !== "success" && (
-              <p className="text-xs text-zinc-500 mt-0.5">
-                Step {stepIndex + 1} of {WIZARD_STEPS.length} — {WIZARD_STEPS[stepIndex].label}
-              </p>
-            )}
-          </div>
-          <button
-            onClick={() => !submitting && onClose()}
-            aria-label="Close onboarding wizard"
-            disabled={submitting}
-            className="rounded-lg p-1.5 text-zinc-500 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <CloseIcon className="w-4 h-4" />
-          </button>
-        </div>
+        <ModalHeader onClose={submitting ? undefined : onClose}>
+          <h2 id="wizard-title" className="text-sm font-semibold text-fg">
+            {step === "success" ? "Business Onboarded" : "Onboard New Business"}
+          </h2>
+          {step !== "success" && (
+            <p className="text-xs text-fg-tertiary mt-0.5">
+              Step {stepIndex + 1} of {WIZARD_STEPS.length} — {WIZARD_STEPS[stepIndex].label}
+            </p>
+          )}
+        </ModalHeader>
 
         {/* Progress bar */}
         {step !== "success" && (
@@ -216,7 +200,7 @@ export function OnboardWizard({
             {WIZARD_STEPS.map((s, i) => (
               <div
                 key={s.key}
-                className={`h-1 flex-1 rounded-full transition-colors duration-300 ${i <= stepIndex ? "bg-emerald-500" : "bg-zinc-800"}`}
+                className={`h-1 flex-1 rounded-full transition-colors duration-300 ${i <= stepIndex ? "bg-brand" : "bg-surface-inset"}`}
               />
             ))}
           </div>
@@ -225,7 +209,7 @@ export function OnboardWizard({
         {/* Body */}
         <div className="px-6 py-5 space-y-4 overflow-y-auto">
           {serverError && step !== "success" && (
-            <div role="alert" className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300 flex items-start gap-2">
+            <div role="alert" className="rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger flex items-start gap-2">
               <AlertIcon className="w-4 h-4 shrink-0 mt-0.5" />
               <span>{serverError}</span>
             </div>
@@ -234,11 +218,8 @@ export function OnboardWizard({
           {step === "details" && (
             <div className="space-y-4">
               {DETAIL_FIELDS.map(({ f, label, required }, i) => (
-                <div key={f} className="space-y-1.5">
-                  <label htmlFor={`wiz-${f}`} className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
-                    {label}{required && <span className="text-red-400 ml-1">*</span>}
-                  </label>
-                  <input
+                <Field key={f} label={`${label}${required ? " *" : ""}`} htmlFor={`wiz-${f}`} error={detailErrors[f]}>
+                  <Input
                     id={`wiz-${f}`}
                     autoFocus={i === 0}
                     type={f === "email" ? "email" : "text"}
@@ -251,54 +232,36 @@ export function OnboardWizard({
                     onBlur={() => { setDetailTouched((t) => ({ ...t, [f]: true })); validateDetailField(f, details); }}
                     aria-invalid={!!detailErrors[f]}
                     placeholder={f === "googleReviewUrl" ? "https://maps.google.com/..." : label}
-                    className={`w-full rounded-xl border px-4 py-2.5 text-sm text-white bg-zinc-800 placeholder-zinc-600 outline-none transition-all duration-200 focus:ring-1 ${
-                      detailErrors[f]
-                        ? "border-red-500/60 focus:border-red-500 focus:ring-red-500/20"
-                        : "border-zinc-700 focus:border-emerald-500/50 focus:ring-emerald-500/15"
-                    }`}
+                    error={!!detailErrors[f]}
                   />
-                  {detailErrors[f] && <p role="alert" className="text-xs text-red-400">{detailErrors[f]}</p>}
-                </div>
+                </Field>
               ))}
-              <div className="space-y-1.5">
-                <label htmlFor="wiz-plan" className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
-                  Plan
-                </label>
-                <select
-                  id="wiz-plan"
-                  value={planId}
-                  onChange={(e) => setPlanId(e.target.value)}
-                  className="w-full rounded-xl border border-zinc-700 px-4 py-2.5 text-sm text-white bg-zinc-800 outline-none transition-all duration-200 focus:ring-1 focus:border-emerald-500/50 focus:ring-emerald-500/15"
-                >
+              <div>
+                <Label htmlFor="wiz-plan">Plan</Label>
+                <Select id="wiz-plan" value={planId} onChange={(e) => setPlanId(e.target.value)}>
                   <option value="">— none yet —</option>
                   {plans.map((p) => <option key={p._id} value={p._id}>{p.name} · ₹{p.price}{p.billingType === "monthly" ? "/mo" : p.billingType === "annually" ? "/yr" : ""}</option>)}
-                </select>
+                </Select>
                 {!plans.length && (
-                  <p className="text-xs text-zinc-600">No plans set up yet — add one from the Plans tab, or leave this business unassigned for now.</p>
+                  <p className="mt-1.5 text-xs text-fg-quaternary">No plans set up yet — add one from the Plans tab, or leave this business unassigned for now.</p>
                 )}
               </div>
-              <div className="space-y-1.5">
-                <label htmlFor="wiz-password" className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
-                  Business Portal Password
-                </label>
+              <div>
+                <Label htmlFor="wiz-password">Business Portal Password</Label>
                 <div className="flex gap-2">
-                  <input
+                  <Input
                     id="wiz-password"
                     type="text"
                     value={portalPassword}
                     onChange={(e) => setPortalPassword(e.target.value)}
                     placeholder="Leave blank to set up later"
-                    className="flex-1 min-w-0 rounded-xl border border-zinc-700 px-4 py-2.5 text-sm text-white bg-zinc-800 placeholder-zinc-600 outline-none transition-all duration-200 focus:ring-1 focus:border-emerald-500/50 focus:ring-emerald-500/15 font-mono"
+                    className="flex-1 min-w-0 font-mono"
                   />
-                  <button
-                    type="button"
-                    onClick={() => setPortalPassword(generatePassword())}
-                    className="shrink-0 rounded-xl border border-zinc-700 px-4 py-2.5 text-sm font-medium text-zinc-300 hover:text-white hover:border-zinc-600 transition-all duration-150 cursor-pointer"
-                  >
+                  <Button type="button" variant="secondary" onClick={() => setPortalPassword(generatePassword())} className="shrink-0">
                     Generate
-                  </button>
+                  </Button>
                 </div>
-                <p className="text-xs text-zinc-600">
+                <p className="mt-1.5 text-xs text-fg-quaternary">
                   Lets the business owner log into their own dashboard at /business/login to see their stats and manage reviews. You&apos;ll see this password once more on the next screen — share it with them.
                 </p>
               </div>
@@ -307,32 +270,30 @@ export function OnboardWizard({
 
           {step === "code" && (
             <div className="space-y-4">
-              <p className="text-sm text-zinc-400">
+              <p className="text-sm text-fg-tertiary">
                 This code goes on the physical QR stand, table tent, or NFC tag for{" "}
-                <span className="text-white font-medium">{details.name || "this business"}</span>.
+                <span className="text-fg font-medium">{details.name || "this business"}</span>.
               </p>
-              <div className="space-y-1.5">
-                <label htmlFor="wiz-code" className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
-                  Hardware Serial / Code
-                </label>
-                <input
+              <div>
+                <Label htmlFor="wiz-code">Hardware Serial / Code</Label>
+                <Input
                   id="wiz-code"
                   autoFocus
                   type="text"
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
                   placeholder="e.g. CAFE-DELHI"
-                  className="w-full rounded-xl border border-zinc-700 px-4 py-2.5 text-sm text-white bg-zinc-800 placeholder-zinc-600 outline-none transition-all duration-200 focus:ring-1 focus:border-emerald-500/50 focus:ring-emerald-500/15 font-mono"
+                  className="font-mono"
                 />
-                <p className="text-xs text-zinc-600">
+                <p className="mt-1.5 text-xs text-fg-quaternary">
                   {codeTouched
                     ? "Doesn't need to exist yet — it's set up automatically when you finish."
                     : "Suggested from the business name — edit it if you already have a physical code."}
                 </p>
               </div>
               {availableHardware.length > 0 && (
-                <div className="space-y-1.5">
-                  <p className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Or use unassigned hardware already in stock</p>
+                <div>
+                  <p className="text-xs font-medium text-fg-tertiary uppercase tracking-wider mb-1.5">Or use unassigned hardware already in stock</p>
                   <div className="flex flex-wrap gap-2">
                     {availableHardware.map((h) => (
                       <button
@@ -341,11 +302,11 @@ export function OnboardWizard({
                         onClick={() => setCode(h.serial)}
                         className={`rounded-lg border px-3 py-1.5 text-xs font-mono transition-colors cursor-pointer ${
                           code === h.serial
-                            ? "border-emerald-500 bg-emerald-500/10 text-emerald-400"
-                            : "border-zinc-700 text-zinc-400 hover:border-zinc-600 hover:text-white"
+                            ? "border-brand bg-brand/10 text-brand"
+                            : "border-border-strong text-fg-tertiary hover:border-fg-quaternary hover:text-fg"
                         }`}
                       >
-                        {h.serial} <span className="text-zinc-600">· {h.type}</span>
+                        {h.serial} <span className="text-fg-quaternary">· {h.type}</span>
                       </button>
                     ))}
                   </div>
@@ -356,25 +317,25 @@ export function OnboardWizard({
 
           {step === "reviews" && (
             <div className="space-y-4">
-              <p className="text-sm text-zinc-400">
+              <p className="text-sm text-fg-tertiary">
                 Pre-written reviews shown to customers after they scan — optional, but they significantly increase conversion. You can add more later too.
               </p>
               {reviews.map((r, i) => (
                 <div key={i} className="flex gap-2 items-start">
-                  <textarea
+                  <Textarea
                     autoFocus={i === 0}
                     value={r}
                     onChange={(e) => updateReview(i, e.target.value)}
                     rows={2}
                     placeholder={`Suggestion ${i + 1}, e.g. "Great coffee and quick service!"`}
-                    className="flex-1 rounded-xl border border-zinc-700 px-4 py-2.5 text-sm text-white bg-zinc-800 placeholder-zinc-600 outline-none transition-all duration-200 focus:ring-1 focus:border-emerald-500/50 focus:ring-emerald-500/15 resize-none"
+                    className="flex-1"
                   />
                   {reviews.length > 1 && (
                     <button
                       type="button"
                       onClick={() => removeReview(i)}
                       aria-label={`Remove suggestion ${i + 1}`}
-                      className="mt-1 rounded-lg p-2 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer shrink-0"
+                      className="mt-1 rounded-lg p-2 text-fg-tertiary hover:text-danger hover:bg-danger/10 transition-colors cursor-pointer shrink-0"
                     >
                       <CloseIcon className="w-4 h-4" />
                     </button>
@@ -385,9 +346,9 @@ export function OnboardWizard({
                 <button
                   type="button"
                   onClick={addReview}
-                  className="flex items-center gap-1.5 text-xs font-medium text-emerald-400 hover:text-emerald-300 transition-colors cursor-pointer"
+                  className="flex items-center gap-1.5 text-xs font-medium text-brand hover:text-brand-hover transition-colors cursor-pointer"
                 >
-                  <PlusIcon className="w-3.5 h-3.5" strokeWidth={2} />
+                  <PlusIcon className="w-3.5 h-3.5" />
                   Add another suggestion
                 </button>
               )}
@@ -396,20 +357,20 @@ export function OnboardWizard({
 
           {step === "success" && result && (
             <div className="space-y-4">
-              <div className="flex items-center gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3">
-                <div className="w-8 h-8 rounded-full bg-emerald-500/15 flex items-center justify-center shrink-0">
-                  <CheckIcon className="w-4 h-4 text-emerald-400" />
+              <div className="flex items-center gap-3 rounded-xl border border-success/20 bg-success/5 px-4 py-3">
+                <div className="w-8 h-8 rounded-full bg-success/15 flex items-center justify-center shrink-0">
+                  <CheckIcon className="w-4 h-4 text-success" />
                 </div>
-                <p className="text-sm text-emerald-300">
+                <p className="text-sm text-success">
                   <span className="font-semibold">{result.businessName}</span> is set up and ready to collect reviews
                   {planId && plans.find((p) => p._id === planId) ? <> on the <span className="font-semibold">{plans.find((p) => p._id === planId)?.name}</span> plan</> : "."}
                 </p>
               </div>
               {portalPassword.trim() && (
-                <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-4 space-y-2">
-                  <p className="text-xs font-medium text-blue-300 uppercase tracking-wider">Business Portal Login — share this now</p>
-                  <p className="text-xs text-zinc-500">Shown once — it won&apos;t be displayed again after you close this.</p>
-                  <div className="flex items-center justify-between gap-3 rounded-lg bg-zinc-950 border border-zinc-800 px-3 py-2 font-mono text-xs text-zinc-300">
+                <div className="rounded-xl border border-info/20 bg-info/5 p-4 space-y-2">
+                  <p className="text-xs font-medium text-info uppercase tracking-wider">Business Portal Login — share this now</p>
+                  <p className="text-xs text-fg-tertiary">Shown once — it won&apos;t be displayed again after you close this.</p>
+                  <div className="flex items-center justify-between gap-3 rounded-lg bg-background border border-border px-3 py-2 font-mono text-xs text-fg-secondary">
                     <span className="truncate">{details.email.trim()} · {portalPassword.trim()}</span>
                     <button
                       type="button"
@@ -419,9 +380,9 @@ export function OnboardWizard({
                           .then(() => { setCopiedCreds(true); toast("info", "Credentials copied"); setTimeout(() => setCopiedCreds(false), 2500); })
                           .catch(() => toast("error", "Could not copy to clipboard"));
                       }}
-                      className="shrink-0 flex items-center gap-1 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                      className="shrink-0 flex items-center gap-1 text-fg-tertiary hover:text-fg transition-colors cursor-pointer"
                     >
-                      {copiedCreds ? <CheckIcon className="w-3.5 h-3.5 text-emerald-400" /> : <CopyIcon className="w-3.5 h-3.5" />}
+                      {copiedCreds ? <CheckIcon className="w-3.5 h-3.5 text-success" /> : <CopyIcon className="w-3.5 h-3.5" />}
                     </button>
                   </div>
                 </div>
@@ -429,7 +390,7 @@ export function OnboardWizard({
               {result.reviewUrl ? (
                 <QrCard reviewUrl={result.reviewUrl} businessName={result.businessName} toast={toast} badgeLabel="Ready" compact />
               ) : result.codeNotConfirmed ? (
-                <div role="alert" className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-300 flex items-start gap-2">
+                <div role="alert" className="rounded-xl border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning flex items-start gap-2">
                   <AlertIcon className="w-4 h-4 shrink-0 mt-0.5" />
                   <span>
                     The business was created, but the server didn&apos;t confirm the QR code was linked — it may be
@@ -437,7 +398,7 @@ export function OnboardWizard({
                   </span>
                 </div>
               ) : (
-                <p className="text-sm text-zinc-400">
+                <p className="text-sm text-fg-tertiary">
                   No QR code was linked yet — assign hardware to this business anytime from the Businesses tab.
                 </p>
               )}
@@ -446,67 +407,34 @@ export function OnboardWizard({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center gap-3 px-6 py-4 border-t border-zinc-800 shrink-0">
+        <div className="flex items-center gap-3 px-6 py-4 border-t border-border shrink-0">
           {step === "details" && (
-            <button
-              onClick={goToCode}
-              className="ml-auto flex items-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 px-5 py-2.5 text-sm font-semibold text-zinc-950 transition-all duration-150 cursor-pointer"
-            >
+            <Button onClick={goToCode} variant="primary" className="ml-auto">
               Continue
-            </button>
+            </Button>
           )}
           {step === "code" && (
             <>
-              <button
-                onClick={() => setStep("details")}
-                className="rounded-xl border border-zinc-700 px-5 py-2.5 text-sm font-medium text-zinc-400 hover:text-white hover:border-zinc-600 transition-all duration-150 cursor-pointer"
-              >
-                Back
-              </button>
-              <button
-                onClick={() => setStep("reviews")}
-                className="ml-auto flex items-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 px-5 py-2.5 text-sm font-semibold text-zinc-950 transition-all duration-150 cursor-pointer"
-              >
-                Continue
-              </button>
+              <Button onClick={() => setStep("details")} variant="secondary">Back</Button>
+              <Button onClick={() => setStep("reviews")} variant="primary" className="ml-auto">Continue</Button>
             </>
           )}
           {step === "reviews" && (
             <>
-              <button
-                onClick={() => setStep("code")}
-                disabled={submitting}
-                className="rounded-xl border border-zinc-700 px-5 py-2.5 text-sm font-medium text-zinc-400 hover:text-white hover:border-zinc-600 transition-all duration-150 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Back
-              </button>
-              <button
-                onClick={finish}
-                disabled={submitting}
-                className="ml-auto flex items-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-60 px-5 py-2.5 text-sm font-semibold text-zinc-950 transition-all duration-150 cursor-pointer disabled:cursor-not-allowed"
-              >
-                {submitting ? <><Spinner /> Creating…</> : "Finish & Generate QR"}
-              </button>
+              <Button onClick={() => setStep("code")} variant="secondary" disabled={submitting}>Back</Button>
+              <Button onClick={finish} variant="primary" loading={submitting} loadingText="Creating…" className="ml-auto">
+                Finish &amp; Generate QR
+              </Button>
             </>
           )}
           {step === "success" && (
             <>
-              <button
-                onClick={resetAll}
-                className="rounded-xl border border-zinc-700 px-5 py-2.5 text-sm font-medium text-zinc-400 hover:text-white hover:border-zinc-600 transition-all duration-150 cursor-pointer"
-              >
-                Onboard Another
-              </button>
-              <button
-                onClick={onClose}
-                className="ml-auto flex items-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 px-5 py-2.5 text-sm font-semibold text-zinc-950 transition-all duration-150 cursor-pointer"
-              >
-                Done
-              </button>
+              <Button onClick={resetAll} variant="secondary">Onboard Another</Button>
+              <Button onClick={onClose} variant="primary" className="ml-auto">Done</Button>
             </>
           )}
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }

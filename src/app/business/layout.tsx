@@ -4,9 +4,11 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { BusinessProvider, useBusiness } from "./_lib/context";
-import { ToastContainer } from "../admin/_components/Toast";
-import { FullPageSpinner } from "../admin/_components/Loaders";
-import { LogoutIcon, QrIcon } from "../admin/_lib/icons";
+import { ToastContainer } from "@/components/Toast";
+import { FullPageSpinner } from "@/components/Loaders";
+import { LogoutIcon, QrIcon } from "@/components/icons";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { IconButton } from "@/components/ui/Button";
 
 const NAV = [
   { href: "/business/dashboard", label: "Dashboard" },
@@ -42,16 +44,16 @@ function BusinessShell({ children }: { children: React.ReactNode }) {
   if (isLoginRoute) return <>{children}</>;
 
   return (
-    <div className="min-h-screen bg-zinc-950">
+    <div className="min-h-screen bg-background">
       <ToastContainer toasts={toasts} dismiss={dismissToast} />
-      <header className="sticky top-0 z-10 bg-zinc-950/80 border-b border-zinc-800 px-5 py-3 flex items-center justify-between backdrop-blur-md">
+      <header className="sticky top-0 z-10 bg-background/80 border-b border-border px-5 py-3 flex items-center justify-between backdrop-blur-md">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30 shrink-0">
-            <QrIcon className="w-4 h-4 text-emerald-400" />
+          <div className="w-8 h-8 rounded-lg bg-brand/15 flex items-center justify-center border border-brand/25 shrink-0">
+            <QrIcon className="w-4 h-4 text-brand" />
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-white truncate">{business?.name || "Business Portal"}</p>
-            <p className="text-xs text-zinc-500">{(business?.planId as { name?: string } | undefined)?.name || "No plan"}</p>
+            <p className="text-sm font-semibold text-fg truncate">{business?.name || "Business Portal"}</p>
+            <p className="text-xs text-fg-tertiary">{(business?.planId as { name?: string } | undefined)?.name || "No plan"}</p>
           </div>
         </div>
         <nav className="flex items-center gap-1">
@@ -61,21 +63,17 @@ function BusinessShell({ children }: { children: React.ReactNode }) {
               href={href}
               className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors duration-150 ${
                 pathname.startsWith(href)
-                  ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/20"
-                  : "border-transparent text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800"
+                  ? "bg-brand/15 text-brand border-brand/20"
+                  : "border-transparent text-fg-tertiary hover:text-fg hover:bg-surface-inset"
               }`}
             >
               {label}
             </Link>
           ))}
-          <button
-            onClick={() => signOut()}
-            aria-label="Sign out"
-            title="Sign out"
-            className="ml-1 rounded-lg p-2 text-zinc-500 hover:text-red-400 hover:bg-red-500/8 transition-all duration-150 cursor-pointer"
-          >
+          <ThemeToggle className="ml-1" />
+          <IconButton onClick={() => signOut()} aria-label="Sign out" title="Sign out" tone="danger">
             <LogoutIcon className="w-4 h-4" />
-          </button>
+          </IconButton>
         </nav>
       </header>
       <main className="p-5 sm:p-6 lg:p-8 max-w-5xl mx-auto">{children}</main>

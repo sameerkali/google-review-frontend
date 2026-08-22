@@ -1,7 +1,7 @@
 "use client";
 
-import type { Toast } from "../_lib/types";
-import { AlertIcon, CheckIcon, CloseIcon, InfoIcon } from "../_lib/icons";
+import type { Toast } from "@/lib/types";
+import { AlertIcon, CheckIcon, CloseIcon, InfoIcon } from "@/components/icons";
 
 export function ToastContainer({ toasts, dismiss }: { toasts: Toast[]; dismiss: (id: number) => void }) {
   return (
@@ -13,12 +13,12 @@ export function ToastContainer({ toasts, dismiss }: { toasts: Toast[]; dismiss: 
       {toasts.map((t) => (
         <div
           key={t.id}
-          className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium shadow-xl pointer-events-auto transition-all duration-300 ${
+          className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium shadow-xl pointer-events-auto transition-all duration-300 animate-toast-in ${
             t.kind === "success"
-              ? "bg-emerald-950 border border-emerald-500/30 text-emerald-300"
+              ? "bg-success/10 border border-success/30 text-success"
               : t.kind === "error"
-              ? "bg-red-950 border border-red-500/30 text-red-300"
-              : "bg-blue-950 border border-blue-500/30 text-blue-300"
+              ? "bg-danger/10 border border-danger/30 text-danger"
+              : "bg-info/10 border border-info/30 text-info"
           }`}
         >
           <span>

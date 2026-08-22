@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import { api } from "@/lib/api";
-import type { Row, ToastFn } from "../_lib/types";
+import type { Row, ToastFn } from "@/lib/types";
 import { BUSINESS_STATUS_OPTIONS, validate } from "../_lib/validators";
-import { AlertIcon, CloseIcon } from "../_lib/icons";
+import { AlertIcon } from "@/components/icons";
 import { generatePassword } from "../_lib/generatePassword";
-import { useEscapeKey } from "../_lib/useEscapeKey";
-import { Spinner } from "./Loaders";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
+import { Modal, ModalHeader, ModalBody, ModalFooter } from "@/components/ui/Modal";
+import { Button } from "@/components/ui/Button";
+import { Field, Input, Select, Label } from "@/components/ui/Input";
 
 const FIELDS: { f: string; label: string; required?: boolean }[] = [
   { f: "name", label: "Business Name", required: true },
@@ -84,107 +86,77 @@ export function BusinessEditModal({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-40 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
-      onClick={(e) => { if (e.target === e.currentTarget && !saving) onClose(); }}
-    >
-      <div role="dialog" aria-modal="true" aria-labelledby="biz-edit-title" className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900 shadow-2xl max-h-[90vh] flex flex-col">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800 shrink-0">
-          <h2 id="biz-edit-title" className="text-sm font-semibold text-white">Edit Business</h2>
-          <button onClick={onClose} disabled={saving} aria-label="Close" className="rounded-lg p-1.5 text-zinc-500 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer disabled:opacity-40">
-            <CloseIcon className="w-4 h-4" />
-          </button>
-        </div>
+    <Modal open={!!business} onClose={saving ? undefined : onClose} maxWidth="md" labelledBy="biz-edit-title">
+      <div className="max-h-[85vh] flex flex-col">
+        <ModalHeader onClose={saving ? undefined : onClose}>
+          <h2 id="biz-edit-title" className="text-sm font-semibold text-fg">Edit Business</h2>
+        </ModalHeader>
 
-        <div className="px-6 py-5 space-y-4 overflow-y-auto">
-          {serverError && (
-            <div role="alert" className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300 flex items-start gap-2">
-              <AlertIcon className="w-4 h-4 shrink-0 mt-0.5" />
-              <span>{serverError}</span>
-            </div>
-          )}
-
-          {FIELDS.map(({ f, label, required }) => (
-            <div key={f} className="space-y-1.5">
-              <label htmlFor={`biz-edit-${f}`} className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
-                {label}{required && <span className="text-red-400 ml-1">*</span>}
-              </label>
-              <input
-                id={`biz-edit-${f}`}
-                type={f === "email" ? "email" : "text"}
-                value={form[f]}
-                onChange={(e) => setForm({ ...form, [f]: e.target.value })}
-                aria-invalid={!!errors[f]}
-                className={`w-full rounded-xl border px-4 py-2.5 text-sm text-white bg-zinc-800 outline-none transition-all duration-200 focus:ring-1 ${
-                  errors[f] ? "border-red-500/60 focus:border-red-500 focus:ring-red-500/20" : "border-zinc-700 focus:border-emerald-500/50 focus:ring-emerald-500/15"
-                }`}
-              />
-              {errors[f] && <p role="alert" className="text-xs text-red-400">{errors[f]}</p>}
-            </div>
-          ))}
-
-          <div className="space-y-1.5">
-            <label htmlFor="biz-edit-status" className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Status</label>
-            <select
-              id="biz-edit-status"
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              className="w-full rounded-xl border border-zinc-700 px-4 py-2.5 text-sm text-white bg-zinc-800 outline-none focus:ring-1 focus:border-emerald-500/50 focus:ring-emerald-500/15"
-            >
-              {BUSINESS_STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
-          </div>
-
-          <div className="space-y-1.5">
-            <label htmlFor="biz-edit-plan" className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Plan</label>
-            <select
-              id="biz-edit-plan"
-              value={plan}
-              onChange={(e) => setPlan(e.target.value)}
-              className="w-full rounded-xl border border-zinc-700 px-4 py-2.5 text-sm text-white bg-zinc-800 outline-none focus:ring-1 focus:border-emerald-500/50 focus:ring-emerald-500/15"
-            >
-              <option value="">— none —</option>
-              {plans.map((p) => <option key={p._id} value={p._id}>{p.name}</option>)}
-            </select>
-          </div>
-
-          <div className="space-y-1.5">
-            <label htmlFor="biz-edit-password" className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
-              Reset Portal Password
-            </label>
-            <div className="flex gap-2">
-              <input
-                id="biz-edit-password"
-                type="text"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Leave blank to keep current password"
-                className="flex-1 min-w-0 rounded-xl border border-zinc-700 px-4 py-2.5 text-sm text-white bg-zinc-800 placeholder-zinc-600 outline-none transition-all duration-200 focus:ring-1 focus:border-emerald-500/50 focus:ring-emerald-500/15 font-mono"
-              />
-              <button
-                type="button"
-                onClick={() => setNewPassword(generatePassword())}
-                className="shrink-0 rounded-xl border border-zinc-700 px-4 py-2.5 text-sm font-medium text-zinc-300 hover:text-white hover:border-zinc-600 transition-all duration-150 cursor-pointer"
-              >
-                Generate
-              </button>
-            </div>
-            {newPassword.trim() && (
-              <p className="text-xs text-amber-400">New password: <span className="font-mono">{newPassword.trim()}</span> — copy it now, it won&apos;t be shown again after saving.</p>
+        <div className="overflow-y-auto">
+          <ModalBody>
+            {serverError && (
+              <div role="alert" className="rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger flex items-start gap-2">
+                <AlertIcon className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>{serverError}</span>
+              </div>
             )}
-          </div>
+
+            {FIELDS.map(({ f, label, required }) => (
+              <Field key={f} label={`${label}${required ? " *" : ""}`} htmlFor={`biz-edit-${f}`} error={errors[f]}>
+                <Input
+                  id={`biz-edit-${f}`}
+                  type={f === "email" ? "email" : "text"}
+                  value={form[f]}
+                  onChange={(e) => setForm({ ...form, [f]: e.target.value })}
+                  aria-invalid={!!errors[f]}
+                  error={!!errors[f]}
+                />
+              </Field>
+            ))}
+
+            <div>
+              <Label htmlFor="biz-edit-status">Status</Label>
+              <Select id="biz-edit-status" value={status} onChange={(e) => setStatus(e.target.value)}>
+                {BUSINESS_STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="biz-edit-plan">Plan</Label>
+              <Select id="biz-edit-plan" value={plan} onChange={(e) => setPlan(e.target.value)}>
+                <option value="">— none —</option>
+                {plans.map((p) => <option key={p._id} value={p._id}>{p.name}</option>)}
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="biz-edit-password">Reset Portal Password</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="biz-edit-password"
+                  type="text"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Leave blank to keep current password"
+                  className="flex-1 min-w-0 font-mono"
+                />
+                <Button type="button" variant="secondary" onClick={() => setNewPassword(generatePassword())} className="shrink-0">
+                  Generate
+                </Button>
+              </div>
+              {newPassword.trim() && (
+                <p className="mt-1.5 text-xs text-warning">New password: <span className="font-mono">{newPassword.trim()}</span> — copy it now, it won&apos;t be shown again after saving.</p>
+              )}
+            </div>
+          </ModalBody>
         </div>
 
-        <div className="flex items-center gap-3 px-6 py-4 border-t border-zinc-800 shrink-0">
-          <button
-            onClick={save}
-            disabled={saving}
-            className="ml-auto flex items-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-60 px-5 py-2.5 text-sm font-semibold text-zinc-950 transition-all duration-150 cursor-pointer disabled:cursor-not-allowed"
-          >
-            {saving ? <><Spinner /> Saving…</> : "Save Changes"}
-          </button>
-        </div>
+        <ModalFooter>
+          <Button onClick={save} loading={saving} loadingText="Saving…" variant="primary" className="ml-auto">
+            Save Changes
+          </Button>
+        </ModalFooter>
       </div>
-    </div>
+    </Modal>
   );
 }

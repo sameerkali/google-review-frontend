@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import type { Row, ToastFn } from "./types";
+import type { Row, ToastFn } from "@/lib/types";
 
 /* Drives a server-paginated, searchable list (Businesses, Hardware, Analytics, …)
    against an endpoint shaped like GET /admin/x?page=&limit=&search= → {data,total,totalPages}.

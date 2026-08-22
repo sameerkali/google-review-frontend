@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { AlertIcon, CheckIcon, CopyIcon } from "@/components/icons";
+import { Spinner } from "@/components/Loaders";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 type Suggestion = { id: string; text: string };
 type BizData = {
@@ -9,6 +12,12 @@ type BizData = {
   suggestions: Suggestion[];
   hardware: { code: string };
 };
+
+function initials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return "?";
+  return (parts[0][0] + (parts[1]?.[0] ?? "")).toUpperCase();
+}
 
 export default function ReviewPage({ params }: { params: Promise<{ code: string }> }) {
   const [code, setCode] = useState("");
@@ -68,18 +77,23 @@ export default function ReviewPage({ params }: { params: Promise<{ code: string 
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-zinc-950">
-        <div className="w-8 h-8 rounded-full border-2 border-emerald-400 border-t-transparent animate-spin" />
+      <div className="min-h-dvh flex items-center justify-center bg-background relative">
+        <ThemeToggle className="fixed top-4 right-4" />
+        <Spinner size="md" />
       </div>
     );
   }
 
   if (error || !data) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-zinc-950 p-6">
-        <div className="text-center space-y-3">
-          <p className="text-zinc-300 text-lg font-medium">QR Code Not Found</p>
-          <p className="text-zinc-500 text-sm">{error}</p>
+      <div className="min-h-dvh flex items-center justify-center bg-background p-6 relative">
+        <ThemeToggle className="fixed top-4 right-4" />
+        <div className="text-center space-y-3 animate-rise-in">
+          <div className="w-12 h-12 rounded-2xl bg-danger/10 flex items-center justify-center mx-auto mb-1">
+            <AlertIcon className="w-6 h-6 text-danger" />
+          </div>
+          <p className="text-fg-secondary text-lg font-medium">QR Code Not Found</p>
+          <p className="text-fg-tertiary text-sm max-w-xs">{error}</p>
         </div>
       </div>
     );
@@ -88,20 +102,36 @@ export default function ReviewPage({ params }: { params: Promise<{ code: string 
   const { business, suggestions } = data;
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center p-6">
+    <div className="min-h-dvh bg-background flex flex-col items-center justify-center p-6 relative">
+      <ThemeToggle className="fixed top-4 right-4" />
+
       <div className="w-full max-w-sm space-y-4">
 
-        {/* Business card — name only */}
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900 px-6 py-5 text-center">
-          <h1 className="text-xl font-semibold text-zinc-100">{business.name}</h1>
-          <p className="text-sm text-zinc-500 mt-1">We&apos;d love your feedback!</p>
+        {/* Business identity — logo/initials avatar + name */}
+        <div className="rounded-2xl border border-border bg-surface px-6 py-7 text-center space-y-3 animate-rise-in">
+          {business.logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={business.logoUrl}
+              alt={business.name}
+              className="w-16 h-16 rounded-2xl object-cover mx-auto border border-border-strong shadow-sm"
+            />
+          ) : (
+            <div className="w-16 h-16 rounded-2xl bg-brand/10 border border-brand/20 flex items-center justify-center mx-auto">
+              <span className="text-lg font-semibold text-brand">{initials(business.name)}</span>
+            </div>
+          )}
+          <div>
+            <h1 className="text-xl font-semibold text-fg">{business.name}</h1>
+            <p className="text-sm text-fg-tertiary mt-1">We&apos;d love your feedback!</p>
+          </div>
         </div>
 
         {/* All reviews in one box, one row each with inline copy button */}
         {suggestions.length > 0 && (
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-900 overflow-hidden">
-            <div className="px-4 py-3 border-b border-zinc-800">
-              <p className="text-xs text-zinc-500 uppercase tracking-widest font-medium">Suggested reviews</p>
+          <div className="rounded-2xl border border-border bg-surface overflow-hidden animate-rise-in" style={{ animationDelay: "60ms" }}>
+            <div className="px-4 py-3 border-b border-border">
+              <p className="text-xs text-fg-tertiary uppercase tracking-widest font-medium">Suggested reviews</p>
             </div>
             {suggestions.map((s, i) => {
               const isCopied = copiedId === s.id;
@@ -109,19 +139,23 @@ export default function ReviewPage({ params }: { params: Promise<{ code: string 
                 <div
                   key={s.id}
                   className={`flex items-center gap-3 px-4 py-4${
-                    i < suggestions.length - 1 ? " border-b border-zinc-800" : ""
+                    i < suggestions.length - 1 ? " border-b border-border" : ""
                   }`}
                 >
-                  <p className="flex-1 text-zinc-200 text-sm leading-relaxed min-w-0">{s.text}</p>
+                  <p className="flex-1 text-fg-secondary text-sm leading-relaxed min-w-0">{s.text}</p>
                   <button
                     onClick={() => handleCopy(s)}
-                    className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-medium transition-all duration-150 cursor-pointer border ${
+                    className={`shrink-0 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all duration-150 cursor-pointer active:scale-95 border ${
                       isCopied
-                        ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
-                        : "border-zinc-700 text-zinc-400 hover:border-emerald-500 hover:text-emerald-400"
+                        ? "border-success/40 bg-success/10 text-success"
+                        : "border-border-strong text-fg-tertiary hover:border-brand hover:text-brand"
                     }`}
                   >
-                    {isCopied ? "✓ Copied" : "Copy"}
+                    {isCopied ? (
+                      <><CheckIcon className="w-3.5 h-3.5" /> Copied</>
+                    ) : (
+                      <><CopyIcon className="w-3.5 h-3.5" /> Copy</>
+                    )}
                   </button>
                 </div>
               );
@@ -132,7 +166,8 @@ export default function ReviewPage({ params }: { params: Promise<{ code: string 
         {/* Google Review CTA */}
         <button
           onClick={handleGoogle}
-          className="w-full rounded-2xl bg-emerald-500 py-4 text-zinc-950 font-semibold text-base flex items-center justify-center gap-2 hover:bg-emerald-400 active:scale-95 transition-all shadow-lg shadow-emerald-500/20 cursor-pointer"
+          className="w-full rounded-2xl bg-brand py-4 text-white font-semibold text-base flex items-center justify-center gap-2 hover:bg-brand-hover active:scale-95 transition-all shadow-lg shadow-brand/20 cursor-pointer animate-rise-in"
+          style={{ animationDelay: "120ms" }}
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -144,15 +179,13 @@ export default function ReviewPage({ params }: { params: Promise<{ code: string 
         </button>
 
         {googleUrlError && (
-          <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300 flex items-start gap-2">
-            <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-            </svg>
+          <div className="rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger flex items-start gap-2">
+            <AlertIcon className="w-4 h-4 shrink-0 mt-0.5" />
             {googleUrlError}
           </div>
         )}
 
-        <p className="text-center text-xs text-zinc-600">Powered by QR Expendifii.com</p>
+        <p className="text-center text-xs text-fg-quaternary">Powered by QR Expendifii.com</p>
       </div>
     </div>
   );

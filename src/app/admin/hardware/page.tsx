@@ -3,12 +3,13 @@
 import { useState } from "react";
 import { api } from "@/lib/api";
 import { useAdmin } from "../_lib/context";
-import type { Row } from "../_lib/types";
+import type { Row } from "@/lib/types";
 import { usePaginatedList } from "../_lib/usePaginatedList";
-import { ListTab } from "../_components/ListTab";
+import { ListTab } from "@/components/ListTab";
 import { HardwareEditModal } from "../_components/HardwareEditModal";
-import { ConfirmDialog } from "../_components/ConfirmDialog";
-import { PencilIcon, TrashIcon } from "../_lib/icons";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { PencilIcon, TrashIcon } from "@/components/icons";
+import { IconButton } from "@/components/ui/Button";
 
 export default function HardwarePage() {
   const { data, token, toast, create, refresh } = useAdmin();
@@ -67,22 +68,12 @@ export default function HardwarePage() {
         }}
         renderActions={(row) => (
           <>
-            <button
-              onClick={() => setEditHardware(row)}
-              aria-label={`Edit ${row.serial}`}
-              title="Edit"
-              className="rounded-lg p-1.5 text-zinc-500 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer"
-            >
+            <IconButton onClick={() => setEditHardware(row)} aria-label={`Edit ${row.serial}`} title="Edit">
               <PencilIcon className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setDeleteHardware(row)}
-              aria-label={`Delete ${row.serial}`}
-              title="Delete"
-              className="rounded-lg p-1.5 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
-            >
+            </IconButton>
+            <IconButton onClick={() => setDeleteHardware(row)} aria-label={`Delete ${row.serial}`} title="Delete" tone="danger">
               <TrashIcon className="w-4 h-4" />
-            </button>
+            </IconButton>
           </>
         )}
       />

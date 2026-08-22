@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useAdmin } from "../_lib/context";
-import type { Row } from "../_lib/types";
-import { AlertIcon, HardwareIcon, PlusIcon, QrIcon } from "../_lib/icons";
-import { Skeleton } from "../_components/Loaders";
+import type { Row } from "@/lib/types";
+import { AlertIcon, HardwareIcon, PlusIcon, QrIcon } from "@/components/icons";
+import { Skeleton } from "@/components/Loaders";
 
 function timeAgo(iso?: string): string {
   if (!iso) return "";
@@ -62,12 +62,12 @@ export default function OverviewPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-white">Platform Overview</h2>
-          <p className="text-sm text-zinc-500 mt-0.5">Real-time summary of your QR review platform</p>
+          <h2 className="text-lg font-semibold text-fg">Platform Overview</h2>
+          <p className="text-sm text-fg-tertiary mt-0.5">Real-time summary of your QR review platform</p>
         </div>
         <button
           onClick={openWizard}
-          className="flex items-center justify-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 px-4 py-2.5 text-sm font-semibold text-zinc-950 transition-all duration-150 cursor-pointer shrink-0"
+          className="flex items-center justify-center gap-2 rounded-xl bg-brand hover:bg-brand-hover px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150 cursor-pointer shrink-0"
         >
           <PlusIcon className="w-4 h-4" strokeWidth={2} />
           Onboard New Business
@@ -76,76 +76,76 @@ export default function OverviewPage() {
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {cards.map(({ label, value }) => (
-          <div key={label} className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5 space-y-3 hover:border-zinc-700 transition-colors duration-200">
+          <div key={label} className="rounded-2xl border border-border bg-surface p-5 space-y-3 hover:border-border-strong transition-colors duration-200">
             {dataLoading ? (
               <><Skeleton className="h-3 w-24" /><Skeleton className="h-8 w-16 mt-2" /></>
             ) : (
-              <><p className="text-xs font-medium text-zinc-500 uppercase tracking-wider">{label}</p><p className="text-3xl font-bold text-white">{value ?? "—"}</p></>
+              <><p className="text-xs font-medium text-fg-tertiary uppercase tracking-wider">{label}</p><p className="text-3xl font-bold text-fg font-mono tabular-nums">{value ?? "—"}</p></>
             )}
           </div>
         ))}
       </div>
 
       {!ov && !dataLoading && (
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-8 text-center">
-          <p className="text-zinc-500 text-sm">Click Refresh to load data.</p>
+        <div className="rounded-2xl border border-border bg-surface p-8 text-center">
+          <p className="text-fg-tertiary text-sm">Click Refresh to load data.</p>
         </div>
       )}
 
       {!dataLoading && ov && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Needs attention */}
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5 space-y-4">
+          <div className="rounded-2xl border border-border bg-surface p-5 space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-                <AlertIcon className="w-4 h-4 text-amber-400" />
+              <h3 className="text-sm font-semibold text-fg flex items-center gap-2">
+                <AlertIcon className="w-4 h-4 text-warning" />
                 Needs Attention
               </h3>
-              <Link href="/admin/businesses" className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors">View all →</Link>
+              <Link href="/admin/businesses" className="text-xs text-brand hover:text-brand-hover transition-colors">View all →</Link>
             </div>
             {needsAttention.length ? (
               <ul className="space-y-2.5">
                 {needsAttention.map(({ b, reason }) => (
                   <li key={b._id} className="flex items-center justify-between gap-3 text-sm">
-                    <span className="text-zinc-200 truncate">{b.name}</span>
-                    <span className="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-full px-2 py-0.5 shrink-0">{reason}</span>
+                    <span className="text-fg-secondary truncate">{b.name}</span>
+                    <span className="text-xs text-warning bg-warning/10 border border-warning/20 rounded-full px-2 py-0.5 shrink-0">{reason}</span>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-zinc-500">Nothing needs attention — every active business has a QR linked.</p>
+              <p className="text-sm text-fg-tertiary">Nothing needs attention — every active business has a QR linked.</p>
             )}
           </div>
 
           {/* Hardware stock */}
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5 space-y-4">
+          <div className="rounded-2xl border border-border bg-surface p-5 space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-                <HardwareIcon className="w-4 h-4 text-blue-400" />
+              <h3 className="text-sm font-semibold text-fg flex items-center gap-2">
+                <HardwareIcon className="w-4 h-4 text-info" />
                 Hardware Stock
               </h3>
-              <Link href="/admin/hardware" className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors">View all →</Link>
+              <Link href="/admin/hardware" className="text-xs text-brand hover:text-brand-hover transition-colors">View all →</Link>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <p className="text-2xl font-bold text-white">{hardwareByStatus.available}</p>
-                <p className="text-xs text-zinc-500">Available</p>
+                <p className="text-2xl font-bold text-fg font-mono tabular-nums">{hardwareByStatus.available}</p>
+                <p className="text-xs text-fg-tertiary">Available</p>
               </div>
               <div>
-                <p className="text-2xl font-bold text-white">{hardwareByStatus.assigned}</p>
-                <p className="text-xs text-zinc-500">Assigned</p>
+                <p className="text-2xl font-bold text-fg font-mono tabular-nums">{hardwareByStatus.assigned}</p>
+                <p className="text-xs text-fg-tertiary">Assigned</p>
               </div>
               <div>
-                <p className="text-2xl font-bold text-white">{hardwareByStatus.lost}</p>
-                <p className="text-xs text-zinc-500">Lost</p>
+                <p className="text-2xl font-bold text-fg font-mono tabular-nums">{hardwareByStatus.lost}</p>
+                <p className="text-xs text-fg-tertiary">Lost</p>
               </div>
               <div>
-                <p className="text-2xl font-bold text-white">{hardwareByStatus.damaged}</p>
-                <p className="text-xs text-zinc-500">Damaged</p>
+                <p className="text-2xl font-bold text-fg font-mono tabular-nums">{hardwareByStatus.damaged}</p>
+                <p className="text-xs text-fg-tertiary">Damaged</p>
               </div>
             </div>
             {lowStock && (
-              <p className="flex items-center gap-1.5 text-xs text-amber-400">
+              <p className="flex items-center gap-1.5 text-xs text-warning">
                 <AlertIcon className="w-3.5 h-3.5 shrink-0" />
                 Running low on unassigned stock — register more hardware soon.
               </p>
@@ -153,24 +153,24 @@ export default function OverviewPage() {
           </div>
 
           {/* Recent activity */}
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5 space-y-4 lg:col-span-2">
-            <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-              <QrIcon className="w-4 h-4 text-emerald-400" />
+          <div className="rounded-2xl border border-border bg-surface p-5 space-y-4 lg:col-span-2">
+            <h3 className="text-sm font-semibold text-fg flex items-center gap-2">
+              <QrIcon className="w-4 h-4 text-brand" />
               Recent Activity
             </h3>
             {recentEvents.length ? (
-              <ul className="divide-y divide-zinc-800">
+              <ul className="divide-y divide-border">
                 {recentEvents.map((e) => (
                   <li key={String(e._id)} className="flex items-center justify-between gap-3 py-2.5 text-sm">
-                    <span className="text-zinc-300 truncate">
-                      <span className="text-white font-medium">{businessName(e.businessId)}</span> {EVENT_LABEL[String(e.eventType)] || e.eventType}
+                    <span className="text-fg-secondary truncate">
+                      <span className="text-fg font-medium">{businessName(e.businessId)}</span> {EVENT_LABEL[String(e.eventType)] || e.eventType}
                     </span>
-                    <span className="text-xs text-zinc-600 shrink-0">{timeAgo(String(e.createdAt))}</span>
+                    <span className="text-xs text-fg-quaternary shrink-0">{timeAgo(String(e.createdAt))}</span>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-zinc-500">No activity yet — scans and clicks will show up here.</p>
+              <p className="text-sm text-fg-tertiary">No activity yet — scans and clicks will show up here.</p>
             )}
           </div>
         </div>

@@ -15,8 +15,8 @@ export function PageBtn({
       disabled={disabled}
       className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 ${
         active
-          ? "bg-emerald-500 text-zinc-950"
-          : "border border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-600"
+          ? "bg-brand text-white"
+          : "border border-border-strong text-fg-tertiary hover:text-fg hover:border-fg-quaternary"
       }`}
     >
       {children}
@@ -45,14 +45,14 @@ export function Pagination({
 
   return (
     <div className="flex items-center justify-between flex-wrap gap-3">
-      <p className="text-xs text-zinc-500">
+      <p className="text-xs text-fg-tertiary">
         Page {page} of {totalPages} · {total} result{total !== 1 ? "s" : ""}
       </p>
       <div className="flex items-center gap-1.5 flex-wrap">
         <PageBtn onClick={() => onChange(page - 1)} disabled={page <= 1}>← Prev</PageBtn>
         {pages.map((n, i) =>
           n === "…" ? (
-            <span key={`gap-${i}`} className="px-2 text-zinc-600 text-xs">…</span>
+            <span key={`gap-${i}`} className="px-2 text-fg-quaternary text-xs">…</span>
           ) : (
             <PageBtn key={n} active={n === page} onClick={() => onChange(n)}>{n}</PageBtn>
           )

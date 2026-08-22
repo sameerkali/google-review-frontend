@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "@/lib/api";
-import type { Row, Toast, ToastFn } from "../../admin/_lib/types";
+import type { Row, Toast, ToastFn } from "@/lib/types";
 
 interface BusinessContextValue {
   token: string;

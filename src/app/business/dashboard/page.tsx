@@ -3,9 +3,9 @@
 import { useEffect, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import { useBusiness } from "../_lib/context";
-import { QrCard } from "../../admin/_components/QrCard";
-import { Skeleton } from "../../admin/_components/Loaders";
-import { AlertIcon, CheckIcon, CloseIcon, InfoIcon } from "../../admin/_lib/icons";
+import { QrCard } from "@/components/QrCard";
+import { Skeleton } from "@/components/Loaders";
+import { AlertIcon, CheckIcon, CloseIcon, InfoIcon } from "@/components/icons";
 
 interface Plan {
   name: string;
@@ -24,17 +24,17 @@ interface AnalyticsPayload {
 function FeatureRow({ label, on }: { label: string; on: boolean }) {
   return (
     <div className="flex items-center gap-2 text-sm">
-      {on ? <CheckIcon className="w-4 h-4 text-emerald-400 shrink-0" /> : <CloseIcon className="w-4 h-4 text-zinc-600 shrink-0" />}
-      <span className={on ? "text-zinc-200" : "text-zinc-600"}>{label}</span>
+      {on ? <CheckIcon className="w-4 h-4 text-success shrink-0" /> : <CloseIcon className="w-4 h-4 text-fg-quaternary shrink-0" />}
+      <span className={on ? "text-fg-secondary" : "text-fg-quaternary"}>{label}</span>
     </div>
   );
 }
 
 function UpgradeTeaser({ message }: { message: string }) {
   return (
-    <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6 flex items-start gap-3">
-      <InfoIcon className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
-      <p className="text-sm text-zinc-400">{message}</p>
+    <div className="rounded-2xl border border-border bg-surface p-6 flex items-start gap-3">
+      <InfoIcon className="w-5 h-5 text-info shrink-0 mt-0.5" />
+      <p className="text-sm text-fg-tertiary">{message}</p>
     </div>
   );
 }
@@ -98,20 +98,20 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold text-white">Dashboard</h2>
-        <p className="text-sm text-zinc-500 mt-0.5">Welcome back, {business?.name}</p>
+        <h2 className="text-lg font-semibold text-fg">Dashboard</h2>
+        <p className="text-sm text-fg-tertiary mt-0.5">Welcome back, {business?.name}</p>
       </div>
 
       {/* Plan card */}
-      <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6 space-y-4">
+      <div className="rounded-2xl border border-border bg-surface p-6 space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-white">Your Plan</h3>
+          <h3 className="text-sm font-semibold text-fg">Your Plan</h3>
           {plan ? (
-            <span className="text-lg font-bold text-white">
-              {plan.name} <span className="text-sm font-normal text-zinc-500">₹{plan.price}{plan.billingType === "monthly" ? "/mo" : plan.billingType === "annually" ? "/yr" : ""}</span>
+            <span className="text-lg font-bold text-fg">
+              {plan.name} <span className="text-sm font-normal text-fg-tertiary">₹{plan.price}{plan.billingType === "monthly" ? "/mo" : plan.billingType === "annually" ? "/yr" : ""}</span>
             </span>
           ) : (
-            <span className="text-sm text-zinc-500">No plan assigned</span>
+            <span className="text-sm text-fg-tertiary">No plan assigned</span>
           )}
         </div>
         {plan?.features && (
@@ -134,7 +134,7 @@ export default function DashboardPage() {
 
       {/* Analytics */}
       <div className="space-y-4">
-        <h3 className="text-sm font-semibold text-white">Analytics</h3>
+        <h3 className="text-sm font-semibold text-fg">Analytics</h3>
         {analyticsLoading ? (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-24" />)}
@@ -148,9 +148,9 @@ export default function DashboardPage() {
                 { label: "Review Copies", value: analytics.summary.byType.review_copy ?? 0 },
                 { label: "Conversion Rate", value: `${analytics.summary.conversionRate}%` },
               ].map(({ label, value }) => (
-                <div key={label} className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5 space-y-2">
-                  <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider">{label}</p>
-                  <p className="text-3xl font-bold text-white">{value}</p>
+                <div key={label} className="rounded-2xl border border-border bg-surface p-5 space-y-2">
+                  <p className="text-xs font-medium text-fg-tertiary uppercase tracking-wider">{label}</p>
+                  <p className="text-3xl font-bold text-fg font-mono tabular-nums">{value}</p>
                 </div>
               ))}
             </div>
@@ -158,19 +158,19 @@ export default function DashboardPage() {
             {analytics.breakdown && (
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {(["device", "browser", "os"] as const).map((field) => (
-                  <div key={field} className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5 space-y-2">
-                    <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider capitalize">{field}</p>
+                  <div key={field} className="rounded-2xl border border-border bg-surface p-5 space-y-2">
+                    <p className="text-xs font-medium text-fg-tertiary uppercase tracking-wider capitalize">{field}</p>
                     {analytics.breakdown![field].length ? (
                       <ul className="space-y-1.5">
                         {analytics.breakdown![field].map((row) => (
                           <li key={row._id || "unknown"} className="flex items-center justify-between text-sm">
-                            <span className="text-zinc-300 capitalize">{row._id || "unknown"}</span>
-                            <span className="text-zinc-500">{row.count}</span>
+                            <span className="text-fg-secondary capitalize">{row._id || "unknown"}</span>
+                            <span className="text-fg-tertiary">{row.count}</span>
                           </li>
                         ))}
                       </ul>
                     ) : (
-                      <p className="text-xs text-zinc-600">No data yet</p>
+                      <p className="text-xs text-fg-quaternary">No data yet</p>
                     )}
                   </div>
                 ))}
@@ -178,19 +178,19 @@ export default function DashboardPage() {
             )}
 
             {analytics.recentEvents && (
-              <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5 space-y-3">
-                <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Recent Scans</p>
+              <div className="rounded-2xl border border-border bg-surface p-5 space-y-3">
+                <p className="text-xs font-medium text-fg-tertiary uppercase tracking-wider">Recent Scans</p>
                 {analytics.recentEvents.length ? (
-                  <ul className="divide-y divide-zinc-800">
+                  <ul className="divide-y divide-border">
                     {analytics.recentEvents.slice(0, 10).map((e, i) => (
                       <li key={i} className="flex items-center justify-between gap-3 py-2 text-sm">
-                        <span className="text-zinc-300">{e.eventType} · {e.device || "unknown"} · {e.browser || "unknown"}</span>
-                        <span className="text-xs text-zinc-600 shrink-0">{new Date(e.createdAt).toLocaleString()}</span>
+                        <span className="text-fg-secondary">{e.eventType} · {e.device || "unknown"} · {e.browser || "unknown"}</span>
+                        <span className="text-xs text-fg-quaternary shrink-0">{new Date(e.createdAt).toLocaleString()}</span>
                       </li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-sm text-zinc-500">No activity yet.</p>
+                  <p className="text-sm text-fg-tertiary">No activity yet.</p>
                 )}
               </div>
             )}
@@ -202,15 +202,15 @@ export default function DashboardPage() {
 
       {/* Growth suggestions */}
       <div className="space-y-4">
-        <h3 className="text-sm font-semibold text-white">Growth Suggestions</h3>
+        <h3 className="text-sm font-semibold text-fg">Growth Suggestions</h3>
         {tipsLoading ? (
           <Skeleton className="h-24 rounded-2xl" />
         ) : tips ? (
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5 space-y-3">
+          <div className="rounded-2xl border border-border bg-surface p-5 space-y-3">
             {tips.map((t, i) => (
               <div key={i} className="flex items-start gap-2.5 text-sm">
-                <AlertIcon className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                <span className="text-zinc-300">{t}</span>
+                <AlertIcon className="w-4 h-4 text-warning shrink-0 mt-0.5" />
+                <span className="text-fg-secondary">{t}</span>
               </div>
             ))}
           </div>

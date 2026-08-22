@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { api } from "@/lib/api";
-import type { Row, ToastFn } from "../_lib/types";
-import { CloseIcon } from "../_lib/icons";
-import { useEscapeKey } from "../_lib/useEscapeKey";
-import { Spinner } from "./Loaders";
+import type { Row, ToastFn } from "@/lib/types";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
+import { Modal, ModalHeader, ModalBody, ModalFooter } from "@/components/ui/Modal";
+import { Button } from "@/components/ui/Button";
+import { Field, Input, Select, Label } from "@/components/ui/Input";
 
 const BILLING_OPTIONS = ["monthly", "annually", "one_time"] as const;
 const ANALYTICS_OPTIONS = [
@@ -87,104 +88,78 @@ export function PlanEditModal({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-40 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
-      onClick={(e) => { if (e.target === e.currentTarget && !saving) onClose(); }}
-    >
-      <div role="dialog" aria-modal="true" aria-labelledby="plan-edit-title" className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900 shadow-2xl max-h-[90vh] flex flex-col">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800 shrink-0">
-          <h2 id="plan-edit-title" className="text-sm font-semibold text-white">{plan ? "Edit Plan" : "New Plan"}</h2>
-          <button onClick={onClose} disabled={saving} aria-label="Close" className="rounded-lg p-1.5 text-zinc-500 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer disabled:opacity-40">
-            <CloseIcon className="w-4 h-4" />
-          </button>
+    <Modal open={open} onClose={saving ? undefined : onClose} maxWidth="md" labelledBy="plan-edit-title">
+      <div className="max-h-[85vh] flex flex-col">
+        <ModalHeader onClose={saving ? undefined : onClose}>
+          <h2 id="plan-edit-title" className="text-sm font-semibold text-fg">{plan ? "Edit Plan" : "New Plan"}</h2>
+        </ModalHeader>
+
+        <div className="overflow-y-auto">
+          <ModalBody>
+            <Field label="Name *" htmlFor="plan-name" error={nameErr}>
+              <Input
+                id="plan-name"
+                value={form.name}
+                onChange={(e) => { setForm({ ...form, name: e.target.value }); if (nameErr) setNameErr(""); }}
+                placeholder="Basic / Starter / Pro"
+                error={!!nameErr}
+              />
+            </Field>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="plan-billing">Billing</Label>
+                <Select id="plan-billing" value={form.billingType} onChange={(e) => setForm({ ...form, billingType: e.target.value as PlanForm["billingType"] })}>
+                  {BILLING_OPTIONS.map((b) => <option key={b} value={b}>{b}</option>)}
+                </Select>
+              </div>
+              <Field label="Price *" htmlFor="plan-price" error={priceErr}>
+                <Input
+                  id="plan-price"
+                  type="number"
+                  value={form.price}
+                  onChange={(e) => { setForm({ ...form, price: e.target.value }); if (priceErr) setPriceErr(""); }}
+                  error={!!priceErr}
+                />
+              </Field>
+            </div>
+
+            <div className="rounded-xl border border-border p-4 space-y-4">
+              <p className="text-xs font-medium text-fg-tertiary uppercase tracking-wider">Features</p>
+              <div>
+                <label htmlFor="plan-analytics" className="block text-xs text-fg-tertiary mb-1.5">Analytics visible to the business</label>
+                <Select id="plan-analytics" value={form.analytics} onChange={(e) => setForm({ ...form, analytics: e.target.value as PlanForm["analytics"] })}>
+                  {ANALYTICS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </Select>
+              </div>
+              <label className="flex items-center gap-2.5 text-sm text-fg-secondary cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.userData}
+                  onChange={(e) => setForm({ ...form, userData: e.target.checked })}
+                  className="w-4 h-4 rounded border-border-strong bg-surface-inset accent-brand cursor-pointer"
+                />
+                Scanner device/browser data
+              </label>
+              <label className="flex items-center gap-2.5 text-sm text-fg-secondary cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.suggestions}
+                  onChange={(e) => setForm({ ...form, suggestions: e.target.checked })}
+                  className="w-4 h-4 rounded border-border-strong bg-surface-inset accent-brand cursor-pointer"
+                />
+                Foot-traffic growth suggestions
+              </label>
+            </div>
+          </ModalBody>
         </div>
 
-        <div className="px-6 py-5 space-y-4 overflow-y-auto">
-          <div className="space-y-1.5">
-            <label htmlFor="plan-name" className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Name <span className="text-red-400">*</span></label>
-            <input
-              id="plan-name"
-              value={form.name}
-              onChange={(e) => { setForm({ ...form, name: e.target.value }); if (nameErr) setNameErr(""); }}
-              placeholder="Basic / Starter / Pro"
-              className={`w-full rounded-xl border px-4 py-2.5 text-sm text-white bg-zinc-800 placeholder-zinc-600 outline-none focus:ring-1 ${
-                nameErr ? "border-red-500/60 focus:border-red-500 focus:ring-red-500/20" : "border-zinc-700 focus:border-emerald-500/50 focus:ring-emerald-500/15"
-              }`}
-            />
-            {nameErr && <p role="alert" className="text-xs text-red-400">{nameErr}</p>}
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label htmlFor="plan-billing" className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Billing</label>
-              <select
-                id="plan-billing"
-                value={form.billingType}
-                onChange={(e) => setForm({ ...form, billingType: e.target.value as PlanForm["billingType"] })}
-                className="w-full rounded-xl border border-zinc-700 px-4 py-2.5 text-sm text-white bg-zinc-800 outline-none focus:ring-1 focus:border-emerald-500/50 focus:ring-emerald-500/15"
-              >
-                {BILLING_OPTIONS.map((b) => <option key={b} value={b}>{b}</option>)}
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <label htmlFor="plan-price" className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Price <span className="text-red-400">*</span></label>
-              <input
-                id="plan-price"
-                type="number"
-                value={form.price}
-                onChange={(e) => { setForm({ ...form, price: e.target.value }); if (priceErr) setPriceErr(""); }}
-                className={`w-full rounded-xl border px-4 py-2.5 text-sm text-white bg-zinc-800 outline-none focus:ring-1 ${
-                  priceErr ? "border-red-500/60 focus:border-red-500 focus:ring-red-500/20" : "border-zinc-700 focus:border-emerald-500/50 focus:ring-emerald-500/15"
-                }`}
-              />
-              {priceErr && <p role="alert" className="text-xs text-red-400">{priceErr}</p>}
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-zinc-800 p-4 space-y-4">
-            <p className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Features</p>
-            <div className="space-y-1.5">
-              <label htmlFor="plan-analytics" className="text-xs text-zinc-400">Analytics visible to the business</label>
-              <select
-                id="plan-analytics"
-                value={form.analytics}
-                onChange={(e) => setForm({ ...form, analytics: e.target.value as PlanForm["analytics"] })}
-                className="w-full rounded-xl border border-zinc-700 px-4 py-2.5 text-sm text-white bg-zinc-800 outline-none focus:ring-1 focus:border-emerald-500/50 focus:ring-emerald-500/15"
-              >
-                {ANALYTICS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
-            </div>
-            <label className="flex items-center gap-2.5 text-sm text-zinc-300 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={form.userData}
-                onChange={(e) => setForm({ ...form, userData: e.target.checked })}
-                className="w-4 h-4 rounded border-zinc-700 bg-zinc-800 accent-emerald-500 cursor-pointer"
-              />
-              Scanner device/browser data
-            </label>
-            <label className="flex items-center gap-2.5 text-sm text-zinc-300 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={form.suggestions}
-                onChange={(e) => setForm({ ...form, suggestions: e.target.checked })}
-                className="w-4 h-4 rounded border-zinc-700 bg-zinc-800 accent-emerald-500 cursor-pointer"
-              />
-              Foot-traffic growth suggestions
-            </label>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3 px-6 py-4 border-t border-zinc-800 shrink-0">
-          <button
-            onClick={save}
-            disabled={saving}
-            className="ml-auto flex items-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-60 px-5 py-2.5 text-sm font-semibold text-zinc-950 transition-all duration-150 cursor-pointer disabled:cursor-not-allowed"
-          >
-            {saving ? <><Spinner /> Saving…</> : "Save Plan"}
-          </button>
-        </div>
+        <ModalFooter>
+          <Button onClick={save} loading={saving} loadingText="Saving…" variant="primary" className="ml-auto">
+            Save Plan
+          </Button>
+        </ModalFooter>
       </div>
-    </div>
+    </Modal>
   );
 }

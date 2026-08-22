@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { api } from "@/lib/api";
-import type { Row, ToastFn } from "../_lib/types";
-import { CloseIcon } from "../_lib/icons";
-import { useEscapeKey } from "../_lib/useEscapeKey";
-import { Spinner } from "./Loaders";
-import { QrCard } from "./QrCard";
-import { ConfirmDialog } from "./ConfirmDialog";
+import type { Row, ToastFn } from "@/lib/types";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
+import { QrCard } from "@/components/QrCard";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { Modal, ModalHeader } from "@/components/ui/Modal";
+import { Button } from "@/components/ui/Button";
+import { Input, Label } from "@/components/ui/Input";
 
 function slugifyCode(name: string): string {
   const base = name.toUpperCase().replace(/[^A-Z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 24);
@@ -82,77 +83,63 @@ export function QrViewModal({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-40 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      <div role="dialog" aria-modal="true" aria-labelledby="qr-view-title" className="w-full max-w-lg rounded-2xl border border-zinc-800 bg-zinc-900 shadow-2xl max-h-[90vh] flex flex-col">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800 shrink-0">
-          <h2 id="qr-view-title" className="text-sm font-semibold text-white">{business.name}&apos;s QR Code</h2>
-          <button
-            onClick={onClose}
-            aria-label="Close"
-            className="rounded-lg p-1.5 text-zinc-500 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer"
-          >
-            <CloseIcon className="w-4 h-4" />
-          </button>
-        </div>
+    <>
+      <Modal open={!!business} onClose={onClose} maxWidth="lg" labelledBy="qr-view-title">
+        <div className="max-h-[85vh] flex flex-col">
+          <ModalHeader onClose={onClose}>
+            <h2 id="qr-view-title" className="text-sm font-semibold text-fg">{business.name}&apos;s QR Code</h2>
+          </ModalHeader>
 
-        <div className="px-6 py-5 overflow-y-auto">
-          {linked ? (
-            <div className="space-y-4">
-              <QrCard
-                reviewUrl={`${baseUrl}/r/${encodeURIComponent(linked.serial)}`}
-                businessName={business.name}
-                toast={toast}
-                badgeLabel={linked.status === "assigned" ? "Active" : linked.status}
-                compact
-              />
-              <div className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-950/50 px-4 py-3">
-                <p className="text-xs text-zinc-500">
-                  Linked hardware: <span className="font-mono text-zinc-300">{linked.serial}</span> ({linked.type})
-                </p>
-                <button
-                  onClick={() => setConfirmUnlink(true)}
-                  className="text-xs font-medium text-red-400 hover:text-red-300 transition-colors cursor-pointer shrink-0 ml-3"
-                >
-                  Unlink
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <p className="text-sm text-zinc-400">
-                No QR code is linked to <span className="text-white font-medium">{business.name}</span> yet.
-              </p>
-              <div className="space-y-1.5">
-                <label htmlFor="qr-link-code" className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
-                  Hardware Serial / Code
-                </label>
-                <input
-                  id="qr-link-code"
-                  autoFocus
-                  type="text"
-                  value={code}
-                  onChange={(e) => { setCodeInput(e.target.value); setCodeTouched(true); }}
-                  placeholder="e.g. CAFE-DELHI"
-                  className="w-full rounded-xl border border-zinc-700 px-4 py-2.5 text-sm text-white bg-zinc-800 placeholder-zinc-600 outline-none transition-all duration-200 focus:ring-1 focus:border-emerald-500/50 focus:ring-emerald-500/15 font-mono"
+          <div className="px-6 py-5 overflow-y-auto">
+            {linked ? (
+              <div className="space-y-4">
+                <QrCard
+                  reviewUrl={`${baseUrl}/r/${encodeURIComponent(linked.serial)}`}
+                  businessName={business.name}
+                  toast={toast}
+                  badgeLabel={linked.status === "assigned" ? "Active" : linked.status}
+                  compact
                 />
-                <p className="text-xs text-zinc-600">
-                  {codeTouched ? "Doesn't need to exist yet — it's created automatically." : "Suggested from the business name — edit if you already have a physical code."}
-                </p>
+                <div className="flex items-center justify-between rounded-xl border border-border bg-background/50 px-4 py-3">
+                  <p className="text-xs text-fg-tertiary">
+                    Linked hardware: <span className="font-mono text-fg-secondary">{linked.serial}</span> ({linked.type})
+                  </p>
+                  <button
+                    onClick={() => setConfirmUnlink(true)}
+                    className="text-xs font-medium text-danger hover:text-danger-hover transition-colors cursor-pointer shrink-0 ml-3"
+                  >
+                    Unlink
+                  </button>
+                </div>
               </div>
-              <button
-                onClick={link}
-                disabled={linking}
-                className="flex items-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-60 px-5 py-2.5 text-sm font-semibold text-zinc-950 transition-all duration-150 cursor-pointer disabled:cursor-not-allowed"
-              >
-                {linking ? <><Spinner /> Linking…</> : "Link & Generate QR"}
-              </button>
-            </div>
-          )}
+            ) : (
+              <div className="space-y-4">
+                <p className="text-sm text-fg-tertiary">
+                  No QR code is linked to <span className="text-fg font-medium">{business.name}</span> yet.
+                </p>
+                <div>
+                  <Label htmlFor="qr-link-code">Hardware Serial / Code</Label>
+                  <Input
+                    id="qr-link-code"
+                    autoFocus
+                    type="text"
+                    value={code}
+                    onChange={(e) => { setCodeInput(e.target.value); setCodeTouched(true); }}
+                    placeholder="e.g. CAFE-DELHI"
+                    className="font-mono"
+                  />
+                  <p className="mt-1.5 text-xs text-fg-quaternary">
+                    {codeTouched ? "Doesn't need to exist yet — it's created automatically." : "Suggested from the business name — edit if you already have a physical code."}
+                  </p>
+                </div>
+                <Button onClick={link} loading={linking} loadingText="Linking…" variant="primary">
+                  Link &amp; Generate QR
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      </Modal>
 
       <ConfirmDialog
         open={confirmUnlink}
@@ -162,6 +149,6 @@ export function QrViewModal({
         onConfirm={unlink}
         onCancel={() => setConfirmUnlink(false)}
       />
-    </div>
+    </>
   );
 }

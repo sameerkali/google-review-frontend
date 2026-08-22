@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
-import type { ToastFn } from "../_lib/types";
-import { CheckIcon, CopyIcon, ExternalLinkIcon } from "../_lib/icons";
+import type { ToastFn } from "@/lib/types";
+import { CheckIcon, CopyIcon, ExternalLinkIcon } from "@/components/icons";
 
 /* ─── QR Card (shared: Businesses "View QR", Onboarding Wizard) ── */
 export function QrCard({
@@ -42,11 +42,11 @@ export function QrCard({
   };
 
   return (
-    <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6 space-y-5">
+    <div className="rounded-2xl border border-border bg-surface p-6 space-y-5">
       <div className="flex items-center justify-between gap-3">
-        <h3 className="text-sm font-semibold text-white truncate">QR Code for <span className="text-emerald-400">{businessName}</span></h3>
-        <span className="flex items-center gap-1.5 text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-full px-2.5 py-0.5 shrink-0">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+        <h3 className="text-sm font-semibold text-fg truncate">QR Code for <span className="text-brand">{businessName}</span></h3>
+        <span className="flex items-center gap-1.5 text-xs text-success bg-success/10 border border-success/20 rounded-full px-2.5 py-0.5 shrink-0">
+          <span className="w-1.5 h-1.5 rounded-full bg-success" />
           {badgeLabel}
         </span>
       </div>
@@ -57,31 +57,31 @@ export function QrCard({
         </div>
         <div className="space-y-4 flex-1 min-w-0">
           <div className="space-y-1.5">
-            <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Review URL</p>
-            <code className="block text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2 break-all">
+            <p className="text-xs font-medium text-fg-tertiary uppercase tracking-wider">Review URL</p>
+            <code className="block text-xs text-brand bg-brand/10 border border-brand/20 rounded-lg px-3 py-2 break-all">
               {reviewUrl}
             </code>
           </div>
           <div className={`flex flex-wrap gap-2 ${compact ? "justify-center" : ""}`}>
             <button
               onClick={copyLink}
-              className="flex items-center gap-2 rounded-xl border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-400 hover:text-white hover:border-zinc-600 transition-all duration-150 cursor-pointer"
+              className="flex items-center gap-2 rounded-xl border border-border-strong px-4 py-2 text-sm font-medium text-fg-tertiary hover:text-fg hover:border-fg-quaternary transition-all duration-150 cursor-pointer"
             >
               {copied ? (
-                <><CheckIcon className="w-4 h-4 text-emerald-400" /> Copied!</>
+                <><CheckIcon className="w-4 h-4 text-success" /> Copied!</>
               ) : (
                 <><CopyIcon className="w-4 h-4" /> Copy Link</>
               )}
             </button>
             <button
               onClick={() => window.open(reviewUrl, "_blank", "noopener,noreferrer")}
-              className="flex items-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition-all duration-150 cursor-pointer"
+              className="flex items-center gap-2 rounded-xl bg-brand hover:bg-brand-hover px-4 py-2 text-sm font-semibold text-white transition-all duration-150 cursor-pointer"
             >
               <ExternalLinkIcon className="w-4 h-4" />
               Open Review Page
             </button>
           </div>
-          <p className="text-xs text-zinc-600">
+          <p className="text-xs text-fg-quaternary">
             Scan the QR with your phone camera or tap &quot;Open Review Page&quot; to test the customer experience.
           </p>
         </div>

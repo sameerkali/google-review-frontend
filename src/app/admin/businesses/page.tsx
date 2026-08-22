@@ -4,13 +4,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAdmin } from "../_lib/context";
-import type { Row } from "../_lib/types";
+import type { Row } from "@/lib/types";
 import { usePaginatedList } from "../_lib/usePaginatedList";
-import { ListTab } from "../_components/ListTab";
+import { ListTab } from "@/components/ListTab";
 import { QrViewModal } from "../_components/QrViewModal";
 import { BusinessEditModal } from "../_components/BusinessEditModal";
-import { ConfirmDialog } from "../_components/ConfirmDialog";
-import { EyeIcon, HardwareIcon, PencilIcon, TrashIcon } from "../_lib/icons";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { EyeIcon, HardwareIcon, PencilIcon, TrashIcon } from "@/components/icons";
+import { IconButton } from "@/components/ui/Button";
 
 function hasLinkedHardware(business: Row, hardwareList: Row[]): boolean {
   return hardwareList.some((h) => {
@@ -80,30 +81,29 @@ export default function BusinessesPage() {
         }}
         renderActions={(row) => (
           <>
-            <button
+            <IconButton
               onClick={() => setQrBusiness(row)}
               aria-label={`View QR for ${row.name}`}
               title={hasLinkedHardware(row, hardware) ? "View QR" : "Link a QR code"}
-              className="rounded-lg p-1.5 text-zinc-500 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors cursor-pointer"
+              tone="brand"
             >
               <EyeIcon className="w-4 h-4" />
-            </button>
-            <button
+            </IconButton>
+            <IconButton
               onClick={() => setEditBusiness(row)}
               aria-label={`Edit ${row.name}`}
               title="Edit"
-              className="rounded-lg p-1.5 text-zinc-500 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer"
             >
               <PencilIcon className="w-4 h-4" />
-            </button>
-            <button
+            </IconButton>
+            <IconButton
               onClick={() => setDeleteBusiness(row)}
               aria-label={`Delete ${row.name}`}
               title="Delete"
-              className="rounded-lg p-1.5 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
+              tone="danger"
             >
               <TrashIcon className="w-4 h-4" />
-            </button>
+            </IconButton>
           </>
         )}
       />
