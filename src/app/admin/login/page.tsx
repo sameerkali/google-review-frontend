@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { useAdmin } from "../_lib/context";
-import { AlertIcon, LockIcon, ShieldIcon, UserIcon } from "@/components/icons";
+import { AlertIcon, ShieldIcon, UserIcon } from "@/components/icons";
 import { Button } from "@/components/ui/Button";
-import { Input, Label, ErrorText } from "@/components/ui/Input";
+import { Input, PasswordInput, Label, ErrorText } from "@/components/ui/Input";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default function LoginPage() {
@@ -86,20 +86,15 @@ export default function LoginPage() {
 
         <div>
           <Label htmlFor="admin-password">Password</Label>
-          <div className="relative">
-            <LockIcon className="w-4 h-4 text-fg-quaternary absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <Input
-              id="admin-password"
-              type="password"
-              autoComplete="current-password"
-              placeholder="Enter password"
-              value={password}
-              onChange={(e) => { setPassword(e.target.value); setPasswordErr(""); setFormErr(""); }}
-              aria-invalid={!!passwordErr}
-              error={!!passwordErr}
-              className="pl-10"
-            />
-          </div>
+          <PasswordInput
+            id="admin-password"
+            autoComplete="current-password"
+            placeholder="Enter password"
+            value={password}
+            onChange={(e) => { setPassword(e.target.value); setPasswordErr(""); setFormErr(""); }}
+            aria-invalid={!!passwordErr}
+            error={!!passwordErr}
+          />
           <ErrorText>{passwordErr}</ErrorText>
         </div>
 

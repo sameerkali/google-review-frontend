@@ -1,4 +1,7 @@
+import Image from "next/image";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { Reveal } from "@/components/Reveal";
+import { HeroQrCode } from "@/components/HeroQrCode";
 import {
   QrIcon,
   ArrowRightIcon,
@@ -7,13 +10,11 @@ import {
   DeviceMobileIcon,
   StorefrontIcon,
   SparkleIcon,
-  CopyIcon,
-  CheckIcon,
 } from "@/components/icons";
 
 export default function Home() {
   return (
-    <div className="bg-background">
+    <div className="bg-background overflow-x-clip">
       {/* Nav */}
       <header className="border-b border-border">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
@@ -37,96 +38,120 @@ export default function Home() {
 
       <main>
         {/* Hero */}
-        <section className="max-w-6xl mx-auto px-6 pt-16 pb-20 lg:pt-20 lg:pb-28 grid lg:grid-cols-[1.15fr_0.85fr] gap-14 items-center">
-          <div className="space-y-6 animate-rise-in">
-            <h1 className="text-4xl md:text-5xl lg:text-[3.4rem] font-semibold tracking-tight leading-[1.08] text-fg">
-              Reviews start with a scan, not a request.
-            </h1>
-            <p className="text-fg-tertiary text-base leading-relaxed max-w-[46ch]">
-              Print one QR code. Customers scan it, copy a ready-made review, and land straight on your Google listing.
-            </p>
-            <div className="flex items-center gap-2 pt-1">
-              <a
-                href="/business/login"
-                className="inline-flex items-center gap-2 rounded-xl bg-brand hover:bg-brand-hover text-white font-semibold px-5 py-2.5 text-sm transition-all duration-150 active:scale-[0.98]"
-              >
-                Business Login
-                <ArrowRightIcon className="w-4 h-4" />
-              </a>
-            </div>
+        <section className="max-w-6xl mx-auto px-6 pt-16 pb-20 lg:pt-20 lg:pb-28 grid lg:grid-cols-[1.1fr_0.9fr] gap-14 items-center">
+          <div className="space-y-6">
+            <Reveal direction="up">
+              <h1 className="text-4xl md:text-5xl lg:text-[3.4rem] font-semibold tracking-tight leading-[1.08] text-fg">
+                Reviews start with a scan, not a request.
+              </h1>
+            </Reveal>
+            <Reveal direction="up" delay={80}>
+              <p className="text-fg-tertiary text-base leading-relaxed max-w-[46ch]">
+                Print one QR code. Customers scan it, copy a ready-made review, and land straight on your Google listing.
+              </p>
+            </Reveal>
+            <Reveal direction="up" delay={160}>
+              <div className="flex items-center gap-2 pt-1">
+                <a
+                  href="/business/login"
+                  className="inline-flex items-center gap-2 rounded-xl bg-brand hover:bg-brand-hover text-white font-semibold px-5 py-2.5 text-sm transition-all duration-150 active:scale-[0.98]"
+                >
+                  Business Login
+                  <ArrowRightIcon className="w-4 h-4" />
+                </a>
+              </div>
+            </Reveal>
           </div>
 
-          {/* Phone preview — a faithful small-scale rendition of the real
-              /r/[code] review screen customers land on after scanning. */}
-          <div className="flex justify-center lg:justify-end animate-rise-in" style={{ animationDelay: "80ms" }}>
-            <div className="relative inline-block">
-              <div className="hidden sm:flex absolute -top-4 -left-6 w-14 h-14 rounded-2xl bg-brand items-center justify-center shadow-lg shadow-brand/20 rotate-[-6deg] z-10">
-                <QrIcon className="w-7 h-7 text-white" />
+          {/* A real photo of a counter (placeholder, swap for your own) with
+              a real, scannable QR code composed over the corner, the way it
+              would actually sit on a till. */}
+          <Reveal direction="right" delay={100} className="flex justify-center lg:justify-end">
+            <div className="relative w-full max-w-[340px]">
+              <div className="relative aspect-[4/5] rounded-[2rem] overflow-hidden shadow-2xl">
+                <Image
+                  src="https://picsum.photos/seed/qr-review-counter/800/1000"
+                  alt="A café counter, the kind of spot a QR review code lives next to the till"
+                  fill
+                  sizes="(min-width: 1024px) 340px, 80vw"
+                  className="object-cover"
+                  priority
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-transparent" />
               </div>
-              <div className="w-[260px] rounded-[2.25rem] border-[6px] border-surface-inset bg-surface-inset shadow-2xl">
-                <div className="rounded-[1.85rem] bg-background overflow-hidden">
-                  <div className="p-5 space-y-4">
-                    <div className="text-center space-y-2">
-                      <div className="w-11 h-11 mx-auto rounded-xl bg-brand/10 border border-brand/20 flex items-center justify-center">
-                        <span className="text-sm font-semibold text-brand">MB</span>
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-fg">Milk Bar Coffee</p>
-                        <p className="text-[11px] text-fg-tertiary">We&apos;d love your feedback!</p>
-                      </div>
-                    </div>
-
-                    <div className="rounded-xl border border-border bg-surface p-3 space-y-2">
-                      <p className="text-[11px] text-fg-secondary leading-relaxed">
-                        Great coffee and even better service, my new go-to spot.
-                      </p>
-                      <span className="inline-flex items-center gap-1 rounded-lg border border-success/40 bg-success/10 px-2 py-1 text-[10px] font-medium text-success">
-                        <CheckIcon className="w-3 h-3" /> Copied
-                      </span>
-                    </div>
-
-                    <div className="rounded-xl border border-border bg-surface p-3 flex items-center justify-between gap-2">
-                      <p className="text-[11px] text-fg-secondary leading-relaxed">
-                        Friendly staff, quick service, will be back.
-                      </p>
-                      <CopyIcon className="w-3.5 h-3.5 text-fg-quaternary shrink-0" />
-                    </div>
-
-                    <button className="w-full rounded-xl bg-brand py-2.5 flex items-center justify-center gap-2 text-white text-xs font-semibold">
-                      <GoogleLogoIcon className="w-3.5 h-3.5" />
-                      Leave a Google Review
-                    </button>
-                  </div>
-                </div>
+              <div className="absolute -bottom-8 -left-8 sm:-left-10">
+                <HeroQrCode size={132} />
               </div>
             </div>
-          </div>
+          </Reveal>
         </section>
 
         {/* How it works */}
         <section className="border-t border-border">
           <div className="max-w-6xl mx-auto px-6 py-16 lg:py-24">
-            <h2 className="text-2xl md:text-3xl font-semibold text-fg text-center mb-12">
-              From QR code to Google review
-            </h2>
+            <Reveal direction="up">
+              <h2 className="text-2xl md:text-3xl font-semibold text-fg text-center mb-12">
+                From QR code to Google review
+              </h2>
+            </Reveal>
             <div className="grid md:grid-cols-[1fr_auto_1fr_auto_1fr] gap-8 md:gap-4 items-start">
-              <Step
-                icon={<QrIcon className="w-5 h-5 text-brand" />}
-                title="Stick up your QR code"
-                body="One code per till or table. We print it, you place it."
-              />
+              <Reveal direction="up" delay={0}>
+                <Step
+                  icon={<QrIcon className="w-5 h-5 text-brand" />}
+                  title="Stick up your QR code"
+                  body="One code per till or table. We print it, you place it."
+                />
+              </Reveal>
               <Connector />
-              <Step
-                icon={<ChatIcon className="w-5 h-5 text-brand" />}
-                title="Customer picks a review"
-                body="They scan, read a couple of honest suggestions, and copy the one that fits."
-              />
+              <Reveal direction="up" delay={120}>
+                <Step
+                  icon={<ChatIcon className="w-5 h-5 text-brand" />}
+                  title="Customer picks a review"
+                  body="They scan, read a couple of honest suggestions, and copy the one that fits."
+                />
+              </Reveal>
               <Connector />
-              <Step
-                icon={<GoogleLogoIcon className="w-5 h-5 text-brand" />}
-                title="It posts straight to Google"
-                body="One tap drops them on your listing, review already in the clipboard."
-              />
+              <Reveal direction="up" delay={240}>
+                <Step
+                  icon={<GoogleLogoIcon className="w-5 h-5 text-brand" />}
+                  title="It posts straight to Google"
+                  body="One tap drops them on your listing, review already in the clipboard."
+                />
+              </Reveal>
+            </div>
+          </div>
+        </section>
+
+        {/* Photo strip — works wherever customers already are. Placeholders
+            (picsum), swap for real photos of the shops using it. */}
+        <section className="border-t border-border">
+          <div className="max-w-6xl mx-auto px-6 py-16 lg:py-24">
+            <Reveal direction="up">
+              <h2 className="text-2xl md:text-3xl font-semibold text-fg max-w-[24ch] mb-10">
+                Works wherever the till does.
+              </h2>
+            </Reveal>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+              {[
+                { seed: "qr-review-cafe", label: "Cafés and bakeries" },
+                { seed: "qr-review-salon", label: "Salons and clinics" },
+                { seed: "qr-review-shop", label: "Shops and studios" },
+              ].map((item, i) => (
+                <Reveal key={item.seed} direction="up" delay={i * 100}>
+                  <figure>
+                    <div className="relative aspect-[4/5] rounded-2xl overflow-hidden">
+                      <Image
+                        src={`https://picsum.photos/seed/${item.seed}/500/620`}
+                        alt=""
+                        fill
+                        sizes="(min-width: 640px) 33vw, 90vw"
+                        className="object-cover"
+                      />
+                    </div>
+                    <figcaption className="mt-3 text-sm text-fg-secondary">{item.label}</figcaption>
+                  </figure>
+                </Reveal>
+              ))}
             </div>
           </div>
         </section>
@@ -134,25 +159,25 @@ export default function Home() {
         {/* Benefits */}
         <section className="border-t border-border">
           <div className="max-w-6xl mx-auto px-6 py-16 lg:py-24 grid lg:grid-cols-[1.2fr_1fr] gap-10 lg:gap-16 items-start">
-            <div className="space-y-3">
+            <Reveal direction="up" className="space-y-3">
               <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-fg">
                 No app. No login. No excuse to skip it.
               </h2>
               <p className="text-fg-tertiary text-sm leading-relaxed max-w-[46ch]">
                 Customers already have a phone and a camera. That&apos;s the whole install process.
               </p>
-            </div>
-            <div className="divide-y divide-border">
+            </Reveal>
+            <Reveal direction="up" delay={100} className="divide-y divide-border">
               <Benefit icon={<DeviceMobileIcon className="w-4.5 h-4.5" />} text="Works with any phone, no app to install" />
               <Benefit icon={<StorefrontIcon className="w-4.5 h-4.5" />} text="Set up once per location, works for every visit" />
               <Benefit icon={<SparkleIcon className="w-4.5 h-4.5" />} text="Reviews go straight to your real Google listing" />
-            </div>
+            </Reveal>
           </div>
         </section>
 
         {/* Final CTA */}
         <section className="bg-brand">
-          <div className="max-w-3xl mx-auto px-6 py-16 lg:py-20 text-center space-y-5">
+          <Reveal direction="up" className="max-w-3xl mx-auto px-6 py-16 lg:py-20 text-center space-y-5">
             <h2 className="text-2xl md:text-3xl font-semibold text-white">Ready when you are.</h2>
             <p className="text-sm text-white/80">
               Existing customer? Sign in to see your QR code and reviews.
@@ -164,7 +189,7 @@ export default function Home() {
               Business Login
               <ArrowRightIcon className="w-4 h-4" />
             </a>
-          </div>
+          </Reveal>
         </section>
       </main>
 

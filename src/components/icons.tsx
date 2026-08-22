@@ -40,6 +40,7 @@ import {
   ChatCircleText,
   Storefront,
   Sparkle,
+  EyeSlashIcon as PhosphorEyeSlash,
   type Icon,
 } from "@phosphor-icons/react";
 
@@ -85,6 +86,7 @@ export const GoogleLogoIcon = make(GoogleLogo);
 export const ChatIcon = make(ChatCircleText);
 export const StorefrontIcon = make(Storefront);
 export const SparkleIcon = make(Sparkle, "bold");
+export const EyeSlashIcon = make(PhosphorEyeSlash);
 
 export const TAB_ICONS = {
   overview: OverviewIcon,
