@@ -34,6 +34,12 @@ import {
   Sun,
   Moon,
   Tray,
+  DeviceMobile,
+  ArrowRight,
+  GoogleLogo,
+  ChatCircleText,
+  Storefront,
+  Sparkle,
   type Icon,
 } from "@phosphor-icons/react";
 
@@ -73,6 +79,12 @@ export const LockIcon = make(Lock);
 export const SunIcon = make(Sun, "bold");
 export const MoonIcon = make(Moon, "bold");
 export const TrayIcon = make(Tray);
+export const DeviceMobileIcon = make(DeviceMobile);
+export const ArrowRightIcon = make(ArrowRight, "bold");
+export const GoogleLogoIcon = make(GoogleLogo);
+export const ChatIcon = make(ChatCircleText);
+export const StorefrontIcon = make(Storefront);
+export const SparkleIcon = make(Sparkle, "bold");
 
 export const TAB_ICONS = {
   overview: OverviewIcon,
