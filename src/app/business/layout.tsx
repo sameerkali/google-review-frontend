@@ -3,7 +3,10 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { BusinessProvider, useBusiness } from "./_lib/context";
+import { api } from "@/lib/api";
+import type { Row } from "@/lib/types";
 import { ToastContainer } from "@/components/Toast";
 import { FullPageSpinner } from "@/components/Loaders";
 import { LogoutIcon, QrIcon } from "@/components/icons";
@@ -24,9 +27,14 @@ export default function BusinessLayout({ children }: { children: React.ReactNode
 }
 
 function BusinessShell({ children }: { children: React.ReactNode }) {
-  const { token, authChecked, business, toasts, dismissToast, signOut } = useBusiness();
+  const { token, authChecked, toasts, dismissToast, signOut } = useBusiness();
   const router = useRouter();
   const pathname = usePathname();
+  const { data: business } = useQuery({
+    queryKey: ["business", "me"],
+    queryFn: () => api<Row>("/business/me", { token }),
+    enabled: authChecked && !!token,
+  });
 
   const isLoginRoute = pathname === "/business/login";
   const isIndexRoute = pathname === "/business";

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { Row, ToastFn } from "@/lib/types";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
@@ -27,20 +28,53 @@ function hardwareForBusiness(business: Row, hardwareList: Row[]): Row | undefine
    at creation. Links a new one on the spot if none exists yet, and lets the
    admin unlink the current one to hand the hardware back to stock. */
 export function QrViewModal({
-  business, hardwareList, token, onClose, onRefresh, toast,
+  business, hardwareList, token, onClose, toast,
 }: {
   business: Row | null;
   hardwareList: Row[];
   token: string;
   onClose: () => void;
-  onRefresh: () => Promise<void>;
   toast: ToastFn;
 }) {
+  const queryClient = useQueryClient();
   const [codeInput, setCodeInput] = useState("");
   const [codeTouched, setCodeTouched] = useState(false);
-  const [linking, setLinking] = useState(false);
   const [confirmUnlink, setConfirmUnlink] = useState(false);
   useEscapeKey(onClose, !!business && !confirmUnlink);
+
+  const invalidateHardware = () => {
+    queryClient.invalidateQueries({ queryKey: ["admin", "hardware", "all"] });
+    queryClient.invalidateQueries({ queryKey: ["admin", "hardware", "list"] });
+    queryClient.invalidateQueries({ queryKey: ["admin", "overview"] });
+  };
+
+  const linkMutation = useMutation({
+    mutationKey: ["admin", "hardware", "link"],
+    mutationFn: async (serial: string) => {
+      const existing = hardwareList.find((h) => h.serial === serial);
+      if (existing) {
+        return api(`/admin/assign`, { method: "POST", token, body: { serial, businessId: business?._id } });
+      }
+      return api(`/admin/hardware`, { method: "POST", token, body: { type: "QR", serial, assignedBusinessId: business?._id, status: "assigned" } });
+    },
+    meta: { toastOnError: false }, // custom message below (mentions the code)
+    onSuccess: (_data, serial) => {
+      invalidateHardware();
+      toast("success", `QR code "${serial}" is ready to scan`);
+    },
+    onError: (e) => toast("error", e instanceof Error ? e.message : "Could not link that code"),
+  });
+
+  const unlinkMutation = useMutation({
+    mutationKey: ["admin", "hardware", "unlink"],
+    mutationFn: (hardwareId: string) => api(`/admin/hardware/${hardwareId}`, { method: "PUT", token, body: { assignedBusinessId: null, status: "available" } }),
+    meta: { toastOnError: false },
+    onSuccess: () => {
+      invalidateHardware();
+      setConfirmUnlink(false);
+    },
+    onError: (e) => toast("error", e instanceof Error ? e.message : "Could not unlink that code"),
+  });
 
   if (!business) return null;
 
@@ -50,36 +84,18 @@ export function QrViewModal({
   const suggestedCode = slugifyCode(business.name || "");
   const code = codeTouched ? codeInput : suggestedCode;
 
-  const link = async () => {
+  const link = () => {
     const trimmed = code.trim();
     if (!trimmed) { toast("error", "Enter a code first"); return; }
-    setLinking(true);
-    try {
-      const existing = hardwareList.find((h) => h.serial === trimmed);
-      if (existing) {
-        await api(`/admin/assign`, { method: "POST", token, body: { serial: trimmed, businessId: business._id } });
-      } else {
-        await api(`/admin/hardware`, { method: "POST", token, body: { type: "QR", serial: trimmed, assignedBusinessId: business._id, status: "assigned" } });
-      }
-      await onRefresh();
-      toast("success", `QR code "${trimmed}" is ready to scan`);
-    } catch (e) {
-      toast("error", e instanceof Error ? e.message : "Could not link that code");
-    } finally {
-      setLinking(false);
-    }
+    linkMutation.mutate(trimmed);
   };
 
   const unlink = async () => {
     if (!linked) return;
-    try {
-      await api(`/admin/hardware/${linked._id}`, { method: "PUT", token, body: { assignedBusinessId: null, status: "available" } });
-      await onRefresh();
-      toast("info", `QR code "${linked.serial}" unlinked — the hardware is back in stock`);
-      setConfirmUnlink(false);
-    } catch (e) {
-      toast("error", e instanceof Error ? e.message : "Could not unlink that code");
-    }
+    await unlinkMutation.mutateAsync(String(linked._id)).then(
+      () => toast("info", `QR code "${linked.serial}" unlinked — the hardware is back in stock`),
+      () => {}
+    );
   };
 
   return (
@@ -132,7 +148,7 @@ export function QrViewModal({
                     {codeTouched ? "Doesn't need to exist yet — it's created automatically." : "Suggested from the business name — edit if you already have a physical code."}
                   </p>
                 </div>
-                <Button onClick={link} loading={linking} loadingText="Linking…" variant="primary">
+                <Button onClick={link} loading={linkMutation.isPending} loadingText="Linking…" variant="primary">
                   Link &amp; Generate QR
                 </Button>
               </div>

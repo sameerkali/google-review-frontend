@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAdmin } from "../_lib/context";
 import type { Row } from "@/lib/types";
@@ -22,8 +23,13 @@ function FeatureRow({ label, on }: { label: string; on: boolean }) {
 }
 
 export default function PlansPage() {
-  const { data, dataLoading, token, toast, refresh } = useAdmin();
-  const plans = (data.p as Row[]) || [];
+  const { token, authChecked, toast } = useAdmin();
+  const queryClient = useQueryClient();
+  const { data: plans = [], isPending: dataLoading } = useQuery({
+    queryKey: ["admin", "plans"],
+    queryFn: () => api<Row[]>("/admin/plans", { token }),
+    enabled: authChecked && !!token,
+  });
 
   const [editPlan, setEditPlan] = useState<Row | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -35,16 +41,21 @@ export default function PlansPage() {
   const openAdd = () => { setEditPlan(null); setModalKey((k) => k + 1); setModalOpen(true); };
   const openEdit = (p: Row) => { setEditPlan(p); setModalKey((k) => k + 1); setModalOpen(true); };
 
+  const deleteMutation = useMutation({
+    mutationKey: ["admin", "plans", "delete"],
+    mutationFn: (id: string) => api(`/admin/plans/${id}`, { method: "DELETE", token }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "plans"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "businesses", "list"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "businesses", "all"] });
+      toast("info", `"${deletePlan?.name}" deleted`);
+      setDeletePlan(null);
+    },
+  });
+
   const confirmDelete = async () => {
     if (!deletePlan) return;
-    try {
-      await api(`/admin/plans/${deletePlan._id}`, { method: "DELETE", token });
-      await refresh();
-      toast("info", `"${deletePlan.name}" deleted`);
-      setDeletePlan(null);
-    } catch (e) {
-      toast("error", e instanceof Error ? e.message : "Could not delete plan");
-    }
+    await deleteMutation.mutateAsync(String(deletePlan._id)).catch(() => {});
   };
 
   return (
@@ -113,7 +124,6 @@ export default function PlansPage() {
         plan={editPlan}
         token={token}
         onClose={() => setModalOpen(false)}
-        onRefresh={refresh}
         toast={toast}
       />
 

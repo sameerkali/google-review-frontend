@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { Row, ToastFn } from "@/lib/types";
 import { validate } from "../_lib/validators";
@@ -38,16 +39,16 @@ function slugifyCode(name: string): string {
 }
 
 export function OnboardWizard({
-  open, onClose, token, hardwareList, plans, onRefresh, toast,
+  open, onClose, token, hardwareList, plans, toast,
 }: {
   open: boolean;
   onClose: () => void;
   token: string;
   hardwareList: Row[];
   plans: Row[];
-  onRefresh: () => Promise<void>;
   toast: ToastFn;
 }) {
+  const queryClient = useQueryClient();
   const emptyDetails: Record<string, string> = { name: "", email: "", phone: "", address: "", googleReviewUrl: "" };
   const [step, setStep] = useState<WizardStep>("details");
   const [details, setDetails] = useState<Record<string, string>>(emptyDetails);
@@ -61,7 +62,6 @@ export function OnboardWizard({
   const [codeInput, setCodeInput] = useState("");
   const [codeTouched, setCodeTouched] = useState(false);
   const [reviews, setReviews] = useState<string[]>([""]);
-  const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState("");
   const [result, setResult] = useState<{ businessName: string; reviewUrl: string; codeNotConfirmed?: boolean } | null>(null);
   const [copiedCreds, setCopiedCreds] = useState(false);
@@ -96,7 +96,74 @@ export function OnboardWizard({
     setResult(null);
   };
 
-  useEscapeKey(onClose, open && !submitting);
+  const onboardMutation = useMutation({
+    mutationKey: ["admin", "businesses", "onboard"],
+    mutationFn: async () => {
+      const created = await api<Row>("/admin/business", {
+        method: "POST",
+        token,
+        body: {
+          name: details.name.trim(),
+          email: details.email.trim(),
+          phone: details.phone.trim() || undefined,
+          address: details.address.trim() || undefined,
+          googleReviewUrl: details.googleReviewUrl.trim() || undefined,
+          serial: code.trim() || undefined,
+          planId: planId || undefined,
+          password: portalPassword.trim() || undefined,
+        },
+      });
+
+      // Review suggestions are best-effort follow-ups: a failure here must
+      // not fail (or retry) the business that was just successfully created.
+      const texts = reviews.map((r) => r.trim()).filter(Boolean);
+      let failedReviewCount = 0;
+      for (const reviewText of texts) {
+        try {
+          await api("/admin/review-suggestions", { method: "POST", token, body: { businessId: created._id, reviewText } });
+        } catch {
+          failedReviewCount++;
+        }
+      }
+      return { business: created, failedReviewCount };
+    },
+    meta: { toastOnError: false }, // inline serverError banner below
+    onSuccess: ({ business: created, failedReviewCount }) => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "businesses", "list"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "businesses", "all"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "overview"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "hardware", "all"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "hardware", "list"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "reviews", "businesses"] });
+
+      if (failedReviewCount > 0) {
+        toast("error", `Business created, but ${failedReviewCount} review suggestion${failedReviewCount > 1 ? "s" : ""} failed to save — add ${failedReviewCount > 1 ? "them" : "it"} again from the Reviews tab`);
+      }
+
+      // Don't celebrate a QR that isn't actually live — only show it once the
+      // server confirms the code was assigned or created, not just because a
+      // code was typed (e.g. an out-of-date backend can silently no-op this).
+      const trimmedCode = code.trim();
+      const linkConfirmed = Boolean(created.hardwareAssigned || created.hardwareCreated);
+      setResult({
+        businessName: created.name,
+        reviewUrl: trimmedCode && linkConfirmed ? `${baseUrl}/r/${encodeURIComponent(trimmedCode)}` : "",
+        codeNotConfirmed: Boolean(trimmedCode) && !linkConfirmed,
+      });
+      setStep("success");
+    },
+    onError: (e) => {
+      const msg: string = e instanceof Error ? e.message : "Something went wrong. Please try again.";
+      if (/email/i.test(msg)) {
+        setStep("details");
+        setDetailErrors((prev) => ({ ...prev, email: "This email is already registered to another business" }));
+        setDetailTouched((prev) => ({ ...prev, email: true }));
+      }
+      setServerError(msg);
+    },
+  });
+
+  useEscapeKey(onClose, open && !onboardMutation.isPending);
 
   if (!open) return null;
 
@@ -120,70 +187,13 @@ export function OnboardWizard({
   const removeReview = (i: number) => setReviews((r) => r.filter((_, idx) => idx !== i));
   const updateReview = (i: number, v: string) => setReviews((r) => r.map((x, idx) => (idx === i ? v : x)));
 
-  const finish = async () => {
-    setSubmitting(true);
-    setServerError("");
-    try {
-      const created = await api<Row>("/admin/business", {
-        method: "POST",
-        token,
-        body: {
-          name: details.name.trim(),
-          email: details.email.trim(),
-          phone: details.phone.trim() || undefined,
-          address: details.address.trim() || undefined,
-          googleReviewUrl: details.googleReviewUrl.trim() || undefined,
-          serial: code.trim() || undefined,
-          planId: planId || undefined,
-          password: portalPassword.trim() || undefined,
-        },
-      });
-
-      const texts = reviews.map((r) => r.trim()).filter(Boolean);
-      let failedReviews = 0;
-      for (const reviewText of texts) {
-        try {
-          await api("/admin/review-suggestions", { method: "POST", token, body: { businessId: created._id, reviewText } });
-        } catch {
-          failedReviews++;
-        }
-      }
-      if (failedReviews > 0) {
-        toast("error", `Business created, but ${failedReviews} review suggestion${failedReviews > 1 ? "s" : ""} failed to save — add ${failedReviews > 1 ? "them" : "it"} again from the Reviews tab`);
-      }
-
-      await onRefresh();
-      // Don't celebrate a QR that isn't actually live — only show it once the
-      // server confirms the code was assigned or created, not just because a
-      // code was typed (e.g. an out-of-date backend can silently no-op this).
-      const trimmedCode = code.trim();
-      const linkConfirmed = Boolean(created.hardwareAssigned || created.hardwareCreated);
-      setResult({
-        businessName: created.name,
-        reviewUrl: trimmedCode && linkConfirmed ? `${baseUrl}/r/${encodeURIComponent(trimmedCode)}` : "",
-        codeNotConfirmed: Boolean(trimmedCode) && !linkConfirmed,
-      });
-      setStep("success");
-    } catch (e) {
-      const msg: string = e instanceof Error ? e.message : "Something went wrong. Please try again.";
-      if (/email/i.test(msg)) {
-        setStep("details");
-        setDetailErrors((prev) => ({ ...prev, email: "This email is already registered to another business" }));
-        setDetailTouched((prev) => ({ ...prev, email: true }));
-      }
-      setServerError(msg);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   const stepIndex = WIZARD_STEPS.findIndex((s) => s.key === step);
 
   return (
-    <Modal open={open} onClose={submitting ? undefined : onClose} maxWidth="lg" labelledBy="wizard-title">
+    <Modal open={open} onClose={onboardMutation.isPending ? undefined : onClose} maxWidth="lg" labelledBy="wizard-title">
       <div className="max-h-[85vh] flex flex-col">
         {/* Header */}
-        <ModalHeader onClose={submitting ? undefined : onClose}>
+        <ModalHeader onClose={onboardMutation.isPending ? undefined : onClose}>
           <h2 id="wizard-title" className="text-sm font-semibold text-fg">
             {step === "success" ? "Business Onboarded" : "Onboard New Business"}
           </h2>
@@ -421,8 +431,8 @@ export function OnboardWizard({
           )}
           {step === "reviews" && (
             <>
-              <Button onClick={() => setStep("code")} variant="secondary" disabled={submitting}>Back</Button>
-              <Button onClick={finish} variant="primary" loading={submitting} loadingText="Creating…" className="ml-auto">
+              <Button onClick={() => setStep("code")} variant="secondary" disabled={onboardMutation.isPending}>Back</Button>
+              <Button onClick={() => onboardMutation.mutate()} variant="primary" loading={onboardMutation.isPending} loadingText="Creating…" className="ml-auto">
                 Finish &amp; Generate QR
               </Button>
             </>

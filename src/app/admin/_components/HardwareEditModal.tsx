@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { Row, ToastFn } from "@/lib/types";
 import { HARDWARE_STATUS_OPTIONS } from "../_lib/validators";
@@ -12,15 +13,15 @@ import { Field, Input, Select, Label } from "@/components/ui/Input";
 /* Full edit for a hardware/QR record: rename its serial, change type/status,
    or reassign it to a different business — the "U" in CRUD for hardware. */
 export function HardwareEditModal({
-  hardware, businesses, token, onClose, onRefresh, toast,
+  hardware, businesses, token, onClose, toast,
 }: {
   hardware: Row | null;
   businesses: Row[];
   token: string;
   onClose: () => void;
-  onRefresh: () => Promise<void>;
   toast: ToastFn;
 }) {
+  const queryClient = useQueryClient();
   const linkedId = hardware?.assignedBusinessId
     ? (typeof hardware.assignedBusinessId === "object" ? hardware.assignedBusinessId._id : hardware.assignedBusinessId)
     : "";
@@ -30,39 +31,36 @@ export function HardwareEditModal({
   const [status, setStatus] = useState(hardware?.status || "available");
   const [businessId, setBusinessId] = useState(linkedId || "");
   const [serialErr, setSerialErr] = useState("");
-  const [saving, setSaving] = useState(false);
-  useEscapeKey(onClose, !!hardware && !saving);
+
+  const saveMutation = useMutation({
+    mutationKey: ["admin", "hardware", "update"],
+    mutationFn: (body: Record<string, unknown>) => api(`/admin/hardware/${hardware?._id}`, { method: "PUT", token, body }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "hardware", "list"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "hardware", "all"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "overview"] });
+      toast("success", "Hardware updated");
+      onClose();
+    },
+  });
+  useEscapeKey(onClose, !!hardware && !saveMutation.isPending);
 
   if (!hardware) return null;
 
-  const save = async () => {
+  const save = () => {
     if (!serial.trim()) { setSerialErr("Serial is required"); return; }
     setSerialErr("");
-    setSaving(true);
-    try {
-      await api(`/admin/hardware/${hardware._id}`, {
-        method: "PUT",
-        token,
-        body: {
-          type,
-          serial: serial.trim(),
-          status,
-          assignedBusinessId: status === "assigned" ? (businessId || null) : null,
-        },
-      });
-      await onRefresh();
-      toast("success", "Hardware updated");
-      onClose();
-    } catch (e) {
-      toast("error", e instanceof Error ? e.message : "Could not update hardware");
-    } finally {
-      setSaving(false);
-    }
+    saveMutation.mutate({
+      type,
+      serial: serial.trim(),
+      status,
+      assignedBusinessId: status === "assigned" ? (businessId || null) : null,
+    });
   };
 
   return (
-    <Modal open={!!hardware} onClose={saving ? undefined : onClose} maxWidth="md" labelledBy="hw-edit-title">
-      <ModalHeader onClose={saving ? undefined : onClose}>
+    <Modal open={!!hardware} onClose={saveMutation.isPending ? undefined : onClose} maxWidth="md" labelledBy="hw-edit-title">
+      <ModalHeader onClose={saveMutation.isPending ? undefined : onClose}>
         <h2 id="hw-edit-title" className="text-sm font-semibold text-fg">Edit Hardware</h2>
       </ModalHeader>
 
@@ -113,7 +111,7 @@ export function HardwareEditModal({
       </ModalBody>
 
       <ModalFooter>
-        <Button onClick={save} loading={saving} loadingText="Saving…" variant="primary" className="ml-auto">
+        <Button onClick={save} loading={saveMutation.isPending} loadingText="Saving…" variant="primary" className="ml-auto">
           Save Changes
         </Button>
       </ModalFooter>

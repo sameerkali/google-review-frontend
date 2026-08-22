@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAdmin } from "../_lib/context";
 import type { Row, ToastFn } from "@/lib/types";
 import { DataTable } from "@/components/DataTable";
@@ -26,31 +27,18 @@ interface BizSummary {
 }
 
 function BusinessList({
-  token, toast, onSelect, onBulkOpen, refreshToken,
+  token, authChecked, onSelect, onBulkOpen,
 }: {
   token: string;
-  toast: ToastFn;
+  authChecked: boolean;
   onSelect: (b: BizSummary) => void;
   onBulkOpen: () => void;
-  /** Bumped after a bulk upload so the per-business counts below reflect it. */
-  refreshToken: number;
 }) {
-  const [rows, setRows] = useState<BizSummary[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await api<BizSummary[]>("/admin/reviews/businesses", { token });
-      setRows(data);
-    } catch {
-      toast("error", "Failed to load review summary");
-    } finally {
-      setLoading(false);
-    }
-  }, [token, toast]);
-
-  useEffect(() => { load(); }, [load, refreshToken]);
+  const { data: rows = [], isPending: loading } = useQuery({
+    queryKey: ["admin", "reviews", "businesses"],
+    queryFn: () => api<BizSummary[]>("/admin/reviews/businesses", { token }),
+    enabled: authChecked && !!token,
+  });
 
   const badge = (n: number, color: string) => (
     <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${color}`}>
@@ -153,73 +141,63 @@ const STATUSES = [
 ] as const;
 
 function ReviewList({
-  biz, token, toast, onBack, onAdded,
+  biz, token, authChecked, toast, onBack,
 }: {
   biz: BizSummary;
   token: string;
+  authChecked: boolean;
   toast: ToastFn;
   onBack: () => void;
-  /** Called after a comment is added here, so the business-list counts stay in sync. */
-  onAdded: () => void;
 }) {
-  const [rows, setRows]           = useState<Row[]>([]);
-  const [loading, setLoading]     = useState(true);
-  const [total, setTotal]         = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
-  const [page, setPage]           = useState(1);
-  const [limit, setLimit]         = useState(25);
-  const [status, setStatus]       = useState<typeof STATUSES[number]["value"]>("");
+  const queryClient = useQueryClient();
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(25);
+  const [status, setStatus] = useState<typeof STATUSES[number]["value"]>("");
 
   const [showAdd, setShowAdd] = useState(false);
   const [newText, setNewText] = useState("");
   const [addErr, setAddErr] = useState("");
-  const [saving, setSaving] = useState(false);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
+  const queryKey = ["admin", "reviews", "list", { businessId: biz._id, page, limit, status }];
+  const { data, isPending: loading } = useQuery({
+    queryKey,
+    queryFn: () => {
       const qs = new URLSearchParams({
         businessId: biz._id,
         page: String(page),
         limit: String(limit),
         ...(status ? { status } : {}),
       });
-      const res = await api<{ data: Row[]; total: number; totalPages: number }>(
-        `/admin/reviews?${qs}`,
-        { token }
-      );
-      setRows(res.data);
-      setTotal(res.total);
-      setTotalPages(res.totalPages);
-    } catch {
-      toast("error", "Failed to load reviews");
-    } finally {
-      setLoading(false);
-    }
-  }, [biz._id, token, toast, page, limit, status]);
-
-  useEffect(() => { load(); }, [load]);
+      return api<{ data: Row[]; total: number; totalPages: number }>(`/admin/reviews?${qs}`, { token });
+    },
+    enabled: authChecked && !!token,
+  });
+  const rows = data?.data ?? [];
+  const total = data?.total ?? 0;
+  const totalPages = data?.totalPages ?? 1;
 
   // Reset to page 1 when filter/limit changes
   const changeLimit = (v: number) => { setLimit(v); setPage(1); };
   const changeStatus = (v: typeof STATUSES[number]["value"]) => { setStatus(v); setPage(1); };
 
-  const addComment = async () => {
-    if (!newText.trim()) { setAddErr("Comment text is required"); return; }
-    setAddErr("");
-    setSaving(true);
-    try {
-      await api("/admin/review-suggestions", { method: "POST", token, body: { businessId: biz._id, reviewText: newText.trim() } });
+  const addMutation = useMutation({
+    mutationKey: ["admin", "reviews", "add"],
+    mutationFn: (reviewText: string) => api("/admin/review-suggestions", { method: "POST", token, body: { businessId: biz._id, reviewText } }),
+    meta: { toastOnError: false }, // inline `addErr` state below
+    onSuccess: () => {
       toast("success", "Comment added");
       setNewText("");
       setShowAdd(false);
-      await load();
-      onAdded();
-    } catch (e) {
-      setAddErr(e instanceof Error ? e.message : "Could not add comment");
-    } finally {
-      setSaving(false);
-    }
+      queryClient.invalidateQueries({ queryKey: ["admin", "reviews", "list"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "reviews", "businesses"] });
+    },
+    onError: (e) => setAddErr(e instanceof Error ? e.message : "Could not add comment"),
+  });
+
+  const addComment = () => {
+    if (!newText.trim()) { setAddErr("Comment text is required"); return; }
+    setAddErr("");
+    addMutation.mutate(newText.trim());
   };
 
   return (
@@ -280,7 +258,7 @@ function ReviewList({
               {addErr}
             </p>
           )}
-          <Button variant="primary" onClick={addComment} loading={saving} loadingText="Saving…">
+          <Button variant="primary" onClick={addComment} loading={addMutation.isPending} loadingText="Saving…">
             Save Comment
           </Button>
         </div>
@@ -301,10 +279,14 @@ function ReviewList({
 // ── Root page ────────────────────────────────────────────────────────────────
 
 export default function ReviewsPage() {
-  const { data, token, toast, refresh } = useAdmin();
+  const { token, authChecked, toast } = useAdmin();
+  const { data: businesses = [] } = useQuery({
+    queryKey: ["admin", "businesses", "all"],
+    queryFn: () => api<Row[]>("/admin/business", { token }),
+    enabled: authChecked && !!token,
+  });
   const [selected, setSelected] = useState<BizSummary | null>(null);
   const [bulkOpen, setBulkOpen] = useState(false);
-  const [listVersion, setListVersion] = useState(0);
 
   return (
     <>
@@ -312,25 +294,23 @@ export default function ReviewsPage() {
         <ReviewList
           biz={selected}
           token={token}
+          authChecked={authChecked}
           toast={toast}
           onBack={() => setSelected(null)}
-          onAdded={() => setListVersion((v) => v + 1)}
         />
       ) : (
         <BusinessList
           token={token}
-          toast={toast}
+          authChecked={authChecked}
           onSelect={setSelected}
           onBulkOpen={() => setBulkOpen(true)}
-          refreshToken={listVersion}
         />
       )}
       <BulkReviewUploadModal
         open={bulkOpen}
-        businesses={(data.b as Row[]) || []}
+        businesses={businesses}
         token={token}
         onClose={() => setBulkOpen(false)}
-        onRefresh={async () => { await refresh(); setListVersion((v) => v + 1); }}
         toast={toast}
       />
     </>

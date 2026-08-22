@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAdmin } from "../_lib/context";
 import type { Row } from "@/lib/types";
@@ -23,10 +24,20 @@ function hasLinkedHardware(business: Row, hardwareList: Row[]): boolean {
 
 export default function BusinessesPage() {
   const router = useRouter();
-  const { data, token, toast, openWizard, refresh } = useAdmin();
-  const hardware = (data.h as Row[]) || [];
-  const plans = (data.p as Row[]) || [];
-  const list = usePaginatedList("/admin/business", token, toast);
+  const { token, authChecked, toast, openWizard } = useAdmin();
+  const queryClient = useQueryClient();
+  const enabled = authChecked && !!token;
+  const { data: hardware = [] } = useQuery({
+    queryKey: ["admin", "hardware", "all"],
+    queryFn: () => api<Row[]>("/admin/hardware", { token }),
+    enabled,
+  });
+  const { data: plans = [] } = useQuery({
+    queryKey: ["admin", "plans"],
+    queryFn: () => api<Row[]>("/admin/plans", { token }),
+    enabled,
+  });
+  const list = usePaginatedList(["admin", "businesses", "list"], "/admin/business", token, toast);
 
   // Populated planId (an object) → flatten to a plain "plan" column the shared
   // DataTable can render, instead of showing raw ids or [object Object].
@@ -39,20 +50,23 @@ export default function BusinessesPage() {
   const [editBusiness, setEditBusiness] = useState<Row | null>(null);
   const [deleteBusiness, setDeleteBusiness] = useState<Row | null>(null);
 
-  // Both the bootstrapped admin data (used for dropdowns elsewhere) and this
-  // page's own paginated slice need to reflect any change made here.
-  const refreshAll = async () => { await Promise.all([refresh(), list.reload()]); };
+  const deleteMutation = useMutation({
+    mutationKey: ["admin", "businesses", "delete"],
+    mutationFn: (id: string) => api(`/admin/business/${id}`, { method: "DELETE", token }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "businesses", "list"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "businesses", "all"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "overview"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "hardware", "all"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "hardware", "list"] });
+      toast("info", `${deleteBusiness?.name} deleted`);
+      setDeleteBusiness(null);
+    },
+  });
 
   const confirmDelete = async () => {
     if (!deleteBusiness) return;
-    try {
-      await api(`/admin/business/${deleteBusiness._id}`, { method: "DELETE", token });
-      await refreshAll();
-      toast("info", `${deleteBusiness.name} deleted`);
-      setDeleteBusiness(null);
-    } catch (e) {
-      toast("error", e instanceof Error ? e.message : "Could not delete business");
-    }
+    await deleteMutation.mutateAsync(String(deleteBusiness._id)).catch(() => {});
   };
 
   return (
@@ -115,7 +129,6 @@ export default function BusinessesPage() {
           hardwareList={hardware}
           token={token}
           onClose={() => setQrBusiness(null)}
-          onRefresh={refreshAll}
           toast={toast}
         />
       )}
@@ -127,7 +140,6 @@ export default function BusinessesPage() {
           plans={plans}
           token={token}
           onClose={() => setEditBusiness(null)}
-          onRefresh={refreshAll}
           toast={toast}
         />
       )}

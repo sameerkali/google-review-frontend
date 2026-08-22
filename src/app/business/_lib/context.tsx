@@ -2,18 +2,17 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { api, ApiError } from "@/lib/api";
-import type { Row, Toast, ToastFn } from "@/lib/types";
+import { useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api";
+import type { Toast, ToastFn } from "@/lib/types";
+import { registerBusinessSignOut, registerBusinessToast } from "@/lib/authBridge";
 
 interface BusinessContextValue {
   token: string;
   authChecked: boolean;
-  business: Row | null;
-  loading: boolean;
   toasts: Toast[];
   toast: ToastFn;
   dismissToast: (id: number) => void;
-  refresh: () => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   signOut: () => void;
 }
@@ -28,13 +27,11 @@ export function useBusiness() {
 
 export function BusinessProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [token, setToken] = useState("");
   const [authChecked, setAuthChecked] = useState(false);
-  const [business, setBusiness] = useState<Row | null>(null);
-  const [loading, setLoading] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const toastId = useRef(0);
-  const tokenRef = useRef("");
 
   const toast = useCallback<ToastFn>((kind, msg) => {
     const id = ++toastId.current;
@@ -48,40 +45,23 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = useCallback(() => {
     localStorage.removeItem("business_token");
-    tokenRef.current = "";
     setToken("");
-    setBusiness(null);
+    queryClient.clear();
     router.replace("/business/login");
-  }, [router]);
+  }, [router, queryClient]);
 
-  const refresh = useCallback(async (t?: string) => {
-    const tok = t || tokenRef.current;
-    if (!tok) return;
-    setLoading(true);
-    try {
-      const me = await api<Row>("/business/me", { token: tok });
-      setBusiness(me);
-    } catch (e) {
-      if (e instanceof ApiError && e.status === 401) {
-        toast("error", "Session expired — please sign in again");
-        signOut();
-        return;
-      }
-      toast("error", e instanceof Error ? e.message : "Failed to load your account");
-    } finally {
-      setLoading(false);
-    }
-  }, [toast, signOut]);
+  // The QueryClient's global 401 handler lives outside React (created above
+  // this provider); it reaches the real signOut/toast through this bridge.
+  useEffect(() => {
+    registerBusinessSignOut(signOut);
+    registerBusinessToast(toast);
+  }, [signOut, toast]);
 
   useEffect(() => {
     const t = localStorage.getItem("business_token");
-    if (t) {
-      tokenRef.current = t;
-      setToken(t);
-      refresh(t);
-    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time read of persisted token on mount
+    if (t) setToken(t);
     setAuthChecked(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
@@ -90,15 +70,14 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
       body: { email, password },
     });
     localStorage.setItem("business_token", t);
-    tokenRef.current = t;
+    queryClient.clear(); // never show a stale/previous account's cached data
     setToken(t);
     toast("success", "Signed in successfully");
-    await refresh(t);
     router.replace("/business/dashboard");
-  }, [refresh, router, toast]);
+  }, [router, toast, queryClient]);
 
   const value: BusinessContextValue = {
-    token, authChecked, business, loading, toasts, toast, dismissToast, refresh, login, signOut,
+    token, authChecked, toasts, toast, dismissToast, login, signOut,
   };
 
   return <BusinessContext.Provider value={value}>{children}</BusinessContext.Provider>;

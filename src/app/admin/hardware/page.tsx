@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAdmin } from "../_lib/context";
 import type { Row } from "@/lib/types";
@@ -12,9 +13,14 @@ import { PencilIcon, TrashIcon } from "@/components/icons";
 import { IconButton } from "@/components/ui/Button";
 
 export default function HardwarePage() {
-  const { data, token, toast, create, refresh } = useAdmin();
-  const businesses = (data.b as Row[]) || [];
-  const list = usePaginatedList("/admin/hardware", token, toast);
+  const { token, authChecked, toast } = useAdmin();
+  const queryClient = useQueryClient();
+  const { data: businesses = [] } = useQuery({
+    queryKey: ["admin", "businesses", "all"],
+    queryFn: () => api<Row[]>("/admin/business", { token }),
+    enabled: authChecked && !!token,
+  });
+  const list = usePaginatedList(["admin", "hardware", "list"], "/admin/hardware", token, toast);
 
   // Populated assignedBusinessId (an object) → flatten to a plain "business" column
   // the shared DataTable can render, instead of showing raw ids or [object Object].
@@ -26,20 +32,34 @@ export default function HardwarePage() {
   const [editHardware, setEditHardware] = useState<Row | null>(null);
   const [deleteHardware, setDeleteHardware] = useState<Row | null>(null);
 
-  // Both the bootstrapped admin data (used for dropdowns elsewhere) and this
-  // page's own paginated slice need to reflect any change made here.
-  const refreshAll = async () => { await Promise.all([refresh(), list.reload()]); };
+  const invalidateHardware = () => {
+    queryClient.invalidateQueries({ queryKey: ["admin", "hardware", "list"] });
+    queryClient.invalidateQueries({ queryKey: ["admin", "hardware", "all"] });
+    queryClient.invalidateQueries({ queryKey: ["admin", "overview"] });
+  };
+
+  const addMutation = useMutation({
+    mutationKey: ["admin", "hardware", "add"],
+    mutationFn: (body: Record<string, string>) => api<Row>("/admin/hardware", { method: "POST", token, body: { items: [body] } }),
+    onSuccess: () => {
+      invalidateHardware();
+      toast("success", "Created successfully");
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationKey: ["admin", "hardware", "delete"],
+    mutationFn: (id: string) => api(`/admin/hardware/${id}`, { method: "DELETE", token }),
+    onSuccess: () => {
+      invalidateHardware();
+      toast("info", `Hardware "${deleteHardware?.serial}" deleted`);
+      setDeleteHardware(null);
+    },
+  });
 
   const confirmDelete = async () => {
     if (!deleteHardware) return;
-    try {
-      await api(`/admin/hardware/${deleteHardware._id}`, { method: "DELETE", token });
-      await refreshAll();
-      toast("info", `Hardware "${deleteHardware.serial}" deleted`);
-      setDeleteHardware(null);
-    } catch (e) {
-      toast("error", e instanceof Error ? e.message : "Could not delete hardware");
-    }
+    await deleteMutation.mutateAsync(String(deleteHardware._id)).catch(() => {});
   };
 
   return (
@@ -48,11 +68,7 @@ export default function HardwarePage() {
         title="Hardware Management"
         rows={rows}
         cols={["type", "serial", "business", "status"]}
-        onAdd={async (body) => {
-          const created = await create("hardware", { items: [body] });
-          if (created) await list.reload();
-          return Boolean(created);
-        }}
+        onAdd={(body) => addMutation.mutateAsync(body).then(() => true, () => false)}
         addFields={["type", "serial"]}
         loading={list.loading}
         toast={toast}
@@ -85,7 +101,6 @@ export default function HardwarePage() {
           businesses={businesses}
           token={token}
           onClose={() => setEditHardware(null)}
-          onRefresh={refreshAll}
           toast={toast}
         />
       )}

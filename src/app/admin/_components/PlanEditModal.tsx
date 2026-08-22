@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { Row, ToastFn } from "@/lib/types";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
@@ -43,54 +44,58 @@ function toForm(plan: Row | null): PlanForm {
    named feature flags. Structure only for now: nothing yet reads these flags
    to gate what a business owner actually sees. */
 export function PlanEditModal({
-  open, plan, token, onClose, onRefresh, toast,
+  open, plan, token, onClose, toast,
 }: {
   open: boolean;
   /** null when adding a new plan, a Row when editing an existing one. */
   plan: Row | null;
   token: string;
   onClose: () => void;
-  onRefresh: () => Promise<void>;
   toast: ToastFn;
 }) {
+  const queryClient = useQueryClient();
   const [form, setForm] = useState<PlanForm>(() => toForm(plan));
   const [nameErr, setNameErr] = useState("");
   const [priceErr, setPriceErr] = useState("");
-  const [saving, setSaving] = useState(false);
-  useEscapeKey(onClose, open && !saving);
+
+  const saveMutation = useMutation({
+    mutationKey: ["admin", "plans", "save"],
+    mutationFn: (body: Record<string, unknown>) => api(plan ? `/admin/plans/${plan._id}` : "/admin/plans", { method: plan ? "PUT" : "POST", token, body }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "plans"] });
+      if (plan) {
+        // Editing an existing plan can change its name/price, which is
+        // embedded (populated) in every business row that's on this plan.
+        queryClient.invalidateQueries({ queryKey: ["admin", "businesses", "list"] });
+        queryClient.invalidateQueries({ queryKey: ["admin", "businesses", "all"] });
+      }
+      toast("success", plan ? "Plan updated" : "Plan created");
+      onClose();
+    },
+  });
+  useEscapeKey(onClose, open && !saveMutation.isPending);
 
   if (!open) return null;
 
-  const save = async () => {
+  const save = () => {
     const nErr = !form.name.trim() ? "Plan name is required" : "";
     const pErr = !form.price.trim() || isNaN(Number(form.price)) ? "Enter a valid price" : "";
     setNameErr(nErr);
     setPriceErr(pErr);
     if (nErr || pErr) return;
 
-    setSaving(true);
-    try {
-      const body = {
-        name: form.name.trim(),
-        billingType: form.billingType,
-        price: Number(form.price),
-        features: { analytics: form.analytics, userData: form.userData, suggestions: form.suggestions },
-      };
-      await api(plan ? `/admin/plans/${plan._id}` : "/admin/plans", { method: plan ? "PUT" : "POST", token, body });
-      await onRefresh();
-      toast("success", plan ? "Plan updated" : "Plan created");
-      onClose();
-    } catch (e) {
-      toast("error", e instanceof Error ? e.message : "Could not save plan");
-    } finally {
-      setSaving(false);
-    }
+    saveMutation.mutate({
+      name: form.name.trim(),
+      billingType: form.billingType,
+      price: Number(form.price),
+      features: { analytics: form.analytics, userData: form.userData, suggestions: form.suggestions },
+    });
   };
 
   return (
-    <Modal open={open} onClose={saving ? undefined : onClose} maxWidth="md" labelledBy="plan-edit-title">
+    <Modal open={open} onClose={saveMutation.isPending ? undefined : onClose} maxWidth="md" labelledBy="plan-edit-title">
       <div className="max-h-[85vh] flex flex-col">
-        <ModalHeader onClose={saving ? undefined : onClose}>
+        <ModalHeader onClose={saveMutation.isPending ? undefined : onClose}>
           <h2 id="plan-edit-title" className="text-sm font-semibold text-fg">{plan ? "Edit Plan" : "New Plan"}</h2>
         </ModalHeader>
 
@@ -155,7 +160,7 @@ export function PlanEditModal({
         </div>
 
         <ModalFooter>
-          <Button onClick={save} loading={saving} loadingText="Saving…" variant="primary" className="ml-auto">
+          <Button onClick={save} loading={saveMutation.isPending} loadingText="Saving…" variant="primary" className="ml-auto">
             Save Plan
           </Button>
         </ModalFooter>

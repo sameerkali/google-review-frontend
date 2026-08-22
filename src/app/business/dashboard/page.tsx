@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { api, ApiError } from "@/lib/api";
+import type { Row } from "@/lib/types";
 import { useBusiness } from "../_lib/context";
 import { QrCard } from "@/components/QrCard";
 import { Skeleton } from "@/components/Loaders";
@@ -40,59 +41,49 @@ function UpgradeTeaser({ message }: { message: string }) {
 }
 
 export default function DashboardPage() {
-  const { business, token, toast } = useBusiness();
+  const { token, authChecked, toast } = useBusiness();
+  const enabled = authChecked && !!token;
+
+  const { data: business } = useQuery({
+    queryKey: ["business", "me"],
+    queryFn: () => api<Row>("/business/me", { token }),
+    enabled,
+  });
   const plan = business?.planId as Plan | undefined;
 
-  const [qr, setQr] = useState<{ serial: string; type: string }[]>([]);
-  const [qrLoading, setQrLoading] = useState(true);
+  const { data: qr, isPending: qrLoading } = useQuery({
+    queryKey: ["business", "me", "qr"],
+    queryFn: () => api<{ serial: string; type: string }[]>("/business/me/qr", { token }),
+    enabled,
+  });
 
-  const [analytics, setAnalytics] = useState<AnalyticsPayload | null>(null);
-  const [analyticsBlocked, setAnalyticsBlocked] = useState("");
-  const [analyticsLoading, setAnalyticsLoading] = useState(true);
+  const {
+    data: analytics,
+    isPending: analyticsLoading,
+    error: analyticsError,
+  } = useQuery({
+    queryKey: ["business", "me", "analytics"],
+    queryFn: () => api<AnalyticsPayload>("/business/me/analytics", { token }),
+    enabled,
+    meta: { silent: true }, // plan-gated — rendered inline via UpgradeTeaser, not a toast
+  });
+  const analyticsBlocked = analyticsError instanceof ApiError ? analyticsError.message : analyticsError ? "Analytics unavailable right now." : "";
 
-  const [tips, setTips] = useState<string[] | null>(null);
-  const [tipsBlocked, setTipsBlocked] = useState("");
-  const [tipsLoading, setTipsLoading] = useState(true);
-
-  useEffect(() => {
-    if (!token) return;
-    (async () => {
-      setQrLoading(true);
-      try {
-        setQr(await api<{ serial: string; type: string }[]>("/business/me/qr", { token }));
-      } catch (e) {
-        toast("error", e instanceof Error ? e.message : "Failed to load your QR code");
-      } finally {
-        setQrLoading(false);
-      }
-    })();
-
-    (async () => {
-      setAnalyticsLoading(true);
-      try {
-        setAnalytics(await api<AnalyticsPayload>("/business/me/analytics", { token }));
-      } catch (e) {
-        setAnalyticsBlocked(e instanceof ApiError ? e.message : "Analytics unavailable right now.");
-      } finally {
-        setAnalyticsLoading(false);
-      }
-    })();
-
-    (async () => {
-      setTipsLoading(true);
-      try {
-        const res = await api<{ tips: string[] }>("/business/me/suggestions", { token });
-        setTips(res.tips);
-      } catch (e) {
-        setTipsBlocked(e instanceof ApiError ? e.message : "Suggestions unavailable right now.");
-      } finally {
-        setTipsLoading(false);
-      }
-    })();
-  }, [token, toast]);
+  const {
+    data: tipsData,
+    isPending: tipsLoading,
+    error: tipsError,
+  } = useQuery({
+    queryKey: ["business", "me", "suggestions"],
+    queryFn: () => api<{ tips: string[] }>("/business/me/suggestions", { token }),
+    enabled,
+    meta: { silent: true },
+  });
+  const tips = tipsData?.tips ?? null;
+  const tipsBlocked = tipsError instanceof ApiError ? tipsError.message : tipsError ? "Suggestions unavailable right now." : "";
 
   const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
-  const primaryQr = qr[0];
+  const primaryQr = qr?.[0];
   const reviewUrl = primaryQr ? `${baseUrl}/r/${encodeURIComponent(primaryQr.serial)}` : "";
 
   return (

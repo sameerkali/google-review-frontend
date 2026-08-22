@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { AlertIcon, CheckIcon, CopyIcon } from "@/components/icons";
 import { Spinner } from "@/components/Loaders";
@@ -20,31 +21,27 @@ function initials(name: string) {
 }
 
 export default function ReviewPage({ params }: { params: Promise<{ code: string }> }) {
-  const [code, setCode] = useState("");
-  const [data, setData] = useState<BizData | null>(null);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
+  const { code } = use(params);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [googleUrlError, setGoogleUrlError] = useState("");
 
-  useEffect(() => {
-    params.then(({ code: c }) => {
-      setCode(c);
-      load(c);
-    });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const { data, isPending, isError } = useQuery({
+    queryKey: ["public", "review", code],
+    queryFn: () => api<BizData>(`/r/${code}`),
+    refetchOnWindowFocus: false,
+    meta: { silent: true }, // rendered inline below, not a toast
+  });
+  const loading = isPending;
+  const error = isError ? "This QR code is not recognised. Please try again." : "";
 
-  const load = async (c: string) => {
-    try {
-      const result = await api<BizData>(`/r/${c}`);
-      setData(result);
-      void api("/analytics", { method: "POST", body: { code: c } });
-    } catch {
-      setError("This QR code is not recognised. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Fire the scan beacon once per successful load of a given code — not on
+  // every background refetch (e.g. reconnect) of the same query.
+  const analyticsSent = useRef<string | null>(null);
+  useEffect(() => {
+    if (!data || analyticsSent.current === code) return;
+    analyticsSent.current = code;
+    void api("/analytics", { method: "POST", body: { code } });
+  }, [data, code]);
 
   const handleCopy = async (s: Suggestion) => {
     await navigator.clipboard.writeText(s.text);

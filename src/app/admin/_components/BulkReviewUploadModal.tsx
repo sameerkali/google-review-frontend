@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { Row, ToastFn } from "@/lib/types";
 import { AlertIcon, CheckIcon, CopyIcon, UploadIcon } from "@/components/icons";
@@ -50,22 +51,40 @@ function extractComments(parsed: unknown): string[] | null {
 /* Bulk-imports review suggestions ("comments") from a JSON file or pasted JSON,
    instead of adding one at a time through the inline form. */
 export function BulkReviewUploadModal({
-  open, businesses, token, onClose, onRefresh, toast,
+  open, businesses, token, onClose, toast,
 }: {
   open: boolean;
   businesses: Row[];
   token: string;
   onClose: () => void;
-  onRefresh: () => Promise<void>;
   toast: ToastFn;
 }) {
+  const queryClient = useQueryClient();
   const [businessId, setBusinessId] = useState("");
   const [text, setText] = useState("");
   const [error, setError] = useState("");
-  const [uploading, setUploading] = useState(false);
   const [copied, setCopied] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  useEscapeKey(onClose, open && !uploading);
+
+  const uploadMutation = useMutation({
+    mutationKey: ["admin", "reviews", "bulk-upload"],
+    mutationFn: (items: { businessId: string; reviewText: string }[]) =>
+      api<{ created: number; skipped: number }>("/admin/review-suggestions/bulk", { method: "POST", token, body: { items } }),
+    meta: { toastOnError: false }, // inline `error` state below
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "reviews", "businesses"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "reviews", "list"] });
+      if (res.skipped) {
+        toast("info", `Uploaded ${res.created} comment${res.created !== 1 ? "s" : ""} — ${res.skipped} row${res.skipped !== 1 ? "s" : ""} skipped`);
+      } else {
+        toast("success", `Uploaded ${res.created} comment${res.created !== 1 ? "s" : ""}`);
+      }
+      setText("");
+      onClose();
+    },
+    onError: (e) => setError(e instanceof Error ? e.message : "Upload failed"),
+  });
+  useEscapeKey(onClose, open && !uploadMutation.isPending);
 
   if (!open) return null;
 
@@ -83,7 +102,7 @@ export function BulkReviewUploadModal({
       .catch(() => toast("error", "Could not copy to clipboard"));
   };
 
-  const upload = async () => {
+  const upload = () => {
     if (!businessId) {
       setError("Select which business these comments belong to first");
       return;
@@ -107,32 +126,13 @@ export function BulkReviewUploadModal({
     }
 
     setError("");
-    setUploading(true);
-    try {
-      const res = await api<{ created: number; skipped: number }>("/admin/review-suggestions/bulk", {
-        method: "POST",
-        token,
-        body: { items: texts.map((reviewText) => ({ businessId, reviewText })) },
-      });
-      await onRefresh();
-      if (res.skipped) {
-        toast("info", `Uploaded ${res.created} comment${res.created !== 1 ? "s" : ""} — ${res.skipped} row${res.skipped !== 1 ? "s" : ""} skipped`);
-      } else {
-        toast("success", `Uploaded ${res.created} comment${res.created !== 1 ? "s" : ""}`);
-      }
-      setText("");
-      onClose();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Upload failed");
-    } finally {
-      setUploading(false);
-    }
+    uploadMutation.mutate(texts.map((reviewText) => ({ businessId, reviewText })));
   };
 
   return (
-    <Modal open={open} onClose={uploading ? undefined : onClose} maxWidth="2xl" labelledBy="bulk-upload-title">
+    <Modal open={open} onClose={uploadMutation.isPending ? undefined : onClose} maxWidth="2xl" labelledBy="bulk-upload-title">
       <div className="max-h-[85vh] flex flex-col">
-        <ModalHeader onClose={uploading ? undefined : onClose}>
+        <ModalHeader onClose={uploadMutation.isPending ? undefined : onClose}>
           <h2 id="bulk-upload-title" className="text-sm font-semibold text-fg">Bulk Upload Review Comments</h2>
         </ModalHeader>
 
@@ -211,7 +211,7 @@ export function BulkReviewUploadModal({
         </div>
 
         <ModalFooter>
-          <Button onClick={upload} disabled={!text.trim() || !businessId} loading={uploading} loadingText="Uploading…" variant="primary" className="ml-auto">
+          <Button onClick={upload} disabled={!text.trim() || !businessId} loading={uploadMutation.isPending} loadingText="Uploading…" variant="primary" className="ml-auto">
             Upload
           </Button>
         </ModalFooter>

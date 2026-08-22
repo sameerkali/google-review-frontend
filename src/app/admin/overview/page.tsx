@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api";
 import { useAdmin } from "../_lib/context";
 import type { Row } from "@/lib/types";
 import { AlertIcon, HardwareIcon, PlusIcon, QrIcon } from "@/components/icons";
@@ -26,11 +28,31 @@ function hasLinkedHardware(business: Row, hardwareList: Row[]): boolean {
 }
 
 export default function OverviewPage() {
-  const { data, dataLoading, openWizard } = useAdmin();
-  const ov = data.ov as Record<string, number> | undefined;
-  const businesses = (data.b as Row[]) || [];
-  const hardware = (data.h as Row[]) || [];
-  const events = ((data.a as Row | undefined)?.rows as Row[] | undefined) || [];
+  const { token, authChecked, openWizard } = useAdmin();
+  const enabled = authChecked && !!token;
+
+  const { data: ov, isPending: ovLoading } = useQuery({
+    queryKey: ["admin", "overview"],
+    queryFn: () => api<Record<string, number>>("/admin/overview", { token }),
+    enabled,
+  });
+  const { data: businesses = [], isPending: bLoading } = useQuery({
+    queryKey: ["admin", "businesses", "all"],
+    queryFn: () => api<Row[]>("/admin/business", { token }),
+    enabled,
+  });
+  const { data: hardware = [], isPending: hLoading } = useQuery({
+    queryKey: ["admin", "hardware", "all"],
+    queryFn: () => api<Row[]>("/admin/hardware", { token }),
+    enabled,
+  });
+  const { data: analytics, isPending: aLoading } = useQuery({
+    queryKey: ["admin", "analytics", "overview"],
+    queryFn: () => api<Row>("/admin/analytics", { token }),
+    enabled,
+  });
+  const dataLoading = ovLoading || bLoading || hLoading || aLoading;
+  const events = (analytics?.rows as Row[] | undefined) || [];
 
   const businessName = (id: unknown) => businesses.find((b) => b._id === String(id))?.name || "Unknown business";
 

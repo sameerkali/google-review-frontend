@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useBusiness } from "../_lib/context";
 import type { Row } from "@/lib/types";
@@ -11,55 +12,53 @@ import { Button } from "@/components/ui/Button";
 import { Label, Textarea } from "@/components/ui/Input";
 
 export default function BusinessReviewsPage() {
-  const { token, toast } = useBusiness();
-  const [rows, setRows] = useState<Row[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { token, authChecked, toast } = useBusiness();
+  const queryClient = useQueryClient();
   const [showAdd, setShowAdd] = useState(false);
   const [text, setText] = useState("");
   const [error, setError] = useState("");
-  const [saving, setSaving] = useState(false);
   const [deleteRow, setDeleteRow] = useState<Row | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      setRows(await api<Row[]>("/business/me/reviews", { token }));
-    } catch (e) {
-      toast("error", e instanceof Error ? e.message : "Failed to load your reviews");
-    } finally {
-      setLoading(false);
-    }
-  }, [token, toast]);
+  const { data: rows = [], isPending: loading } = useQuery({
+    queryKey: ["business", "me", "reviews"],
+    queryFn: () => api<Row[]>("/business/me/reviews", { token }),
+    enabled: authChecked && !!token,
+  });
 
-  useEffect(() => { load(); }, [load]);
-
-  const addComment = async () => {
-    if (!text.trim()) { setError("Comment text is required"); return; }
-    setError("");
-    setSaving(true);
-    try {
-      await api("/business/me/reviews", { method: "POST", token, body: { reviewText: text.trim() } });
+  const addMutation = useMutation({
+    mutationKey: ["business", "me", "reviews", "add"],
+    mutationFn: (reviewText: string) => api("/business/me/reviews", { method: "POST", token, body: { reviewText } }),
+    meta: { toastOnError: false }, // inline `error` state below instead
+    onSuccess: () => {
       toast("success", "Comment added");
       setText("");
       setShowAdd(false);
-      await load();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not add comment");
-    } finally {
-      setSaving(false);
-    }
+      queryClient.invalidateQueries({ queryKey: ["business", "me", "reviews"] });
+    },
+    onError: (e) => setError(e instanceof Error ? e.message : "Could not add comment"),
+  });
+
+  const deleteMutation = useMutation({
+    mutationKey: ["business", "me", "reviews", "delete"],
+    mutationFn: (id: string) => api(`/business/me/reviews/${id}`, { method: "DELETE", token }),
+    onSuccess: () => {
+      toast("info", "Comment removed");
+      setDeleteRow(null);
+      queryClient.invalidateQueries({ queryKey: ["business", "me", "reviews"] });
+    },
+  });
+
+  const addComment = () => {
+    if (!text.trim()) { setError("Comment text is required"); return; }
+    setError("");
+    addMutation.mutate(text.trim());
   };
 
   const confirmDelete = async () => {
     if (!deleteRow) return;
-    try {
-      await api(`/business/me/reviews/${deleteRow._id}`, { method: "DELETE", token });
-      toast("info", "Comment removed");
-      setDeleteRow(null);
-      await load();
-    } catch (e) {
-      toast("error", e instanceof Error ? e.message : "Could not remove comment");
-    }
+    // Errors are surfaced via the global mutation-error toast; swallow here
+    // only so ConfirmDialog's busy state resolves cleanly either way.
+    await deleteMutation.mutateAsync(String(deleteRow._id)).catch(() => {});
   };
 
   return (
@@ -92,7 +91,7 @@ export default function BusinessReviewsPage() {
               {error}
             </p>
           )}
-          <Button variant="primary" onClick={addComment} loading={saving} loadingText="Saving…">
+          <Button variant="primary" onClick={addComment} loading={addMutation.isPending} loadingText="Saving…">
             Save Comment
           </Button>
         </div>

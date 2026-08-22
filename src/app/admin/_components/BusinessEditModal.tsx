@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { Row, ToastFn } from "@/lib/types";
 import { BUSINESS_STATUS_OPTIONS, validate } from "../_lib/validators";
@@ -25,15 +26,15 @@ function planId(business: Row | null): string {
 }
 
 export function BusinessEditModal({
-  business, plans, token, onClose, onRefresh, toast,
+  business, plans, token, onClose, toast,
 }: {
   business: Row | null;
   plans: Row[];
   token: string;
   onClose: () => void;
-  onRefresh: () => Promise<void>;
   toast: ToastFn;
 }) {
+  const queryClient = useQueryClient();
   const [form, setForm] = useState<Record<string, string>>({
     name: business?.name || "",
     email: business?.email || "",
@@ -45,50 +46,51 @@ export function BusinessEditModal({
   const [plan, setPlan] = useState(planId(business));
   const [newPassword, setNewPassword] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [saving, setSaving] = useState(false);
   const [serverError, setServerError] = useState("");
-  useEscapeKey(onClose, !!business && !saving);
+
+  const saveMutation = useMutation({
+    mutationKey: ["admin", "businesses", "update"],
+    mutationFn: (body: Record<string, unknown>) => api(`/admin/business/${business?._id}`, { method: "PUT", token, body }),
+    meta: { toastOnError: false }, // inline field/server error below
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "businesses", "list"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "businesses", "all"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "overview"] });
+      toast("success", newPassword.trim() ? "Business updated — portal password changed" : "Business updated");
+      onClose();
+    },
+    onError: (e) => {
+      const msg = e instanceof Error ? e.message : "Could not update business";
+      if (/email/i.test(msg)) setErrors((prev) => ({ ...prev, email: "This email is already registered to another business" }));
+      setServerError(msg);
+    },
+  });
+  useEscapeKey(onClose, !!business && !saveMutation.isPending);
 
   if (!business) return null;
 
-  const save = async () => {
+  const save = () => {
     const fieldNames = FIELDS.map((f) => f.f);
     const errs = validate(fieldNames, form);
     setErrors(errs);
     if (Object.values(errs).some(Boolean)) return;
     setServerError("");
-    setSaving(true);
-    try {
-      await api(`/admin/business/${business._id}`, {
-        method: "PUT",
-        token,
-        body: {
-          name: form.name.trim(),
-          email: form.email.trim(),
-          phone: form.phone.trim() || undefined,
-          address: form.address.trim() || undefined,
-          googleReviewUrl: form.googleReviewUrl.trim() || undefined,
-          status,
-          planId: plan || null,
-          password: newPassword.trim() || undefined,
-        },
-      });
-      await onRefresh();
-      toast("success", newPassword.trim() ? "Business updated — portal password changed" : "Business updated");
-      onClose();
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "Could not update business";
-      if (/email/i.test(msg)) setErrors((prev) => ({ ...prev, email: "This email is already registered to another business" }));
-      setServerError(msg);
-    } finally {
-      setSaving(false);
-    }
+    saveMutation.mutate({
+      name: form.name.trim(),
+      email: form.email.trim(),
+      phone: form.phone.trim() || undefined,
+      address: form.address.trim() || undefined,
+      googleReviewUrl: form.googleReviewUrl.trim() || undefined,
+      status,
+      planId: plan || null,
+      password: newPassword.trim() || undefined,
+    });
   };
 
   return (
-    <Modal open={!!business} onClose={saving ? undefined : onClose} maxWidth="md" labelledBy="biz-edit-title">
+    <Modal open={!!business} onClose={saveMutation.isPending ? undefined : onClose} maxWidth="md" labelledBy="biz-edit-title">
       <div className="max-h-[85vh] flex flex-col">
-        <ModalHeader onClose={saving ? undefined : onClose}>
+        <ModalHeader onClose={saveMutation.isPending ? undefined : onClose}>
           <h2 id="biz-edit-title" className="text-sm font-semibold text-fg">Edit Business</h2>
         </ModalHeader>
 
@@ -152,7 +154,7 @@ export function BusinessEditModal({
         </div>
 
         <ModalFooter>
-          <Button onClick={save} loading={saving} loadingText="Saving…" variant="primary" className="ml-auto">
+          <Button onClick={save} loading={saveMutation.isPending} loadingText="Saving…" variant="primary" className="ml-auto">
             Save Changes
           </Button>
         </ModalFooter>

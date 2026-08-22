@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useIsFetching, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AdminProvider, useAdmin } from "./_lib/context";
+import { api } from "@/lib/api";
 import type { Row } from "@/lib/types";
 import { ToastContainer } from "@/components/Toast";
 import { OnboardWizard } from "./_components/OnboardWizard";
@@ -33,10 +35,29 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 }
 
 function AdminShell({ children }: { children: React.ReactNode }) {
-  const { token, authChecked, dataLoading, refresh, signOut, toasts, dismissToast, wizardOpen, wizardKey, closeWizard, data, toast } = useAdmin();
+  const { token, authChecked, signOut, toasts, dismissToast, wizardOpen, wizardKey, closeWizard, toast } = useAdmin();
   const router = useRouter();
   const pathname = usePathname();
+  const queryClient = useQueryClient();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const enabled = authChecked && !!token;
+
+  // OnboardWizard needs the full hardware/plans lists regardless of which
+  // admin page is currently active.
+  const { data: hardwareAll } = useQuery({
+    queryKey: ["admin", "hardware", "all"],
+    queryFn: () => api<Row[]>("/admin/hardware", { token }),
+    enabled,
+  });
+  const { data: plans } = useQuery({
+    queryKey: ["admin", "plans"],
+    queryFn: () => api<Row[]>("/admin/plans", { token }),
+    enabled,
+  });
+
+  // Any in-flight admin query — drives the header spinner/disabled state.
+  const dataLoading = useIsFetching({ queryKey: ["admin"] }) > 0;
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ["admin"] });
 
   const isLoginRoute = pathname === "/admin/login";
   const isIndexRoute = pathname === "/admin";
@@ -65,9 +86,8 @@ function AdminShell({ children }: { children: React.ReactNode }) {
         open={wizardOpen}
         onClose={closeWizard}
         token={token}
-        hardwareList={(data.h as Row[]) || []}
-        plans={(data.p as Row[]) || []}
-        onRefresh={refresh}
+        hardwareList={hardwareAll || []}
+        plans={plans || []}
         toast={toast}
       />
 

@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api";
 import { useAdmin } from "../_lib/context";
 import type { Row } from "@/lib/types";
 import { usePaginatedList } from "../_lib/usePaginatedList";
@@ -12,13 +14,17 @@ import { Select } from "@/components/ui/Input";
 const PAGE_SIZES = [10, 25, 50, 100];
 
 export default function AnalyticsPage() {
-  const { data, token, toast } = useAdmin();
-  const businesses = (data.b as Row[]) || [];
+  const { token, authChecked, toast } = useAdmin();
+  const { data: businesses = [] } = useQuery({
+    queryKey: ["admin", "businesses", "all"],
+    queryFn: () => api<Row[]>("/admin/business", { token }),
+    enabled: authChecked && !!token,
+  });
 
   const [businessId, setBusinessId] = useState("");
   const [sort, setSort] = useState<"desc" | "asc">("desc");
 
-  const list = usePaginatedList("/admin/analytics", token, toast, {
+  const list = usePaginatedList(["admin", "analytics", "list"], "/admin/analytics", token, toast, {
     defaultLimit: 50,
     extraParams: { ...(businessId ? { businessId } : {}), sort },
   });
