@@ -22,7 +22,7 @@ export default function Home() {
             <div className="w-8 h-8 rounded-lg bg-brand/15 border border-brand/25 flex items-center justify-center">
               <QrIcon className="w-4 h-4 text-brand" />
             </div>
-            <span className="text-sm font-semibold text-fg">QR Review</span>
+            <span className="text-sm font-semibold text-fg">Review by Expendifii</span>
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />
@@ -184,9 +184,12 @@ export default function Home() {
             <div className="w-6 h-6 rounded-md bg-brand/15 border border-brand/25 flex items-center justify-center">
               <QrIcon className="w-3 h-3 text-brand" />
             </div>
-            <span className="text-xs text-fg-tertiary">© 2026 QR Review Platform</span>
+            <span className="text-xs text-fg-tertiary">© 2026 Review by Expendifii</span>
           </div>
-          <a href="/admin/login" className="text-xs text-fg-quaternary hover:text-fg-tertiary transition-colors">
+          <a
+            href="/admin/login"
+            className="inline-flex items-center rounded-xl border border-border hover:border-border-strong text-sm text-fg-secondary hover:text-fg px-4 py-2 transition-colors"
+          >
             Admin
           </a>
         </div>

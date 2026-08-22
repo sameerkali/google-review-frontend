@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "QR Review Platform",
-    short_name: "QR Review",
+    name: "Review by Expendifii",
+    short_name: "Expendifii",
     description: "Scan QR codes to leave reviews for your favourite businesses.",
     start_url: "/",
     display: "standalone",

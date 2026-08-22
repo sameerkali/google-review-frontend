@@ -53,7 +53,7 @@ export default function BusinessLoginPage() {
           </div>
           <div>
             <h1 className="text-base font-semibold text-fg">Business Portal</h1>
-            <p className="text-xs text-fg-tertiary">QR Review Platform</p>
+            <p className="text-xs text-fg-tertiary">Review by Expendifii</p>
           </div>
         </div>
 

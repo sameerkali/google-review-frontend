@@ -108,7 +108,7 @@ function AdminShell({ children }: { children: React.ReactNode }) {
             </div>
             <div>
               <p className="text-sm font-semibold text-fg">Admin</p>
-              <p className="text-xs text-fg-tertiary">QR Review Platform</p>
+              <p className="text-xs text-fg-tertiary">Review by Expendifii</p>
             </div>
           </div>
         </div>
@@ -163,7 +163,7 @@ function AdminShell({ children }: { children: React.ReactNode }) {
             </button>
             <div>
               <h1 className="text-sm font-semibold text-fg">{activeLabel}</h1>
-              <p className="text-xs text-fg-quaternary hidden sm:block">QR Review Platform · Admin Dashboard</p>
+              <p className="text-xs text-fg-quaternary hidden sm:block">Review by Expendifii · Admin Dashboard</p>
             </div>
           </div>
           <div className="flex items-center gap-2">

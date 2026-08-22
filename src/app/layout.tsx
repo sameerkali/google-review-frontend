@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "QR Review Platform",
+  title: "Review by Expendifii",
   description: "Scan QR codes to leave reviews for your favourite businesses.",
   icons: {
     icon: [

@@ -182,7 +182,7 @@ export default function ReviewPage({ params }: { params: Promise<{ code: string 
           </div>
         )}
 
-        <p className="text-center text-xs text-fg-quaternary">Powered by QR Expendifii.com</p>
+        <p className="text-center text-xs text-fg-quaternary">Powered by Expendifii</p>
       </div>
     </div>
   );
