@@ -115,6 +115,7 @@ export function QrViewModal({
                   toast={toast}
                   badgeLabel={linked.status === "assigned" ? "Active" : linked.status}
                   compact
+                  posterHref={`/admin/businesses/poster?serial=${encodeURIComponent(linked.serial)}&name=${encodeURIComponent(business.name)}`}
                 />
                 <div className="flex items-center justify-between rounded-xl border border-border bg-background/50 px-4 py-3">
                   <p className="text-xs text-fg-tertiary">

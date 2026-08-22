@@ -36,11 +36,13 @@ import {
   Tray,
   DeviceMobile,
   ArrowRight,
+  ArrowLeft,
   GoogleLogo,
   ChatCircleText,
   Storefront,
   Sparkle,
   EyeSlashIcon as PhosphorEyeSlash,
+  DownloadSimpleIcon as PhosphorDownloadSimple,
   type Icon,
 } from "@phosphor-icons/react";
 
@@ -82,11 +84,13 @@ export const MoonIcon = make(Moon, "bold");
 export const TrayIcon = make(Tray);
 export const DeviceMobileIcon = make(DeviceMobile);
 export const ArrowRightIcon = make(ArrowRight, "bold");
+export const ArrowLeftIcon = make(ArrowLeft, "bold");
 export const GoogleLogoIcon = make(GoogleLogo);
 export const ChatIcon = make(ChatCircleText);
 export const StorefrontIcon = make(Storefront);
 export const SparkleIcon = make(Sparkle, "bold");
 export const EyeSlashIcon = make(PhosphorEyeSlash);
+export const DownloadIcon = make(PhosphorDownloadSimple, "bold");
 
 export const TAB_ICONS = {
   overview: OverviewIcon,

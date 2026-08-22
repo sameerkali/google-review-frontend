@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import QRCode from "qrcode";
 import type { ToastFn } from "@/lib/types";
-import { CheckIcon, CopyIcon, ExternalLinkIcon } from "@/components/icons";
+import { downloadQrPoster } from "@/lib/qrPoster";
+import { CheckIcon, CopyIcon, ExternalLinkIcon, DownloadIcon } from "@/components/icons";
 
 /* ─── QR Card (shared: Businesses "View QR", Onboarding Wizard) ── */
 export function QrCard({
-  reviewUrl, businessName, toast, badgeLabel = "Verified", compact = false,
+  reviewUrl, businessName, toast, badgeLabel = "Verified", compact = false, posterHref,
 }: {
   reviewUrl: string;
   businessName: string;
@@ -16,9 +18,13 @@ export function QrCard({
   /** Force a stacked layout — the row split relies on a viewport-width
       breakpoint, which is wrong inside a narrow container like a modal. */
   compact?: boolean;
+  /** When provided (Businesses list → "View QR"), swaps the one-click
+      poster download for a link to the full poster editor instead. */
+  posterHref?: string;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [copied, setCopied] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   // Draw the QR AFTER React has committed the canvas to the DOM
   useEffect(() => {
@@ -39,6 +45,17 @@ export function QrCard({
         setTimeout(() => setCopied(false), 2500);
       })
       .catch(() => toast("error", "Could not copy to clipboard"));
+  };
+
+  const downloadPoster = async () => {
+    setDownloading(true);
+    try {
+      await downloadQrPoster({ reviewUrl, businessName });
+    } catch {
+      toast("error", "Could not generate the poster");
+    } finally {
+      setDownloading(false);
+    }
   };
 
   return (
@@ -80,9 +97,27 @@ export function QrCard({
               <ExternalLinkIcon className="w-4 h-4" />
               Open Review Page
             </button>
+            {posterHref ? (
+              <Link
+                href={posterHref}
+                className="flex items-center gap-2 rounded-xl border border-border-strong px-4 py-2 text-sm font-medium text-fg-tertiary hover:text-fg hover:border-fg-quaternary transition-all duration-150 cursor-pointer"
+              >
+                <DownloadIcon className="w-4 h-4" />
+                Customize Poster
+              </Link>
+            ) : (
+              <button
+                onClick={downloadPoster}
+                disabled={downloading}
+                className="flex items-center gap-2 rounded-xl border border-border-strong px-4 py-2 text-sm font-medium text-fg-tertiary hover:text-fg hover:border-fg-quaternary transition-all duration-150 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                <DownloadIcon className="w-4 h-4" />
+                {downloading ? "Preparing…" : "Download Poster"}
+              </button>
+            )}
           </div>
           <p className="text-xs text-fg-quaternary">
-            Scan the QR with your phone camera or tap &quot;Open Review Page&quot; to test the customer experience.
+            Scan the QR with your phone camera, tap &quot;Open Review Page&quot; to test the customer experience, or {posterHref ? "customize a printable poster for your counter" : "download a printable poster for your counter"}.
           </p>
         </div>
       </div>
