@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useAdmin } from "../_lib/context";
-import { AlertIcon, ShieldIcon, UserIcon } from "@/components/icons";
+import { AlertIcon, ArrowLeftIcon, ShieldIcon, UserIcon } from "@/components/icons";
 import { Button } from "@/components/ui/Button";
 import { Input, PasswordInput, Label, ErrorText } from "@/components/ui/Input";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -37,6 +38,13 @@ export default function LoginPage() {
 
   return (
     <main className="min-h-dvh flex items-center justify-center bg-background relative overflow-hidden">
+      <Link
+        href="/"
+        className="fixed top-4 left-4 inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm text-fg-tertiary hover:text-fg hover:bg-surface-inset transition-colors duration-150"
+      >
+        <ArrowLeftIcon className="w-4 h-4" />
+        Back
+      </Link>
       <ThemeToggle className="fixed top-4 right-4" />
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute -top-40 -left-40 w-96 h-96 rounded-full bg-brand/5 blur-3xl" />
