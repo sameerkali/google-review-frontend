@@ -1,8 +1,9 @@
 import Image from "next/image";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { HeroQrCode } from "@/components/HeroQrCode";
-import { QrScanScroll } from "@/components/QrScanScroll";
 import { AuthLandingRedirect } from "@/components/AuthLandingRedirect";
+import { GoogleReviewCard } from "@/components/GoogleReviewCard";
+import { WavyBackground } from "@/components/ui/wavy-background";
 import {
   QrIcon,
   ArrowRightIcon,
@@ -63,72 +64,78 @@ export default function Home() {
     <div className="bg-background overflow-x-clip">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(SERVICE_JSON_LD) }} />
       <AuthLandingRedirect />
-      {/* Nav */}
-      <header className="border-b border-border">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-brand/15 border border-brand/25 flex items-center justify-center">
-              <QrIcon className="w-4 h-4 text-brand" />
-            </div>
-            <span className="text-sm font-semibold text-fg">Review by Expendifii</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
-            <a
-              href="/business/login"
-              className="inline-flex items-center rounded-xl bg-brand hover:bg-brand-hover text-white font-semibold px-4 py-2 text-xs transition-all duration-150 active:scale-[0.98]"
-            >
-              Business Login
-            </a>
-          </div>
-        </div>
-      </header>
 
       <main>
-        {/* Hero */}
-        <section className="max-w-6xl mx-auto px-6 pt-16 pb-20 lg:pt-20 lg:pb-28 grid lg:grid-cols-[1.1fr_0.9fr] gap-14 items-center">
-          <div className="space-y-6">
-            <h1 className="text-4xl md:text-5xl lg:text-[3.4rem] font-semibold tracking-tight leading-[1.08] text-fg">
-              Reviews start with a scan, not a request.
-            </h1>
-            <p className="text-fg-tertiary text-base leading-relaxed max-w-[46ch]">
-              Print one QR code. Customers scan it, copy a ready-made review, and land straight on your Google listing.
-            </p>
-            <div className="flex items-center gap-2 pt-1">
-              <a
-                href="/business/login"
-                className="inline-flex items-center gap-2 rounded-xl bg-brand hover:bg-brand-hover text-white font-semibold px-5 py-2.5 text-sm transition-all duration-150 active:scale-[0.98]"
-              >
-                Business Login
-                <ArrowRightIcon className="w-4 h-4" />
-              </a>
+        {/* Hero — no separate nav bar; logo and login sit directly on the
+            wavy background as a plain top row. Fixed dark regardless of
+            page theme (same precedent as the brand-blue final CTA band
+            below). Wave colors are the brand blue family only. */}
+        <WavyBackground
+          colors={["#3b6cf0", "#5a84f3", "#93b4fb", "#2f56c4", "#1c3f8f"]}
+          backgroundFill="#05070f"
+          waveOpacity={0.35}
+          blur={14}
+          speed="slow"
+          containerClassName="!h-auto !min-h-0"
+        >
+          <div className="w-full">
+            <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-white/10 border border-white/15 flex items-center justify-center">
+                  <QrIcon className="w-4 h-4 text-white" />
+                </div>
+                <span className="text-sm font-semibold text-white">Review by Expendifii</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <ThemeToggle className="text-white/70 hover:text-white hover:bg-white/10" />
+                <a
+                  href="/business/login"
+                  className="inline-flex items-center rounded-xl bg-white hover:bg-white/90 text-brand font-semibold px-4 py-2 text-xs transition-all duration-150 active:scale-[0.98]"
+                >
+                  Business Login
+                </a>
+              </div>
+            </div>
+
+            <div className="max-w-6xl mx-auto px-6 pt-10 pb-20 lg:pt-14 lg:pb-28 grid lg:grid-cols-[1.05fr_0.95fr] gap-14 items-center">
+              <div className="space-y-6">
+                <h1 className="text-4xl md:text-5xl lg:text-[3.4rem] font-semibold tracking-tight leading-[1.08] text-white">
+                  Reviews start with a scan, not a request.
+                </h1>
+                <p className="text-white/70 text-base leading-relaxed max-w-[46ch]">
+                  Print one QR code. Customers scan it, copy a ready-made review, and land straight on your Google listing.
+                </p>
+                <div className="flex items-center gap-2 pt-1">
+                  <a
+                    href="/business/login"
+                    className="inline-flex items-center gap-2 rounded-xl bg-white hover:bg-white/90 text-brand font-semibold px-5 py-2.5 text-sm transition-all duration-150 active:scale-[0.98]"
+                  >
+                    Business Login
+                    <ArrowRightIcon className="w-4 h-4" />
+                  </a>
+                </div>
+              </div>
+
+              {/* What actually shows up on the business's Google listing,
+                  and the real, scannable QR code that leads there (encodes
+                  this page's own URL) — stacked, not overlapping, so
+                  nothing ever covers the review text. */}
+              <div className="flex justify-center lg:justify-end">
+                <div className="w-full max-w-[420px] space-y-4">
+                  <GoogleReviewCard />
+                  <div className="flex items-center gap-3 justify-end">
+                    <p className="text-xs text-white/50 text-right leading-snug">
+                      A real, scannable code<br />pointing at this page
+                    </p>
+                    <div className="shrink-0">
+                      <HeroQrCode size={64} />
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-
-          {/* A real photo of a counter (placeholder, swap for your own) with
-              a real, scannable QR code composed over the corner, the way it
-              would actually sit on a till. The only motion on the page: a
-              thin scan line that tracks scroll position as this block moves
-              through the viewport — scrubbed by hand, not looped. */}
-          <div className="flex justify-center lg:justify-end">
-            <QrScanScroll className="w-full max-w-[340px]">
-              <div className="relative aspect-[4/5] rounded-[2rem] overflow-hidden shadow-2xl">
-                <Image
-                  src="https://picsum.photos/seed/qr-review-counter/800/1000"
-                  alt="A café counter, the kind of spot a QR review code lives next to the till"
-                  fill
-                  sizes="(min-width: 1024px) 340px, 80vw"
-                  className="object-cover"
-                  priority
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-transparent" />
-              </div>
-              <div className="absolute -bottom-8 -left-8 sm:-left-10">
-                <HeroQrCode size={132} />
-              </div>
-            </QrScanScroll>
-          </div>
-        </section>
+        </WavyBackground>
 
         {/* How it works */}
         <section className="border-t border-border">

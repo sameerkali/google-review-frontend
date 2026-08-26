@@ -48,7 +48,7 @@ import {
 
 type IconProps = SVGProps<SVGSVGElement>;
 
-function make(Base: Icon, weight: "regular" | "bold" | "duotone" = "regular") {
+function make(Base: Icon, weight: "regular" | "bold" | "duotone" | "fill" = "regular") {
   return function Wrapped(props: IconProps) {
     return <Base weight={weight} {...props} />;
   };
@@ -59,6 +59,7 @@ export const BusinessesIcon = make(Buildings);
 export const PlansIcon = make(CreditCard);
 export const HardwareIcon = make(HardDrives);
 export const ReviewsIcon = make(Star);
+export const StarFillIcon = make(Star, "fill");
 export const AnalyticsIcon = make(ChartBar);
 export const PlusIcon = make(Plus, "bold");
 export const CloseIcon = make(X, "bold");
