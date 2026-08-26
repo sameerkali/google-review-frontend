@@ -6,8 +6,12 @@ import type { Row } from "@/lib/types";
 import { useBusiness } from "../_lib/context";
 import { QrCard } from "@/components/QrCard";
 import { Skeleton } from "@/components/Loaders";
-import { BarChart } from "@/components/charts/BarChart";
-import { FunnelChart } from "@/components/charts/FunnelChart";
+import { ActivityByTypeBar } from "@/components/charts/ActivityByTypeBar";
+import { DeviceDonut } from "@/components/charts/DeviceDonut";
+import { BrowserBar } from "@/components/charts/BrowserBar";
+import { OsRadialBar } from "@/components/charts/OsRadialBar";
+import { EngagementRadar } from "@/components/charts/EngagementRadar";
+import { ConversionFunnelChart } from "@/components/charts/ConversionFunnelChart";
 import { CheckIcon, CloseIcon, InfoIcon, SparkleIcon } from "@/components/icons";
 
 /* Curated, hand-written for now — a real suggestions engine isn't wired up
@@ -158,9 +162,13 @@ export default function DashboardPage() {
                     <p className="text-xs font-medium text-fg-tertiary uppercase tracking-wider capitalize">{field}</p>
                     {analytics.breakdown![field].length ? (
                       analyticsFull ? (
-                        <BarChart
-                          data={analytics.breakdown![field].map((row) => ({ label: row._id || "unknown", value: row.count }))}
-                        />
+                        field === "device" ? (
+                          <DeviceDonut data={analytics.breakdown!.device} />
+                        ) : field === "browser" ? (
+                          <BrowserBar data={analytics.breakdown!.browser} />
+                        ) : (
+                          <OsRadialBar data={analytics.breakdown!.os} />
+                        )
                       ) : (
                         <ul className="space-y-1.5">
                           {analytics.breakdown![field].map((row) => (
@@ -180,24 +188,31 @@ export default function DashboardPage() {
             )}
 
             {analyticsFull && (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 <div className="rounded-2xl border border-border bg-surface p-5 space-y-3">
                   <p className="text-xs font-medium text-fg-tertiary uppercase tracking-wider">Activity by Type</p>
-                  <BarChart
-                    data={[
-                      { label: "Scans", value: analytics.summary.byType.scan ?? 0, color: "var(--chart-series-1)" },
-                      { label: "Review Copies", value: analytics.summary.byType.review_copy ?? 0, color: "var(--chart-series-2)" },
-                      { label: "Google Clicks", value: analytics.summary.byType.google_click ?? 0, color: "var(--chart-series-3)" },
-                    ]}
+                  <ActivityByTypeBar
+                    scans={analytics.summary.byType.scan ?? 0}
+                    reviewCopies={analytics.summary.byType.review_copy ?? 0}
+                    googleClicks={analytics.summary.byType.google_click ?? 0}
+                  />
+                </div>
+                <div className="rounded-2xl border border-border bg-surface p-5 space-y-3">
+                  <p className="text-xs font-medium text-fg-tertiary uppercase tracking-wider">Engagement Profile</p>
+                  <EngagementRadar
+                    scans={analytics.summary.byType.scan ?? 0}
+                    reviewCopies={analytics.summary.byType.review_copy ?? 0}
+                    googleClicks={analytics.summary.byType.google_click ?? 0}
+                    conversionRate={analytics.summary.conversionRate}
                   />
                 </div>
                 <div className="rounded-2xl border border-border bg-surface p-5 space-y-3">
                   <p className="text-xs font-medium text-fg-tertiary uppercase tracking-wider">Conversion Funnel</p>
-                  <FunnelChart
+                  <ConversionFunnelChart
                     stages={[
-                      { label: "Scans", value: analytics.summary.byType.scan ?? 0 },
-                      { label: "Review Copies", value: analytics.summary.byType.review_copy ?? 0 },
-                      { label: "Google Clicks", value: analytics.summary.byType.google_click ?? 0 },
+                      { id: "Scans", value: analytics.summary.byType.scan ?? 0 },
+                      { id: "Review Copies", value: analytics.summary.byType.review_copy ?? 0 },
+                      { id: "Google Clicks", value: analytics.summary.byType.google_click ?? 0 },
                     ]}
                   />
                 </div>
