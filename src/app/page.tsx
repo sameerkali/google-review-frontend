@@ -66,10 +66,14 @@ export default function Home() {
       <AuthLandingRedirect />
 
       <main>
-        {/* Hero — no separate nav bar; logo and login sit directly on the
-            wavy background as a plain top row. Fixed dark regardless of
-            page theme (same precedent as the brand-blue final CTA band
-            below). Wave colors are the brand blue family only. */}
+        {/* Theme toggle floats fixed over everything — the landing page has
+            no nav bar for it to live in, and it needs to stay reachable
+            whether the wave (always dark) or a themed section is underneath. */}
+        <ThemeToggle className="fixed top-4 right-4 z-20 bg-surface/80 backdrop-blur-md border border-border shadow-sm" />
+
+        {/* Hero — no nav bar at all. Wave colors are the brand blue family only,
+            fixed dark regardless of page theme (same precedent as the
+            brand-blue final CTA band below). */}
         <WavyBackground
           colors={["#3b6cf0", "#5a84f3", "#93b4fb", "#2f56c4", "#1c3f8f"]}
           backgroundFill="#05070f"
@@ -79,25 +83,7 @@ export default function Home() {
           containerClassName="!h-auto !min-h-0"
         >
           <div className="w-full">
-            <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-white/10 border border-white/15 flex items-center justify-center">
-                  <QrIcon className="w-4 h-4 text-white" />
-                </div>
-                <span className="text-sm font-semibold text-white">Review by Expendifii</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <ThemeToggle className="text-white/70 hover:text-white hover:bg-white/10" />
-                <a
-                  href="/business/login"
-                  className="inline-flex items-center rounded-xl bg-white hover:bg-white/90 text-brand font-semibold px-4 py-2 text-xs transition-all duration-150 active:scale-[0.98]"
-                >
-                  Business Login
-                </a>
-              </div>
-            </div>
-
-            <div className="max-w-6xl mx-auto px-6 pt-10 pb-20 lg:pt-14 lg:pb-28 grid lg:grid-cols-[1.05fr_0.95fr] gap-14 items-center">
+            <div className="max-w-6xl mx-auto px-6 pt-16 pb-20 lg:pt-20 lg:pb-28 grid lg:grid-cols-[1.05fr_0.95fr] gap-14 items-center">
               <div className="space-y-6">
                 <h1 className="text-4xl md:text-5xl lg:text-[3.4rem] font-semibold tracking-tight leading-[1.08] text-white">
                   Reviews start with a scan, not a request.
