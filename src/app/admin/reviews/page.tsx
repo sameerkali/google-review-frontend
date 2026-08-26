@@ -9,7 +9,7 @@ import { Pagination } from "@/components/Pagination";
 import { BulkReviewUploadModal } from "../_components/BulkReviewUploadModal";
 import { AlertIcon, PlusIcon, UploadIcon } from "@/components/icons";
 import { api } from "@/lib/api";
-import { Spinner } from "@/components/Loaders";
+import { Skeleton } from "@/components/Loaders";
 import { Button } from "@/components/ui/Button";
 import { Label, Select, Textarea } from "@/components/ui/Input";
 
@@ -62,9 +62,38 @@ function BusinessList({
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <Spinner />
-        </div>
+        <>
+          {/* Card — mobile */}
+          <div className="space-y-3 sm:hidden">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="rounded-2xl border border-border bg-surface p-4 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-3 w-14" />
+                </div>
+                <div className="flex gap-2">
+                  <Skeleton className="h-5 w-10 rounded-full" />
+                  <Skeleton className="h-5 w-10 rounded-full" />
+                  <Skeleton className="h-5 w-10 rounded-full" />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Table — sm+ */}
+          <div className="hidden sm:block rounded-2xl border border-border overflow-hidden">
+            <div className="bg-surface px-4 py-3 border-b border-border flex gap-6">
+              {["Business", "Email", "Unused", "Reserved", "Used", "Total"].map((h) => (
+                <Skeleton key={h} className="h-3 w-16" />
+              ))}
+            </div>
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="px-4 py-3 border-b border-border flex gap-6">
+                {[...Array(6)].map((_, c) => <Skeleton key={c} className="h-3 w-16" />)}
+              </div>
+            ))}
+          </div>
+        </>
       ) : !rows.length ? (
         <div className="rounded-2xl border border-border bg-surface p-12 text-center">
           <p className="text-sm text-fg-tertiary">No review suggestions yet</p>

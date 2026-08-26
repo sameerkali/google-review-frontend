@@ -9,7 +9,7 @@ import {
   type QrPosterFields,
 } from "@/lib/qrPoster";
 import { PosterPreviewCanvas } from "@/components/PosterPreviewCanvas";
-import { Spinner } from "@/components/Loaders";
+import { Skeleton } from "@/components/Loaders";
 import { Button } from "@/components/ui/Button";
 import { Field, Input } from "@/components/ui/Input";
 import { ArrowLeftIcon, DownloadIcon } from "@/components/icons";
@@ -115,9 +115,15 @@ function PosterEditor() {
           </button>
         </div>
 
-        {/* Live preview */}
+        {/* Live preview — the wrapper is pinned to the poster's real aspect
+            ratio from first paint (the canvas itself only gets its true
+            width/height once drawQrPoster runs in an effect), so the
+            skeleton fills exactly where the artwork lands, no layout jump. */}
         <div className="flex justify-center">
-          <div className="relative w-full max-w-[420px] rounded-2xl overflow-hidden shadow-2xl border border-border">
+          <div
+            className="relative w-full max-w-[420px] rounded-2xl overflow-hidden shadow-2xl border border-border"
+            style={{ aspectRatio: `${size.width} / ${size.height}` }}
+          >
             {reviewUrl && (
               <PosterPreviewCanvas
                 ref={canvasRef}
@@ -126,14 +132,10 @@ function PosterEditor() {
                 sizeKey={size.key}
                 designKey={design.key}
                 onRenderChange={setRendering}
-                className="block w-full h-auto"
+                className="block w-full h-full"
               />
             )}
-            {rendering && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/10">
-                <Spinner size="md" />
-              </div>
-            )}
+            {rendering && <Skeleton className="absolute inset-0 rounded-none" />}
           </div>
         </div>
       </div>

@@ -63,7 +63,7 @@ export default function DashboardPage() {
   const { token, authChecked, toast } = useBusiness();
   const enabled = authChecked && !!token;
 
-  const { data: business } = useQuery({
+  const { data: business, isPending: businessLoading } = useQuery({
     queryKey: ["business", "me"],
     queryFn: () => api<Row>("/business/me", { token }),
     enabled,
@@ -99,14 +99,20 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <div>
         <h2 className="text-lg font-semibold text-fg">Dashboard</h2>
-        <p className="text-sm text-fg-tertiary mt-0.5">Welcome back, {business?.name}</p>
+        {businessLoading ? (
+          <Skeleton className="h-4 w-40 mt-1.5" />
+        ) : (
+          <p className="text-sm text-fg-tertiary mt-0.5">Welcome back, {business?.name}</p>
+        )}
       </div>
 
       {/* Plan card */}
       <div className="rounded-2xl border border-border bg-surface p-6 space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-fg">Your Plan</h3>
-          {plan ? (
+          {businessLoading ? (
+            <Skeleton className="h-5 w-28" />
+          ) : plan ? (
             <span className="text-lg font-bold text-fg">
               {plan.name} <span className="text-sm font-normal text-fg-tertiary">₹{plan.price}{plan.billingType === "monthly" ? "/mo" : plan.billingType === "annually" ? "/yr" : ""}</span>
             </span>
@@ -114,12 +120,18 @@ export default function DashboardPage() {
             <span className="text-sm text-fg-tertiary">No plan assigned</span>
           )}
         </div>
-        {plan?.features && (
+        {businessLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <FeatureRow label="QR code + basic functionality" on />
-            <FeatureRow label={`Analytics: ${plan.features.analytics === "full" ? "Full" : plan.features.analytics === "basic" ? "Basic" : "None"}`} on={plan.features.analytics !== "none"} />
-            <FeatureRow label="Scanner device data" on={Boolean(plan.features.userData)} />
+            {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-4 w-full" />)}
           </div>
+        ) : (
+          plan?.features && (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <FeatureRow label="QR code + basic functionality" on />
+              <FeatureRow label={`Analytics: ${plan.features.analytics === "full" ? "Full" : plan.features.analytics === "basic" ? "Basic" : "None"}`} on={plan.features.analytics !== "none"} />
+              <FeatureRow label="Scanner device data" on={Boolean(plan.features.userData)} />
+            </div>
+          )
         )}
       </div>
 
@@ -136,9 +148,15 @@ export default function DashboardPage() {
       <div className="space-y-4">
         <h3 className="text-sm font-semibold text-fg">Analytics</h3>
         {analyticsLoading ? (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-24" />)}
-          </div>
+          <>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-24" />)}
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
+              {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-40 rounded-2xl" />)}
+            </div>
+            <Skeleton className="h-48 rounded-2xl mt-4" />
+          </>
         ) : analytics ? (
           <>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -245,7 +263,9 @@ export default function DashboardPage() {
       {/* Growth suggestions */}
       <div className="space-y-4">
         <h3 className="text-sm font-semibold text-fg">Growth Suggestions</h3>
-        {suggestionsEnabled ? (
+        {businessLoading ? (
+          <Skeleton className="h-32 rounded-2xl" />
+        ) : suggestionsEnabled ? (
           <div className="rounded-2xl border border-border bg-surface p-5 space-y-3">
             {STATIC_SUGGESTIONS.map((t, i) => (
               <div key={i} className="flex items-start gap-2.5 text-sm">

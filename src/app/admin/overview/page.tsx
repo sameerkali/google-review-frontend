@@ -108,9 +108,17 @@ export default function OverviewPage() {
         ))}
       </div>
 
+      {dataLoading && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Skeleton className="h-48 rounded-2xl" />
+          <Skeleton className="h-48 rounded-2xl" />
+          <Skeleton className="h-64 rounded-2xl lg:col-span-2" />
+        </div>
+      )}
+
       {!ov && !dataLoading && (
         <div className="rounded-2xl border border-border bg-surface p-8 text-center">
-          <p className="text-fg-tertiary text-sm">Click Refresh to load data.</p>
+          <p className="text-fg-tertiary text-sm">No data available right now.</p>
         </div>
       )}
 

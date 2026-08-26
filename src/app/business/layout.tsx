@@ -9,7 +9,7 @@ import { api } from "@/lib/api";
 import type { Row } from "@/lib/types";
 import { ToastContainer } from "@/components/Toast";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
-import { FullPageSpinner } from "@/components/Loaders";
+import { FullPageSpinner, Skeleton } from "@/components/Loaders";
 import { LogoutIcon, QrIcon } from "@/components/icons";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { IconButton } from "@/components/ui/Button";
@@ -32,7 +32,7 @@ function BusinessShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [confirmSignOut, setConfirmSignOut] = useState(false);
-  const { data: business } = useQuery({
+  const { data: business, isPending: businessLoading } = useQuery({
     queryKey: ["business", "me"],
     queryFn: () => api<Row>("/business/me", { token }),
     enabled: authChecked && !!token,
@@ -70,8 +70,17 @@ function BusinessShell({ children }: { children: React.ReactNode }) {
             <QrIcon className="w-4 h-4 text-brand" />
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-fg truncate">{business?.name || "Business Portal"}</p>
-            <p className="text-xs text-fg-tertiary">{(business?.planId as { name?: string } | undefined)?.name || "No plan"}</p>
+            {businessLoading ? (
+              <>
+                <Skeleton className="h-4 w-28 mb-1" />
+                <Skeleton className="h-3 w-16" />
+              </>
+            ) : (
+              <>
+                <p className="text-sm font-semibold text-fg truncate">{business?.name || "Business Portal"}</p>
+                <p className="text-xs text-fg-tertiary">{(business?.planId as { name?: string } | undefined)?.name || "No plan"}</p>
+              </>
+            )}
           </div>
         </div>
         <nav className="flex items-center gap-1">
