@@ -39,9 +39,9 @@ function IdentityAvatar({ business, ringClassName, textClassName }: { business: 
     <div className={`w-[88px] h-[88px] rounded-full p-1 mx-auto ${ringClassName}`}>
       {business.logoUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={business.logoUrl} alt={business.name} className="w-full h-full rounded-full object-cover bg-white" />
+        <img src={business.logoUrl} alt={business.name} className="w-full h-full rounded-full object-cover bg-white dark:bg-zinc-900" />
       ) : (
-        <div className={`w-full h-full rounded-full bg-white flex items-center justify-center font-semibold text-2xl ${textClassName}`}>
+        <div className={`w-full h-full rounded-full bg-white dark:bg-zinc-900 flex items-center justify-center font-semibold text-2xl ${textClassName}`}>
           {initials(business.name)}
         </div>
       )}
@@ -67,10 +67,10 @@ function PlayfulReviewCard({ business, suggestions, copiedId, onCopy, onGoogle }
       <IdentityAvatar
         business={business}
         ringClassName="bg-[linear-gradient(135deg,#ff8a65,#7c6cf0)]"
-        textClassName="text-[#7c6cf0]"
+        textClassName="text-[#7c6cf0] dark:text-[#b3a6ff]"
       />
-      <h1 className="text-xl font-semibold text-[#22242b] mt-4">{business.name}</h1>
-      <p className="text-sm text-[#6a6d7a] mt-1.5">Tell us how it went!</p>
+      <h1 className="text-xl font-semibold text-[#22242b] dark:text-white mt-4">{business.name}</h1>
+      <p className="text-sm text-[#6a6d7a] dark:text-[#a7abc0] mt-1.5">Tell us how it went!</p>
       <div className="mt-4">
         <DecorativeStars />
       </div>
@@ -80,12 +80,14 @@ function PlayfulReviewCard({ business, suggestions, copiedId, onCopy, onGoogle }
           {suggestions.map((s) => {
             const isCopied = copiedId === s.id;
             return (
-              <div key={s.id} className="shrink-0 w-[210px] snap-start rounded-2xl bg-white p-3.5 text-left shadow-[0_8px_20px_-10px_rgba(34,36,43,0.2)]">
-                <p className="text-[12.5px] leading-relaxed text-[#4a4d59] min-h-[62px]">{s.text}</p>
+              <div key={s.id} className="shrink-0 w-[210px] snap-start rounded-2xl bg-white dark:bg-white/[0.06] dark:border dark:border-white/10 p-3.5 text-left shadow-[0_8px_20px_-10px_rgba(34,36,43,0.2)] dark:shadow-none">
+                <p className="text-[12.5px] leading-relaxed text-[#4a4d59] dark:text-[#d3d5e2] min-h-[62px]">{s.text}</p>
                 <button
                   onClick={() => onCopy(s)}
                   className={`mt-2.5 w-full flex items-center justify-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold transition-all duration-150 cursor-pointer active:scale-95 ${
-                    isCopied ? "bg-emerald-50 text-emerald-600" : "bg-[#f1eefe] text-[#7c6cf0] hover:bg-[#e6e0fd]"
+                    isCopied
+                      ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400"
+                      : "bg-[#f1eefe] text-[#7c6cf0] hover:bg-[#e6e0fd] dark:bg-white/10 dark:text-[#cabdff] dark:hover:bg-white/15"
                   }`}
                 >
                   {isCopied ? (<><CheckIcon className="w-3.5 h-3.5" /> Copied</>) : (<><CopyIcon className="w-3.5 h-3.5" /> Copy</>)}
@@ -115,10 +117,10 @@ function WarmReviewCard({ business, suggestions, copiedId, onCopy, onGoogle }: C
       <IdentityAvatar
         business={business}
         ringClassName="bg-[conic-gradient(from_200deg,#ff8a5c,#ff5a36,#ffb37a,#ff8a5c)]"
-        textClassName="text-[#ff5a36]"
+        textClassName="text-[#ff5a36] dark:text-[#ff9270]"
       />
-      <h1 className="text-[22px] font-semibold text-[#2c1a10] mt-4 tracking-tight">{business.name}</h1>
-      <p className="text-sm text-[#8a6f61] mt-1.5">We&apos;d love your feedback!</p>
+      <h1 className="text-[22px] font-semibold text-[#2c1a10] dark:text-[#fdf1e9] mt-4 tracking-tight">{business.name}</h1>
+      <p className="text-sm text-[#8a6f61] dark:text-[#cba790] mt-1.5">We&apos;d love your feedback!</p>
       <div className="mt-4 mb-2">
         <DecorativeStars />
       </div>
@@ -128,12 +130,14 @@ function WarmReviewCard({ business, suggestions, copiedId, onCopy, onGoogle }: C
           {suggestions.map((s) => {
             const isCopied = copiedId === s.id;
             return (
-              <div key={s.id} className="flex items-center gap-3 rounded-2xl bg-white border border-[#ffe3d1] p-3.5 text-left">
-                <p className="flex-1 text-[13px] leading-relaxed text-[#4a3226] min-w-0">{s.text}</p>
+              <div key={s.id} className="flex items-center gap-3 rounded-2xl bg-white dark:bg-white/[0.05] border border-[#ffe3d1] dark:border-white/10 p-3.5 text-left">
+                <p className="flex-1 text-[13px] leading-relaxed text-[#4a3226] dark:text-[#ecd9cc] min-w-0">{s.text}</p>
                 <button
                   onClick={() => onCopy(s)}
                   className={`shrink-0 flex items-center justify-center rounded-full p-2.5 transition-all duration-150 cursor-pointer active:scale-95 ${
-                    isCopied ? "bg-emerald-50 text-emerald-600" : "bg-[#fff0e6] text-[#ff5a36] hover:bg-[#ffe3d1]"
+                    isCopied
+                      ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400"
+                      : "bg-[#fff0e6] text-[#ff5a36] hover:bg-[#ffe3d1] dark:bg-white/10 dark:text-[#ffb08c] dark:hover:bg-white/15"
                   }`}
                 >
                   {isCopied ? <CheckIcon className="w-4 h-4" /> : <CopyIcon className="w-4 h-4" />}
@@ -145,7 +149,7 @@ function WarmReviewCard({ business, suggestions, copiedId, onCopy, onGoogle }: C
       )}
 
       <div className="relative mt-6">
-        <div className="absolute -top-2.5 right-3.5 w-[30px] h-[30px] rounded-full bg-white shadow-[0_2px_8px_rgba(0,0,0,0.15)] flex items-center justify-center">
+        <div className="absolute -top-2.5 right-3.5 w-[30px] h-[30px] rounded-full bg-white dark:bg-zinc-900 shadow-[0_2px_8px_rgba(0,0,0,0.15)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.4)] flex items-center justify-center">
           <GoogleG className="w-4 h-4" />
         </div>
         <button
@@ -240,16 +244,17 @@ export default function ReviewPage({ params }: { params: Promise<{ code: string 
 
   const { business, suggestions } = data;
 
-  // Both designs are fixed, light, always-on palettes (same precedent as
-  // the landing hero's wavy background) — not built from the app's
-  // dark/light tokens, so they read the same regardless of site theme.
+  // Each design keeps its own light and dark palette (dark variants tuned
+  // by hand, not the app's neutral tokens, so the playful/warm character
+  // survives instead of collapsing to plain grey) — driven by the site's
+  // real theme via the `dark:` class on <html>, same as everywhere else.
   const pageBg = playful
-    ? "bg-[linear-gradient(165deg,#eafff3_0%,#eaf2ff_100%)]"
-    : "bg-[#fff4ec]";
+    ? "bg-[linear-gradient(165deg,#eafff3_0%,#eaf2ff_100%)] dark:bg-[linear-gradient(165deg,#0b1f1a_0%,#0d1330_100%)]"
+    : "bg-[#fff4ec] dark:bg-[#1c140f]";
 
   return (
     <div className={`min-h-dvh flex flex-col items-center justify-center p-6 relative ${pageBg}`}>
-      <ThemeToggle className="fixed top-4 right-4 bg-white/70 backdrop-blur-md border border-black/10 text-zinc-600 hover:text-zinc-900 hover:bg-white/90 shadow-sm" />
+      <ThemeToggle className="fixed top-4 right-4 bg-white/70 dark:bg-black/40 backdrop-blur-md border border-black/10 dark:border-white/10 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-white/90 dark:hover:bg-black/60 shadow-sm" />
 
       <div className="w-full max-w-sm animate-rise-in">
         {playful ? (
@@ -259,13 +264,13 @@ export default function ReviewPage({ params }: { params: Promise<{ code: string 
         )}
 
         {googleUrlError && (
-          <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 flex items-start gap-2">
+          <div className="mt-4 rounded-xl border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/40 px-4 py-3 text-sm text-red-700 dark:text-red-300 flex items-start gap-2">
             <AlertIcon className="w-4 h-4 shrink-0 mt-0.5" />
             {googleUrlError}
           </div>
         )}
 
-        <p className="text-center text-xs text-black/35 mt-5">Powered by Expendifii</p>
+        <p className="text-center text-xs text-black/35 dark:text-white/35 mt-5">Powered by Expendifii</p>
       </div>
     </div>
   );
