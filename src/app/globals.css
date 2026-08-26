@@ -62,6 +62,18 @@
   --text-tertiary: #a1a1aa;
   --text-quaternary: #71717a;
   --placeholder: #52525b;
+
+  /* Chart categorical series + sequential ramp (validated via the dataviz
+     skill's palette validator against this app's dark card surface,
+     #18181b — all 4 checks pass; see the AnalyticsChart components). */
+  --chart-series-1: #3987e5;
+  --chart-series-2: #d95926;
+  --chart-series-3: #199e70;
+  --chart-series-4: #c98500;
+  --chart-seq-300: #6da7ec;
+  --chart-seq-450: #2a78d6;
+  --chart-seq-600: #184f95;
+  --chart-grid: #2c2c2a;
 }
 
 .light {
@@ -75,6 +87,20 @@
   --text-tertiary: #71717a;
   --text-quaternary: #a1a1aa;
   --placeholder: #a1a1aa;
+
+  /* Validated against this app's light card surface, #ffffff — CVD/lightness
+     checks pass; aqua (series-3) and yellow (series-4) sit below 3:1 text
+     contrast by design (the palette's documented light-mode relief case), so
+     those series are always paired with a visible text label, never color
+     alone. */
+  --chart-series-1: #2a78d6;
+  --chart-series-2: #eb6834;
+  --chart-series-3: #1baf7a;
+  --chart-series-4: #eda100;
+  --chart-seq-300: #6da7ec;
+  --chart-seq-450: #2a78d6;
+  --chart-seq-600: #184f95;
+  --chart-grid: #e1e0d9;
 }
 
 body {
