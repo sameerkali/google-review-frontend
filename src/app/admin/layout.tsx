@@ -3,14 +3,14 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useIsFetching, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useIsFetching, useQuery } from "@tanstack/react-query";
 import { AdminProvider, useAdmin } from "./_lib/context";
 import { api } from "@/lib/api";
 import type { Row } from "@/lib/types";
 import { ToastContainer } from "@/components/Toast";
 import { OnboardWizard } from "./_components/OnboardWizard";
 import { FullPageSpinner, Spinner } from "@/components/Loaders";
-import { LogoutIcon, MenuIcon, RefreshIcon, ShieldIcon, TAB_ICONS } from "@/components/icons";
+import { LogoutIcon, MenuIcon, ShieldIcon, TAB_ICONS } from "@/components/icons";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 const NAV: { href: string; key: keyof typeof TAB_ICONS; label: string; hidden?: boolean }[] = [
@@ -38,7 +38,6 @@ function AdminShell({ children }: { children: React.ReactNode }) {
   const { token, authChecked, signOut, toasts, dismissToast, wizardOpen, wizardKey, closeWizard, toast } = useAdmin();
   const router = useRouter();
   const pathname = usePathname();
-  const queryClient = useQueryClient();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const enabled = authChecked && !!token;
 
@@ -55,9 +54,8 @@ function AdminShell({ children }: { children: React.ReactNode }) {
     enabled,
   });
 
-  // Any in-flight admin query — drives the header spinner/disabled state.
+  // Any in-flight admin query — drives the header spinner.
   const dataLoading = useIsFetching({ queryKey: ["admin"] }) > 0;
-  const refresh = () => queryClient.invalidateQueries({ queryKey: ["admin"] });
 
   const isLoginRoute = pathname === "/admin/login";
   const isIndexRoute = pathname === "/admin";
@@ -168,14 +166,6 @@ function AdminShell({ children }: { children: React.ReactNode }) {
           </div>
           <div className="flex items-center gap-2">
             {dataLoading && <Spinner />}
-            <button
-              onClick={() => refresh()}
-              disabled={dataLoading}
-              className="flex items-center gap-1.5 rounded-lg border border-border-strong px-3 py-1.5 text-xs font-medium text-fg-tertiary hover:text-fg hover:border-fg-quaternary transition-all duration-150 cursor-pointer disabled:opacity-40"
-            >
-              <RefreshIcon className={`w-3.5 h-3.5 ${dataLoading ? "animate-spin" : ""}`} />
-              Refresh
-            </button>
             <ThemeToggle />
           </div>
         </header>
