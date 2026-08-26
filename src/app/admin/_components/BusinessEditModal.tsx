@@ -17,6 +17,8 @@ const FIELDS: { f: string; label: string; required?: boolean }[] = [
   { f: "email", label: "Email Address", required: true },
   { f: "phone", label: "Phone Number" },
   { f: "address", label: "Address" },
+  { f: "city", label: "City" },
+  { f: "website", label: "Website" },
   { f: "googleReviewUrl", label: "Google Review URL" },
 ];
 
@@ -40,6 +42,8 @@ export function BusinessEditModal({
     email: business?.email || "",
     phone: business?.phone || "",
     address: business?.address || "",
+    city: business?.city || "",
+    website: business?.website || "",
     googleReviewUrl: business?.googleReviewUrl || "",
   });
   const [status, setStatus] = useState(business?.status || "active");
@@ -80,6 +84,8 @@ export function BusinessEditModal({
       email: form.email.trim(),
       phone: form.phone.trim() || undefined,
       address: form.address.trim() || undefined,
+      city: form.city.trim() || undefined,
+      website: form.website.trim() || undefined,
       googleReviewUrl: form.googleReviewUrl.trim() || undefined,
       status,
       planId: plan || null,

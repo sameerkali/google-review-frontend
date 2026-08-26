@@ -30,6 +30,8 @@ const DETAIL_FIELDS: { f: string; label: string; required?: boolean }[] = [
   { f: "email", label: "Email Address", required: true },
   { f: "phone", label: "Phone Number" },
   { f: "address", label: "Address" },
+  { f: "city", label: "City" },
+  { f: "website", label: "Website" },
   { f: "googleReviewUrl", label: "Google Review URL" },
 ];
 
@@ -49,7 +51,7 @@ export function OnboardWizard({
   toast: ToastFn;
 }) {
   const queryClient = useQueryClient();
-  const emptyDetails: Record<string, string> = { name: "", email: "", phone: "", address: "", googleReviewUrl: "" };
+  const emptyDetails: Record<string, string> = { name: "", email: "", phone: "", address: "", city: "", website: "", googleReviewUrl: "" };
   const [step, setStep] = useState<WizardStep>("details");
   const [details, setDetails] = useState<Record<string, string>>(emptyDetails);
   const [detailErrors, setDetailErrors] = useState<Record<string, string>>({});
@@ -107,6 +109,8 @@ export function OnboardWizard({
           email: details.email.trim(),
           phone: details.phone.trim() || undefined,
           address: details.address.trim() || undefined,
+          city: details.city.trim() || undefined,
+          website: details.website.trim() || undefined,
           googleReviewUrl: details.googleReviewUrl.trim() || undefined,
           serial: code.trim() || undefined,
           planId: planId || undefined,
@@ -241,7 +245,7 @@ export function OnboardWizard({
                     }}
                     onBlur={() => { setDetailTouched((t) => ({ ...t, [f]: true })); validateDetailField(f, details); }}
                     aria-invalid={!!detailErrors[f]}
-                    placeholder={f === "googleReviewUrl" ? "https://maps.google.com/..." : label}
+                    placeholder={f === "googleReviewUrl" ? "https://maps.google.com/..." : f === "website" ? "https://example.com" : label}
                     error={!!detailErrors[f]}
                   />
                 </Field>
