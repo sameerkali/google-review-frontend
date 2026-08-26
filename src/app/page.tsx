@@ -13,9 +13,55 @@ import {
   SparkleIcon,
 } from "@/components/icons";
 
+/* A plain-language, factual description of the service — read by search
+   crawlers and AI agents, not rendered visually. Kept in sync with what the
+   product actually does (see the four screenshots below for the same
+   claims made visually). */
+const SERVICE_JSON_LD = {
+  "@context": "https://schema.org",
+  "@type": "Service",
+  name: "Review by Expendifii",
+  serviceType: "QR code Google review collection",
+  description:
+    "A QR-code-based system for collecting Google reviews. Customers scan a QR code, copy a ready-made review suggestion, and are taken directly to the business's Google review page — no app, login, or account required. Each business is onboarded and managed by a platform operator, who also provides a printable poster and QR code generator (multiple print sizes and designs) and an analytics dashboard tracking scans, review copies, and Google clicks as a conversion funnel.",
+  provider: { "@type": "Organization", name: "Expendifii" },
+  audience: {
+    "@type": "Audience",
+    audienceType: "Local businesses collecting Google reviews, such as cafés, salons, and clinics",
+  },
+};
+
+const FLOW_STEPS = [
+  {
+    title: "The operator sets up the business",
+    body: "A business is onboarded from the admin panel — plan, contact details, and a physical QR code assigned from tracked hardware stock.",
+    src: "/screenshots/admin-overview.png",
+    alt: "Admin panel overview showing total businesses, hardware stock, and recent scan activity",
+  },
+  {
+    title: "A print-ready poster is generated",
+    body: "Pick a size and a design — the QR is real and already embedded, previewed at full resolution exactly as it will print.",
+    src: "/screenshots/poster-designs.png",
+    alt: "Poster design picker showing six live QR poster templates for a café",
+  },
+  {
+    title: "A customer scans and leaves a review",
+    body: "No app, no login. They copy a ready-made suggestion, then tap through straight to the business's real Google review page.",
+    src: "/screenshots/review-flow.png",
+    alt: "Customer-facing review page showing suggested reviews with a copy button and a Leave a Google Review button",
+  },
+  {
+    title: "The business sees real conversion",
+    body: "Scans, copies, and Google clicks tracked as an actual funnel — not just a scan counter — plus device and browser breakdowns.",
+    src: "/screenshots/business-dashboard.png",
+    alt: "Business dashboard showing scan/click analytics charts and a conversion funnel",
+  },
+];
+
 export default function Home() {
   return (
     <div className="bg-background overflow-x-clip">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(SERVICE_JSON_LD) }} />
       <AuthLandingRedirect />
       {/* Nav */}
       <header className="border-b border-border">
@@ -112,31 +158,21 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Photo strip — works wherever customers already are. Placeholders
-            (picsum), swap for real photos of the shops using it. */}
+        {/* Full flow, in screenshots — real product UI, not stock photos or
+            mockups. Each caption states plainly what's happening, so the
+            section is legible from its text alone (to a screen reader, a
+            crawler, or an agent parsing the page), not just the image. */}
         <section className="border-t border-border">
           <div className="max-w-6xl mx-auto px-6 py-16 lg:py-24">
-            <h2 className="text-2xl md:text-3xl font-semibold text-fg max-w-[24ch] mb-10">
-              Works wherever the till does.
+            <h2 className="text-2xl md:text-3xl font-semibold text-fg max-w-[28ch] mb-2">
+              How a review actually gets collected.
             </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-              {[
-                { seed: "qr-review-cafe", label: "Cafés and bakeries" },
-                { seed: "qr-review-salon", label: "Salons and clinics" },
-                { seed: "qr-review-shop", label: "Shops and studios" },
-              ].map((item) => (
-                <figure key={item.seed}>
-                  <div className="relative aspect-[4/5] rounded-2xl overflow-hidden">
-                    <Image
-                      src={`https://picsum.photos/seed/${item.seed}/500/620`}
-                      alt=""
-                      fill
-                      sizes="(min-width: 640px) 33vw, 90vw"
-                      className="object-cover"
-                    />
-                  </div>
-                  <figcaption className="mt-3 text-sm text-fg-secondary">{item.label}</figcaption>
-                </figure>
+            <p className="text-fg-tertiary text-sm max-w-[52ch] mb-10">
+              Four real screens from the product, in order — from setup to a posted review.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              {FLOW_STEPS.map((step, i) => (
+                <FlowCard key={step.title} index={i + 1} {...step} />
               ))}
             </div>
           </div>
@@ -224,5 +260,24 @@ function Benefit({ icon, text }: { icon: React.ReactNode; text: string }) {
       <div className="w-8 h-8 rounded-lg bg-surface-inset flex items-center justify-center text-brand shrink-0">{icon}</div>
       <p className="text-sm text-fg-secondary">{text}</p>
     </div>
+  );
+}
+
+function FlowCard({ index, title, body, src, alt }: { index: number; title: string; body: string; src: string; alt: string }) {
+  return (
+    <figure className="rounded-2xl border border-border bg-surface overflow-hidden">
+      <div className="relative h-64 bg-surface-inset flex items-center justify-center p-4">
+        <Image src={src} alt={alt} fill sizes="(min-width: 640px) 50vw, 90vw" className="object-contain p-4" />
+      </div>
+      <figcaption className="p-5 space-y-1.5">
+        <div className="flex items-center gap-2.5">
+          <span className="w-6 h-6 rounded-full bg-brand/15 text-brand text-xs font-semibold flex items-center justify-center shrink-0">
+            {index}
+          </span>
+          <h3 className="text-sm font-semibold text-fg">{title}</h3>
+        </div>
+        <p className="text-sm text-fg-tertiary leading-relaxed">{body}</p>
+      </figcaption>
+    </figure>
   );
 }
