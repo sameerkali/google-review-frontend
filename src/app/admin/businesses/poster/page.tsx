@@ -3,14 +3,15 @@
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { POSTER_SIZES } from "@/lib/qrPoster";
-import { ArrowLeftIcon, QrIcon } from "@/components/icons";
+import { POSTER_CATEGORIES } from "@/lib/qrPoster";
+import { ArrowLeftIcon, StorefrontIcon } from "@/components/icons";
 
-/* Step 1 of 3 — pick a print size (aspect ratio + target resolution).
-   Reached only from Businesses list → eye icon → QR modal → "Customize
-   Poster", which passes the hardware serial and business name as query
-   params carried through the whole flow. */
-function SizeStep() {
+/* Step 1 of 4 — pick a business category, which narrows the design list in
+   step 3 to what's actually relevant. Reached only from Businesses list →
+   eye icon → QR modal → "Customize Poster", which passes the hardware
+   serial and business name as query params carried through the whole
+   flow. */
+function CategoryStep() {
   const searchParams = useSearchParams();
   const serial = searchParams.get("serial") || "";
   const name = searchParams.get("name") || "Business";
@@ -27,31 +28,26 @@ function SizeStep() {
       </Link>
 
       <div className="mb-6">
-        <p className="text-xs font-medium text-brand uppercase tracking-wider mb-1">Step 1 of 3</p>
-        <h2 className="text-lg font-semibold text-fg">Choose a size</h2>
+        <p className="text-xs font-medium text-brand uppercase tracking-wider mb-1">Step 1 of 4</p>
+        <h2 className="text-lg font-semibold text-fg">Choose a category</h2>
         <p className="text-sm text-fg-tertiary mt-0.5">
-          For <span className="text-fg font-medium">{name}</span> — pick the print size, then a design.
+          For <span className="text-fg font-medium">{name}</span> — this narrows down the designs you&apos;ll see next.
         </p>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {POSTER_SIZES.map((s) => (
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {POSTER_CATEGORIES.map((c) => (
           <Link
-            key={s.key}
-            href={`/admin/businesses/poster/design?serial=${encodeURIComponent(serial)}&name=${encodeURIComponent(name)}&size=${s.key}`}
-            className="group rounded-2xl border border-border bg-surface p-4 hover:border-brand/50 hover:bg-brand/5 transition-all duration-150 flex flex-col items-center gap-3"
+            key={c.key}
+            href={`/admin/businesses/poster/size?serial=${encodeURIComponent(serial)}&name=${encodeURIComponent(name)}&category=${c.key}`}
+            className="group rounded-2xl border border-border bg-surface p-5 hover:border-brand/50 hover:bg-brand/5 transition-all duration-150 flex items-center gap-4"
           >
-            <div className="w-full flex items-center justify-center" style={{ height: 140 }}>
-              <div
-                className="rounded-lg bg-brand/12 border border-brand/25 group-hover:bg-brand/20 transition-colors flex items-center justify-center"
-                style={{ aspectRatio: `${s.width} / ${s.height}`, height: "100%" }}
-              >
-                <QrIcon className="w-6 h-6 text-brand/60" />
-              </div>
+            <div className="w-11 h-11 rounded-xl bg-brand/12 border border-brand/25 group-hover:bg-brand/20 transition-colors flex items-center justify-center shrink-0">
+              <StorefrontIcon className="w-5 h-5 text-brand" />
             </div>
-            <div className="text-center">
-              <p className="text-sm font-semibold text-fg">{s.label}</p>
-              <p className="text-xs text-fg-quaternary mt-0.5">{s.sublabel}</p>
+            <div>
+              <p className="text-sm font-semibold text-fg">{c.label}</p>
+              <p className="text-xs text-fg-quaternary mt-0.5">{c.description}</p>
             </div>
           </Link>
         ))}
@@ -73,10 +69,10 @@ function MissingSerial() {
   );
 }
 
-export default function PosterSizePage() {
+export default function PosterCategoryPage() {
   return (
     <Suspense fallback={null}>
-      <SizeStep />
+      <CategoryStep />
     </Suspense>
   );
 }

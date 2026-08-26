@@ -3,17 +3,19 @@
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { POSTER_DESIGNS, getPosterSize, qrPosterDefaults, type PosterDesignKey, type PosterSizeKey } from "@/lib/qrPoster";
+import { designsForCategory, getPosterCategory, getPosterSize, qrPosterDefaults, type PosterDesignKey, type PosterSizeKey } from "@/lib/qrPoster";
 import { PosterPreviewCanvas } from "@/components/PosterPreviewCanvas";
 import { ArrowLeftIcon } from "@/components/icons";
 
-/* Step 2 of 3 — pick a design. Each option renders a real, full-resolution
-   preview at the size chosen in step 1 (same draw code the final download
-   uses), so this is a true WYSIWYG picker rather than static thumbnails. */
+/* Step 3 of 4 — pick a design, narrowed to whatever's relevant for the
+   chosen category. Each option renders a real, full-resolution preview at
+   the size chosen in step 2 (same draw code the final download uses), so
+   this is a true WYSIWYG picker rather than static thumbnails. */
 function DesignStep() {
   const searchParams = useSearchParams();
   const serial = searchParams.get("serial") || "";
   const name = searchParams.get("name") || "Business";
+  const categoryKey = searchParams.get("category") || "";
   const sizeKey = searchParams.get("size") || "card";
 
   const [origin] = useState(() => (typeof window !== "undefined" ? window.location.origin : ""));
@@ -21,9 +23,11 @@ function DesignStep() {
 
   if (!serial) return <MissingSerial />;
 
+  const category = getPosterCategory(categoryKey);
   const size = getPosterSize(sizeKey);
+  const designs = designsForCategory(category.key);
   const fields = qrPosterDefaults(name);
-  const backHref = `/admin/businesses/poster?serial=${encodeURIComponent(serial)}&name=${encodeURIComponent(name)}`;
+  const backHref = `/admin/businesses/poster/size?serial=${encodeURIComponent(serial)}&name=${encodeURIComponent(name)}&category=${category.key}`;
 
   return (
     <div className="max-w-6xl">
@@ -35,15 +39,15 @@ function DesignStep() {
       </Link>
 
       <div className="mb-6">
-        <p className="text-xs font-medium text-brand uppercase tracking-wider mb-1">Step 2 of 3</p>
+        <p className="text-xs font-medium text-brand uppercase tracking-wider mb-1">Step 3 of 4</p>
         <h2 className="text-lg font-semibold text-fg">Choose a design</h2>
         <p className="text-sm text-fg-tertiary mt-0.5">
-          For <span className="text-fg font-medium">{name}</span> — {size.label} ({size.sublabel})
+          For <span className="text-fg font-medium">{name}</span> — {category.label} — {size.label} ({size.sublabel})
         </p>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-5">
-        {POSTER_DESIGNS.map((d) => (
+        {designs.map((d) => (
           <DesignCard
             key={d.key}
             reviewUrl={reviewUrl}
@@ -52,7 +56,7 @@ function DesignStep() {
             designKey={d.key}
             label={d.label}
             description={d.description}
-            href={`/admin/businesses/poster/edit?serial=${encodeURIComponent(serial)}&name=${encodeURIComponent(name)}&size=${size.key}&design=${d.key}`}
+            href={`/admin/businesses/poster/edit?serial=${encodeURIComponent(serial)}&name=${encodeURIComponent(name)}&category=${category.key}&size=${size.key}&design=${d.key}`}
           />
         ))}
       </div>
@@ -82,7 +86,7 @@ function DesignCard({
           <PosterPreviewCanvas
             reviewUrl={reviewUrl}
             fields={fields}
-            sizeKey={sizeKey as never}
+            sizeKey={sizeKey}
             designKey={designKey}
             onRenderChange={setRendering}
             className="w-full h-full object-contain p-3"

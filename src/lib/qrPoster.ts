@@ -53,6 +53,41 @@ export function getPosterDesign(key: string | null): PosterDesignMeta {
   return POSTER_DESIGNS.find((d) => d.key === key) ?? POSTER_DESIGNS[0];
 }
 
+/* ─── Categories ────────────────────────────────────────────────────── */
+
+/* Each category lists which designs are relevant to it — cafe gets the
+   illustrated "cafe" design on top of the generic set; salon/doctor don't
+   have illustrated designs yet (no assets), so they get the generic set
+   only. Adding a salon/doctor illustration later is just adding its
+   designKey to that category's list here. */
+export type PosterCategoryKey = "cafe" | "salon" | "doctor";
+
+export interface PosterCategoryMeta {
+  key: PosterCategoryKey;
+  label: string;
+  description: string;
+  designKeys: PosterDesignKey[];
+}
+
+const GENERIC_DESIGNS: PosterDesignKey[] = ["classic", "minimal", "bold", "frame", "split"];
+
+export const POSTER_CATEGORIES: PosterCategoryMeta[] = [
+  { key: "cafe", label: "Café", description: "Coffee shops, bakeries, restaurants", designKeys: ["cafe", ...GENERIC_DESIGNS] },
+  { key: "salon", label: "Salon", description: "Salons, spas, barbershops", designKeys: [...GENERIC_DESIGNS] },
+  { key: "doctor", label: "Doctor", description: "Clinics, dentists, healthcare", designKeys: [...GENERIC_DESIGNS] },
+];
+
+export function getPosterCategory(key: string | null): PosterCategoryMeta {
+  return POSTER_CATEGORIES.find((c) => c.key === key) ?? POSTER_CATEGORIES[0];
+}
+
+export function designsForCategory(categoryKey: string | null): PosterDesignMeta[] {
+  const category = getPosterCategory(categoryKey);
+  return category.designKeys
+    .map((k) => POSTER_DESIGNS.find((d) => d.key === k))
+    .filter((d): d is PosterDesignMeta => !!d);
+}
+
 /* ─── Editable text fields ──────────────────────────────────────────── */
 
 export type QrPosterFields = {

@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAdmin } from "../../../_lib/context";
 import {
-  downloadCanvasPng, getPosterDesign, getPosterSize, qrPosterDefaults, slugifyForFilename,
+  downloadCanvasPng, getPosterCategory, getPosterDesign, getPosterSize, qrPosterDefaults, slugifyForFilename,
   type QrPosterFields,
 } from "@/lib/qrPoster";
 import { PosterPreviewCanvas } from "@/components/PosterPreviewCanvas";
@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/Button";
 import { Field, Input } from "@/components/ui/Input";
 import { ArrowLeftIcon, DownloadIcon } from "@/components/icons";
 
-/* Step 3 of 3 — edit the text sections on the left, watch the canvas
+/* Step 4 of 4 — edit the text sections on the left, watch the canvas
    redraw live on the right (same draw code as the download itself), then
    export. The QR code always encodes the business's real review URL and is
    never editable. */
@@ -23,6 +23,7 @@ function PosterEditor() {
   const searchParams = useSearchParams();
   const serial = searchParams.get("serial") || "";
   const businessName = searchParams.get("name") || "Business";
+  const category = getPosterCategory(searchParams.get("category"));
   const size = getPosterSize(searchParams.get("size"));
   const design = getPosterDesign(searchParams.get("design"));
 
@@ -62,7 +63,7 @@ function PosterEditor() {
     );
   }
 
-  const designStepHref = `/admin/businesses/poster/design?serial=${encodeURIComponent(serial)}&name=${encodeURIComponent(businessName)}&size=${size.key}`;
+  const designStepHref = `/admin/businesses/poster/design?serial=${encodeURIComponent(serial)}&name=${encodeURIComponent(businessName)}&category=${category.key}&size=${size.key}`;
 
   return (
     <div className="max-w-6xl">
@@ -75,10 +76,10 @@ function PosterEditor() {
 
       <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
         <div>
-          <p className="text-xs font-medium text-brand uppercase tracking-wider mb-1">Step 3 of 3</p>
+          <p className="text-xs font-medium text-brand uppercase tracking-wider mb-1">Step 4 of 4</p>
           <h2 className="text-lg font-semibold text-fg">Customize Poster</h2>
           <p className="text-sm text-fg-tertiary mt-0.5">
-            For <span className="text-fg font-medium">{businessName}</span> — {design.label}, {size.label} ({size.sublabel}). The QR always points to their real review link.
+            For <span className="text-fg font-medium">{businessName}</span> — {category.label} — {design.label}, {size.label} ({size.sublabel}). The QR always points to their real review link.
           </p>
         </div>
         <Button onClick={download} loading={downloading} loadingText="Preparing…" variant="primary" disabled={rendering}>
