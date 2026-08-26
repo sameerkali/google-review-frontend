@@ -2,6 +2,7 @@ import Image from "next/image";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { HeroQrCode } from "@/components/HeroQrCode";
 import { QrScanScroll } from "@/components/QrScanScroll";
+import { AuthLandingRedirect } from "@/components/AuthLandingRedirect";
 import {
   QrIcon,
   ArrowRightIcon,
@@ -15,6 +16,7 @@ import {
 export default function Home() {
   return (
     <div className="bg-background overflow-x-clip">
+      <AuthLandingRedirect />
       {/* Nav */}
       <header className="border-b border-border">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">

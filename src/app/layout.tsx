@@ -25,6 +25,16 @@ export const metadata: Metadata = {
     ],
     apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
   },
+  // iOS ignores the web manifest for "add to home screen" behavior — without
+  // these, Safari treats the install as a plain bookmark (no standalone
+  // splash screen, so launches show raw blank white until the page paints
+  // instead of the icon + background_color splash Android already gets from
+  // manifest.ts).
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Expendifii",
+  },
 };
 
 export const viewport: Viewport = {
@@ -53,6 +63,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       suppressHydrationWarning
     >
       <head>
+        {/* Next's appleWebApp metadata only emits the modern unprefixed
+            mobile-web-app-capable tag — older iOS Safari versions only
+            recognize this vendor-prefixed one for standalone/splash mode. */}
+        <meta name="apple-mobile-web-app-capable" content="yes" />
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
       </head>
       <body className="min-h-full flex flex-col bg-background text-fg">
