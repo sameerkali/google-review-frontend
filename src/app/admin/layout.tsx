@@ -9,6 +9,7 @@ import { api } from "@/lib/api";
 import type { Row } from "@/lib/types";
 import { ToastContainer } from "@/components/Toast";
 import { OnboardWizard } from "./_components/OnboardWizard";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { FullPageSpinner, Spinner } from "@/components/Loaders";
 import { LogoutIcon, MenuIcon, ShieldIcon, TAB_ICONS } from "@/components/icons";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -39,6 +40,7 @@ function AdminShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [confirmSignOut, setConfirmSignOut] = useState(false);
   const enabled = authChecked && !!token;
 
   // OnboardWizard needs the full hardware/plans lists regardless of which
@@ -87,6 +89,14 @@ function AdminShell({ children }: { children: React.ReactNode }) {
         hardwareList={hardwareAll || []}
         plans={plans || []}
         toast={toast}
+      />
+      <ConfirmDialog
+        open={confirmSignOut}
+        title="Sign out?"
+        message="You'll need your username and password to sign back in."
+        confirmLabel="Sign out"
+        onConfirm={() => { signOut(); setConfirmSignOut(false); }}
+        onCancel={() => setConfirmSignOut(false)}
       />
 
       {sidebarOpen && (
@@ -139,7 +149,7 @@ function AdminShell({ children }: { children: React.ReactNode }) {
 
         <div className="px-3 py-4 border-t border-border">
           <button
-            onClick={() => signOut()}
+            onClick={() => setConfirmSignOut(true)}
             className="w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-fg-tertiary hover:text-danger hover:bg-danger/8 transition-all duration-150 cursor-pointer"
           >
             <LogoutIcon className="w-4 h-4" />

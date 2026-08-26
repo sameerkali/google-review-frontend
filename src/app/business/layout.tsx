@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -8,6 +8,7 @@ import { BusinessProvider, useBusiness } from "./_lib/context";
 import { api } from "@/lib/api";
 import type { Row } from "@/lib/types";
 import { ToastContainer } from "@/components/Toast";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { FullPageSpinner } from "@/components/Loaders";
 import { LogoutIcon, QrIcon } from "@/components/icons";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -30,6 +31,7 @@ function BusinessShell({ children }: { children: React.ReactNode }) {
   const { token, authChecked, toasts, dismissToast, signOut } = useBusiness();
   const router = useRouter();
   const pathname = usePathname();
+  const [confirmSignOut, setConfirmSignOut] = useState(false);
   const { data: business } = useQuery({
     queryKey: ["business", "me"],
     queryFn: () => api<Row>("/business/me", { token }),
@@ -54,6 +56,14 @@ function BusinessShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-background">
       <ToastContainer toasts={toasts} dismiss={dismissToast} />
+      <ConfirmDialog
+        open={confirmSignOut}
+        title="Sign out?"
+        message="You'll need your email and password to sign back in."
+        confirmLabel="Sign out"
+        onConfirm={() => { signOut(); setConfirmSignOut(false); }}
+        onCancel={() => setConfirmSignOut(false)}
+      />
       <header className="sticky top-0 z-10 bg-background/80 border-b border-border px-5 py-3 flex items-center justify-between backdrop-blur-md">
         <div className="flex items-center gap-3 min-w-0">
           <div className="w-8 h-8 rounded-lg bg-brand/15 flex items-center justify-center border border-brand/25 shrink-0">
@@ -79,7 +89,7 @@ function BusinessShell({ children }: { children: React.ReactNode }) {
             </Link>
           ))}
           <ThemeToggle className="ml-1" />
-          <IconButton onClick={() => signOut()} aria-label="Sign out" title="Sign out" tone="danger">
+          <IconButton onClick={() => setConfirmSignOut(true)} aria-label="Sign out" title="Sign out" tone="danger">
             <LogoutIcon className="w-4 h-4" />
           </IconButton>
         </nav>
