@@ -12,6 +12,16 @@ export function PinnedSection({ children }: { children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
   const [height, setHeight] = useState(0);
 
+  // The browser restores scroll position on reload/back-forward navigation
+  // by default — landing mid-page here would show the hero already covered,
+  // looking exactly like it's missing rather than like intended scroll
+  // behavior. This page's hero should always be visible on a fresh load.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if ("scrollRestoration" in window.history) window.history.scrollRestoration = "manual";
+    window.scrollTo(0, 0);
+  }, []);
+
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
