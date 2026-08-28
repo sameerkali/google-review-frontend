@@ -92,9 +92,13 @@ export const WavyBackground = ({
   let animationId: number;
   const render = () => {
     if (!ctx) return;
+    // The solid backdrop must be fully opaque — it's what hides the page's
+    // own (theme-dependent) background behind the canvas. Only the wave
+    // strokes drawn on top of it use waveOpacity for their translucent blend.
+    ctx.globalAlpha = 1;
     ctx.fillStyle = backgroundFill || "black";
-    ctx.globalAlpha = waveOpacity || 0.5;
     ctx.fillRect(0, 0, w, h);
+    ctx.globalAlpha = waveOpacity || 0.5;
     drawWave(5);
     animationId = requestAnimationFrame(render);
   };
