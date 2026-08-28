@@ -44,7 +44,7 @@ export const POSTER_DESIGNS: PosterDesignMeta[] = [
   { key: "classic", label: "Classic", description: "Brand blue, bold and centered", swatch: BRAND },
   { key: "minimal", label: "Minimal", description: "Clean cream background, quiet type", swatch: CREAM },
   { key: "bold", label: "Bold Dark", description: "High-contrast ink background", swatch: INK },
-  { key: "cafe", label: "Café", description: "Illustrated, warm counter-side feel", swatch: BRAND },
+  { key: "cafe", label: "Cafe", description: "Illustrated, warm counter-side feel", swatch: BRAND },
   { key: "frame", label: "Frame", description: "Thin bordered, editorial", swatch: CREAM },
   { key: "split", label: "Split", description: "Two-tone block with an offset QR", swatch: BRAND_DARK },
 ];
@@ -72,7 +72,7 @@ export interface PosterCategoryMeta {
 const GENERIC_DESIGNS: PosterDesignKey[] = ["classic", "minimal", "bold", "frame", "split"];
 
 export const POSTER_CATEGORIES: PosterCategoryMeta[] = [
-  { key: "cafe", label: "Café", description: "Coffee shops, bakeries, restaurants", designKeys: ["cafe", ...GENERIC_DESIGNS] },
+  { key: "cafe", label: "Cafe", description: "Coffee shops, bakeries, restaurants", designKeys: ["cafe", ...GENERIC_DESIGNS] },
   { key: "salon", label: "Salon", description: "Salons, spas, barbershops", designKeys: [...GENERIC_DESIGNS] },
   { key: "doctor", label: "Doctor", description: "Clinics, dentists, healthcare", designKeys: [...GENERIC_DESIGNS] },
 ];

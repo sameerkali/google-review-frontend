@@ -28,7 +28,7 @@ const SERVICE_JSON_LD = {
   provider: { "@type": "Organization", name: "Expendifii" },
   audience: {
     "@type": "Audience",
-    audienceType: "Local businesses collecting Google reviews, such as cafés, salons, and clinics",
+    audienceType: "Local businesses collecting Google reviews, such as Cafes, salons, and clinics",
   },
 };
 
@@ -43,7 +43,7 @@ const FLOW_STEPS = [
     title: "A print-ready poster is generated",
     body: "Pick a size and a design — the QR is real and already embedded, previewed at full resolution exactly as it will print.",
     src: "/screenshots/poster-designs.png",
-    alt: "Poster design picker showing six live QR poster templates for a café",
+    alt: "Poster design picker showing six live QR poster templates for a Cafe",
   },
   {
     title: "A customer scans and leaves a review",
