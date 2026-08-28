@@ -3,6 +3,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { HeroQrCode } from "@/components/HeroQrCode";
 import { AuthLandingRedirect } from "@/components/AuthLandingRedirect";
 import { GoogleReviewCard } from "@/components/GoogleReviewCard";
+import { PinnedSection } from "@/components/PinnedSection";
 import { WavyBackground } from "@/components/ui/wavy-background";
 import {
   QrIcon,
@@ -73,55 +74,63 @@ export default function Home() {
 
         {/* Hero — no nav bar at all. Wave colors are the brand blue family only,
             fixed dark regardless of page theme (same precedent as the
-            brand-blue final CTA band below). */}
-        <WavyBackground
-          colors={["#3b6cf0", "#5a84f3", "#93b4fb", "#2f56c4", "#1c3f8f"]}
-          backgroundFill="#05070f"
-          waveOpacity={0.35}
-          blur={14}
-          speed="slow"
-          containerClassName="!h-auto !min-h-0"
-        >
-          <div className="w-full">
-            <div className="max-w-6xl mx-auto px-6 pt-16 pb-20 lg:pt-20 lg:pb-28 grid lg:grid-cols-[1.05fr_0.95fr] gap-14 items-center">
-              <div className="space-y-6">
-                <h1 className="text-4xl md:text-5xl lg:text-[3.4rem] font-semibold tracking-tight leading-[1.08] text-white">
-                  Reviews start with a scan, not a request.
-                </h1>
-                <p className="text-white/70 text-base leading-relaxed max-w-[46ch]">
-                  Print one QR code. Customers scan it, copy a ready-made review, and land straight on your Google listing.
-                </p>
-                <div className="flex items-center gap-2 pt-1">
-                  <a
-                    href="/business/login"
-                    className="inline-flex items-center gap-2 rounded-xl bg-white hover:bg-white/90 text-brand font-semibold px-5 py-2.5 text-sm transition-all duration-150 active:scale-[0.98]"
-                  >
-                    Business Login
-                    <ArrowRightIcon className="w-4 h-4" />
-                  </a>
+            brand-blue final CTA band below). Pinned to the viewport while
+            everything below scrolls up and over it (see PinnedSection). */}
+        <PinnedSection>
+          <WavyBackground
+            colors={["#3b6cf0", "#5a84f3", "#93b4fb", "#2f56c4", "#1c3f8f"]}
+            backgroundFill="#05070f"
+            waveOpacity={0.35}
+            blur={14}
+            speed="slow"
+            containerClassName="!h-auto !min-h-0"
+          >
+            <div className="w-full">
+              <div className="max-w-6xl mx-auto px-6 pt-16 pb-20 lg:pt-20 lg:pb-28 grid lg:grid-cols-[1.05fr_0.95fr] gap-14 items-center">
+                <div className="space-y-6">
+                  <h1 className="text-4xl md:text-5xl lg:text-[3.4rem] font-semibold tracking-tight leading-[1.08] text-white">
+                    Reviews start with a scan, not a request.
+                  </h1>
+                  <p className="text-white/70 text-base leading-relaxed max-w-[46ch]">
+                    Print one QR code. Customers scan it, copy a ready-made review, and land straight on your Google listing.
+                  </p>
+                  <div className="flex items-center gap-2 pt-1">
+                    <a
+                      href="/business/login"
+                      className="inline-flex items-center gap-2 rounded-xl bg-white hover:bg-white/90 text-brand font-semibold px-5 py-2.5 text-sm transition-all duration-150 active:scale-[0.98]"
+                    >
+                      Business Login
+                      <ArrowRightIcon className="w-4 h-4" />
+                    </a>
+                  </div>
                 </div>
-              </div>
 
-              {/* What actually shows up on the business's Google listing,
-                  and the real, scannable QR code that leads there (encodes
-                  this page's own URL) — stacked, not overlapping, so
-                  nothing ever covers the review text. */}
-              <div className="flex justify-center lg:justify-end">
-                <div className="w-full max-w-[420px] space-y-4">
-                  <GoogleReviewCard />
-                  <div className="flex items-center gap-3 justify-end">
-                    <p className="text-xs text-white/50 text-right leading-snug">
-                      A real, scannable code<br />pointing at this page
-                    </p>
-                    <div className="shrink-0">
-                      <HeroQrCode size={64} />
+                {/* What actually shows up on the business's Google listing,
+                    and the real, scannable QR code that leads there (encodes
+                    this page's own URL) — stacked, not overlapping, so
+                    nothing ever covers the review text. */}
+                <div className="flex justify-center lg:justify-end">
+                  <div className="w-full max-w-[420px] space-y-4">
+                    <GoogleReviewCard />
+                    <div className="flex items-center gap-3 justify-end">
+                      <p className="text-xs text-white/50 text-right leading-snug">
+                        A real, scannable code<br />pointing at this page
+                      </p>
+                      <div className="shrink-0">
+                        <HeroQrCode size={64} />
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-        </WavyBackground>
+          </WavyBackground>
+        </PinnedSection>
+
+        {/* Everything below the hero — higher z-index and its own opaque
+            background, so it visually scrolls up and covers the pinned
+            hero instead of scrolling past it. */}
+        <div className="relative z-10 bg-background">
 
         {/* How it works */}
         <section className="border-t border-border">
@@ -206,6 +215,7 @@ export default function Home() {
             </a>
           </div>
         </section>
+        </div>
       </main>
 
       {/* Footer */}
