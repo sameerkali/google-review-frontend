@@ -222,9 +222,7 @@ export default function Home() {
       <footer className="border-t border-border">
         <div className="max-w-7xl mx-auto px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2.5">
-            <div className="w-6 h-6 rounded-md bg-brand/15 border border-brand/25 flex items-center justify-center">
-              <QrIcon className="w-3 h-3 text-brand" />
-            </div>
+            <Image src="/icon-512.png" alt="" width={24} height={24} className="w-6 h-6 rounded-md" />
             <span className="text-xs text-fg-tertiary">© 2026 Review by Expendifii</span>
           </div>
           <a
