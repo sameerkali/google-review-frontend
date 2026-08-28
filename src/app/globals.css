@@ -45,7 +45,7 @@
   --color-fg-quaternary: var(--text-quaternary);
   --color-placeholder: var(--placeholder);
 
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-sans-inter);
   --font-mono: var(--font-geist-mono);
 }
 
