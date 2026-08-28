@@ -3,6 +3,7 @@ import { Inter, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { QueryProvider } from "@/components/QueryProvider";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
+import { AdminShortcut } from "@/components/AdminShortcut";
 import "./globals.css";
 
 const sans = Inter({
@@ -71,6 +72,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className="min-h-full flex flex-col bg-background text-fg">
         <ServiceWorkerRegister />
+        <AdminShortcut />
         <QueryProvider>
           <ThemeProvider>{children}</ThemeProvider>
         </QueryProvider>
