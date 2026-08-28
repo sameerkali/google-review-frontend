@@ -26,7 +26,7 @@ export function GoogleReviewCard({ className = "" }: { className?: string }) {
       <div className="flex items-start justify-between mb-5">
         <div className="flex items-center gap-3">
           <Image
-            src="/google_profile_image_hero_section.png"
+            src="/google_profile_image_hero_section.webp"
             alt=""
             width={48}
             height={48}
@@ -37,7 +37,7 @@ export function GoogleReviewCard({ className = "" }: { className?: string }) {
             <p className="text-xs text-zinc-500">2 minutes ago</p>
           </div>
         </div>
-        <GoogleG className="w-6 h-6 shrink-0" />
+        <GoogleG className="w-12 h-12 shrink-0" />
       </div>
 
       <div className="flex items-center gap-1 mb-4">
