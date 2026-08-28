@@ -5,6 +5,7 @@ import { AuthLandingRedirect } from "@/components/AuthLandingRedirect";
 import { GoogleReviewCard } from "@/components/GoogleReviewCard";
 import { PinnedSection } from "@/components/PinnedSection";
 import { WavyBackground } from "@/components/ui/wavy-background";
+import { HoverBorderGradient } from "@/components/ui/hover-border-gradient";
 import {
   QrIcon,
   ArrowRightIcon,
@@ -94,14 +95,15 @@ export default function Home() {
                   <p className="text-white/70 text-base leading-relaxed max-w-[46ch]">
                     Print one QR code. Customers scan it, copy a ready-made review, and land straight on your Google listing.
                   </p>
-                  <div className="flex items-center gap-2 pt-1">
-                    <a
+                  <div className="pt-1">
+                    <HoverBorderGradient
+                      as="a"
                       href="/business/login"
-                      className="inline-flex items-center gap-2 rounded-xl bg-white hover:bg-white/90 text-brand font-semibold px-5 py-2.5 text-sm transition-all duration-150 active:scale-[0.98]"
+                      className="flex items-center gap-2 text-sm font-semibold px-5 py-2.5"
                     >
                       Business Login
                       <ArrowRightIcon className="w-4 h-4" />
-                    </a>
+                    </HoverBorderGradient>
                   </div>
                 </div>
 
@@ -206,13 +208,15 @@ export default function Home() {
             <p className="text-sm text-white/80">
               Existing customer? Sign in to see your QR code and reviews.
             </p>
-            <a
+            <HoverBorderGradient
+              as="a"
               href="/business/login"
-              className="inline-flex items-center gap-2 rounded-xl bg-white text-brand font-semibold px-6 py-3 text-sm hover:bg-white/90 active:scale-[0.98] transition-all"
+              containerClassName="mx-auto"
+              className="flex items-center gap-2 text-sm font-semibold px-6 py-3"
             >
               Business Login
               <ArrowRightIcon className="w-4 h-4" />
-            </a>
+            </HoverBorderGradient>
           </div>
         </section>
         </div>
@@ -225,12 +229,13 @@ export default function Home() {
             <Image src="/icon-512.png" alt="" width={24} height={24} className="w-6 h-6 rounded-md" />
             <span className="text-xs text-fg-tertiary">© 2026 Review by Expendifii</span>
           </div>
-          <a
+          <HoverBorderGradient
+            as="a"
             href="/admin/login"
-            className="inline-flex items-center rounded-xl border border-border hover:border-border-strong text-sm text-fg-secondary hover:text-fg px-4 py-2 transition-colors"
+            className="text-sm font-medium px-4 py-2"
           >
             Admin
-          </a>
+          </HoverBorderGradient>
         </div>
       </footer>
     </div>
