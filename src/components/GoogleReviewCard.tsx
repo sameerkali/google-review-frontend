@@ -28,7 +28,7 @@ export function GoogleReviewCard({ className = "" }: { className?: string }) {
             M
           </div>
           <div>
-            <p className="text-[15px] font-semibold text-zinc-900">Meera Iyer</p>
+            <p className="text-[15px] font-semibold text-zinc-900">Anmol Kumar</p>
             <p className="text-xs text-zinc-500">2 minutes ago</p>
           </div>
         </div>
