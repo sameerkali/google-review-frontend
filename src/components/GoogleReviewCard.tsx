@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { StarFillIcon } from "@/components/icons";
 
 /* The real, multi-color Google "G" mark — used for its literal purpose
@@ -24,9 +25,13 @@ export function GoogleReviewCard({ className = "" }: { className?: string }) {
     <div className={`rounded-3xl bg-white border border-black/10 shadow-2xl p-8 ${className}`}>
       <div className="flex items-start justify-between mb-5">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-full bg-brand/15 text-brand font-semibold text-lg flex items-center justify-center shrink-0">
-            M
-          </div>
+          <Image
+            src="/google_profile_image_hero_section.png"
+            alt=""
+            width={48}
+            height={48}
+            className="w-12 h-12 rounded-full object-cover shrink-0"
+          />
           <div>
             <p className="text-[15px] font-semibold text-zinc-900">Anmol Kumar</p>
             <p className="text-xs text-zinc-500">2 minutes ago</p>
