@@ -1,4 +1,4 @@
-// const BASE =  "http://localhost:5001";
+// const BASE =  "http://localhost:5001"; 
 const BASE = process.env.NEXT_PUBLIC_API_URL ||  "http://localhost:5000";
 
 export class ApiError extends Error {
