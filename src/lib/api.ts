@@ -1,12 +1,17 @@
 // const BASE =  "http://localhost:5001";
-const BASE = process.env.NEXT_PUBLIC_API_URL ||  "http://localhost:5000";
+const BASE = process.env.NEXT_PUBLIC_API_URL ||  "http://localhost:5001";
 // backend base url
 export class ApiError extends Error {
   status: number;
-  constructor(message: string, status: number) {
+  /** The full parsed response body — lets a caller read extra fields a
+      particular error carries (e.g. `totalScans` on a 403 from a
+      tier-gated dashboard endpoint) beyond just the message. */
+  body: unknown;
+  constructor(message: string, status: number, body?: unknown) {
     super(message);
     this.name = "ApiError";
     this.status = status;
+    this.body = body;
   }
 }
 
@@ -22,6 +27,6 @@ export async function api<T>(path: string, opts: { method?: string; body?: unkno
     keepalive: opts.keepalive,
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new ApiError((data as { error?: string }).error || `HTTP ${res.status}`, res.status);
+  if (!res.ok) throw new ApiError((data as { error?: string }).error || `HTTP ${res.status}`, res.status, data);
   return data as T;
 }

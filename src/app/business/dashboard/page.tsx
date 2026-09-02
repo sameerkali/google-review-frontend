@@ -1,283 +1,572 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api, ApiError } from "@/lib/api";
 import type { Row } from "@/lib/types";
 import { useBusiness } from "../_lib/context";
 import { QrCard } from "@/components/QrCard";
 import { Skeleton } from "@/components/Loaders";
-import { ActivityByTypeBar } from "@/components/charts/ActivityByTypeBar";
-import { DeviceDonut } from "@/components/charts/DeviceDonut";
-import { BrowserBar } from "@/components/charts/BrowserBar";
-import { OsRadialBar } from "@/components/charts/OsRadialBar";
-import { EngagementRadar } from "@/components/charts/EngagementRadar";
+import { RatingTrendChart } from "@/components/charts/RatingTrendChart";
+import { RatingDistributionBar } from "@/components/charts/RatingDistributionBar";
 import { ConversionFunnelChart } from "@/components/charts/ConversionFunnelChart";
-import { CheckIcon, CloseIcon, InfoIcon, SparkleIcon } from "@/components/icons";
+import { TimingBar } from "@/components/charts/TimingBar";
+import { DeviceDonut } from "@/components/charts/DeviceDonut";
+import { AspectsComparisonBar } from "@/components/charts/AspectsComparisonBar";
+import { ShiftBar } from "@/components/charts/ShiftBar";
+import { InfoIcon, LockIcon, SparkleIcon, StarFillIcon } from "@/components/icons";
 
-/* Curated, hand-written for now — a real suggestions engine isn't wired up
-   yet. Gated behind the same plan.features.suggestions flag the (currently
-   unused) live endpoint would be, so swapping in real ones later is a
-   drop-in data-source change, not a UI change. */
-const STATIC_SUGGESTIONS = [
-  "Ask happy customers to scan right at the moment they're paying — that's when reviews convert best.",
-  "Place the QR code at eye level near the register or exit, not tucked in a corner.",
-  "Give staff a one-line prompt to say out loud: \"Scan this to leave us a quick review!\"",
-  "Print the QR code on receipts and takeaway bags for extra reach beyond the counter.",
-  "Refresh your pre-written review suggestions every few months so they keep feeling authentic.",
-  "Reply publicly to new Google reviews — it shows future customers you're listening.",
-];
+// ── Types matching the backend response shapes ────────────────────────────────
 
-interface Plan {
-  name: string;
-  price: number;
-  billingType: string;
-  features?: { analytics?: string; userData?: boolean; suggestions?: boolean };
+type Range = "7d" | "30d" | "90d";
+interface Stat { value: number | null; prev: number | null }
+interface AvgRatingStat { value: number | null; ratingCount: number; prev: number | null; prevRatingCount: number }
+interface ActivityRow { rating: number; items: string[]; aspects: string[]; startedAt: string }
+interface SummaryPayload { reviewsStarted: Stat; avgRating: AvgRatingStat; googleClicks: Stat; completionRate: Stat; recentActivity: ActivityRow[] }
+interface RatingsPayload { series: { date: string; avg: number | null; count: number; rolling7d: number | null }[]; distribution: Record<string, number>; ratingCount: number }
+interface FunnelPayload { stages: { key: string; label: string; value: number }[] }
+interface TimingPayload { byHour: { hour: number; scans: number; avgRating: number | null }[]; byWeekday: { weekday: number; scans: number }[] }
+interface DevicesPayload { devices: { android: number; ios: number; other: number } }
+interface MenuRow { menuItemId: string; name: string; mentions: number; avgRating: number | null; trend: "up" | "down" | "flat"; fiveStarShare: number; threeOrBelowShare: number; lowData: boolean }
+interface AspectsPayload { aspects: { aspect: string; total: number; lowRated: number; highRated: number }[] }
+interface ShiftsPayload { bands: { label: string; sessions: number; avgRating: number | null; lowData: boolean }[] }
+interface ComparePeriod { scans: number; rated: number; clicked: number; avgRating: number | null; completionRate: number }
+interface ComparePayload { a: ComparePeriod; b: ComparePeriod }
+
+const FUNNEL_HINT: Record<string, string> = {
+  scans: "Where every visit starts.",
+  rated: "Drop here means placement, or the page loading slowly.",
+  drafted: "Drop here means friction on the item/aspect screens.",
+  copied: "Drop here means the draft isn't landing — check the wording.",
+  clicked: "Drop here is a hesitation at Google — not much you can fix.",
+};
+
+function errorTotalScans(err: unknown): number | null {
+  if (err instanceof ApiError && err.body && typeof err.body === "object") {
+    const v = (err.body as { totalScans?: unknown }).totalScans;
+    return typeof v === "number" ? v : null;
+  }
+  return null;
 }
 
-interface AnalyticsPayload {
-  level: string;
-  summary: { total: number; byType: Record<string, number>; conversionRate: number };
-  breakdown?: { device: { _id: string; count: number }[]; browser: { _id: string; count: number }[]; os: { _id: string; count: number }[] };
-  recentEvents?: { eventType: string; device?: string; browser?: string; os?: string; createdAt: string }[];
+function timeAgo(iso: string): string {
+  const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
+  if (s < 60) return "just now";
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+  return `${Math.floor(s / 86400)}d ago`;
 }
 
-function FeatureRow({ label, on }: { label: string; on: boolean }) {
+// ── Small shared pieces ────────────────────────────────────────────────────────
+
+function RangeToggle({ range, onChange }: { range: Range; onChange: (r: Range) => void }) {
   return (
-    <div className="flex items-center gap-2 text-sm">
-      {on ? <CheckIcon className="w-4 h-4 text-success shrink-0" /> : <CloseIcon className="w-4 h-4 text-fg-quaternary shrink-0" />}
-      <span className={on ? "text-fg-secondary" : "text-fg-quaternary"}>{label}</span>
+    <div className="inline-flex rounded-lg border border-border p-0.5 bg-surface">
+      {(["7d", "30d", "90d"] as Range[]).map((r) => (
+        <button
+          key={r}
+          onClick={() => onChange(r)}
+          className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
+            range === r ? "bg-brand text-white" : "text-fg-tertiary hover:text-fg"
+          }`}
+        >
+          {r}
+        </button>
+      ))}
     </div>
   );
 }
 
-function UpgradeTeaser({ message }: { message: string }) {
+function deltaLabel(cur: number | null, prev: number | null, suffix = ""): { text: string; tone: "up" | "down" | "flat" | "none" } {
+  if (prev === null || cur === null) return { text: "first period", tone: "none" };
+  if (prev === 0 && cur === 0) return { text: "no change", tone: "flat" };
+  const diff = cur - prev;
+  const pct = prev !== 0 ? Math.round((diff / prev) * 100) : null;
+  const text = pct === null ? `${diff > 0 ? "+" : ""}${diff.toFixed(1)}${suffix}` : `${diff > 0 ? "+" : ""}${pct}%`;
+  return { text, tone: diff > 0 ? "up" : diff < 0 ? "down" : "flat" };
+}
+
+function StatCard({ label, value, delta, note }: { label: string; value: string; delta?: { text: string; tone: "up" | "down" | "flat" | "none" }; note?: string }) {
+  const toneClass = delta?.tone === "up" ? "text-success" : delta?.tone === "down" ? "text-danger" : "text-fg-quaternary";
   return (
-    <div className="rounded-2xl border border-border bg-surface p-6 flex items-start gap-3">
-      <InfoIcon className="w-5 h-5 text-info shrink-0 mt-0.5" />
-      <p className="text-sm text-fg-tertiary">{message}</p>
+    <div className="rounded-2xl border border-border bg-surface p-5 space-y-2">
+      <p className="text-xs font-medium text-fg-tertiary uppercase tracking-wider">{label}</p>
+      <p className="text-3xl font-bold text-fg font-mono tabular-nums">{value}</p>
+      {delta && <p className={`text-xs font-medium ${toneClass}`}>{delta.text} vs previous period</p>}
+      {note && <p className="text-xs text-warning">{note}</p>}
     </div>
   );
 }
+
+function LockedCard({ title, description }: { title: string; description: string }) {
+  return (
+    <div className="rounded-2xl border border-dashed border-border-strong bg-surface-inset/40 p-6 flex items-start gap-3">
+      <div className="w-9 h-9 rounded-xl bg-surface flex items-center justify-center shrink-0 border border-border">
+        <LockIcon className="w-4 h-4 text-fg-quaternary" />
+      </div>
+      <div>
+        <p className="text-sm font-semibold text-fg">{title}</p>
+        <p className="text-xs text-fg-tertiary mt-1 leading-relaxed">{description}</p>
+        <span className="inline-block mt-2 text-xs font-medium text-brand">Included on the Full plan</span>
+      </div>
+    </div>
+  );
+}
+
+function EmptyChart({ message }: { message: string }) {
+  return (
+    <div className="h-48 flex items-center justify-center text-center px-6">
+      <p className="text-sm text-fg-quaternary">{message}</p>
+    </div>
+  );
+}
+
+function RecentActivityFeed({ rows, featured }: { rows: ActivityRow[]; featured: boolean }) {
+  if (!rows.length) {
+    return <p className="text-sm text-fg-tertiary">No ratings yet — the first one will show up here within minutes of a scan.</p>;
+  }
+  return (
+    <ul className={featured ? "space-y-3" : "divide-y divide-border"}>
+      {rows.map((a, i) => (
+        <li key={i} className={featured ? "rounded-xl border border-border bg-surface p-3.5 flex items-start gap-3" : "flex items-center justify-between gap-3 py-2.5 text-sm"}>
+          <div className="flex items-center gap-1 shrink-0">
+            {Array.from({ length: 5 }).map((_, s) => (
+              <StarFillIcon key={s} className={`w-3.5 h-3.5 ${s < a.rating ? "text-warning" : "text-fg-quaternary/30"}`} />
+            ))}
+          </div>
+          <span className="text-fg-secondary flex-1 min-w-0 truncate">
+            {a.items.length ? `Mentioned ${a.items.join(", ")}` : "No item mentioned"}
+            {a.aspects.length ? ` · ${a.aspects.join(", ")}` : ""}
+          </span>
+          <span className="text-xs text-fg-quaternary shrink-0">{timeAgo(a.startedAt)}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+// ── Free / no-plan tier ────────────────────────────────────────────────────────
+
+function FreeTierView({ business, reviewUrl, totalScans, toast }: { business?: Row; reviewUrl: string; totalScans: number | null; toast: (k: "success" | "error" | "info", m: string) => void }) {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-lg font-semibold text-fg">Dashboard</h2>
+        <p className="text-sm text-fg-tertiary mt-0.5">Welcome back, {business?.name}</p>
+      </div>
+      {reviewUrl ? (
+        <QrCard reviewUrl={reviewUrl} businessName={business?.name || ""} toast={toast} badgeLabel="Live" />
+      ) : null}
+      <div className="rounded-2xl border border-border bg-surface p-6 space-y-4">
+        <div>
+          <p className="text-xs font-medium text-fg-tertiary uppercase tracking-wider">Total scans, all time</p>
+          <p className="text-3xl font-bold text-fg font-mono tabular-nums mt-1">{totalScans ?? "—"}</p>
+        </div>
+        <div className="rounded-xl border border-warning/20 bg-warning/5 p-4 flex items-start gap-3">
+          <InfoIcon className="w-4 h-4 text-warning shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm text-fg-secondary">Your reports are paused. Data is still being collected — you&apos;re just not seeing it.</p>
+            <p className="text-xs text-fg-tertiary mt-1">Restart for ₹299/month to see ratings, trends and your funnel again.</p>
+          </div>
+        </div>
+        <button className="rounded-xl bg-brand hover:bg-brand-hover px-4 py-2.5 text-sm font-semibold text-white transition-colors cursor-pointer">
+          Reactivate reporting
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Full-tier sections ───────────────────────────────────────────────────────
+
+function MenuBreakdownSection({ token, range }: { token: string; range: Range }) {
+  const [sort, setSort] = useState<"mentions" | "rating">("mentions");
+  const { data, isPending } = useQuery({
+    queryKey: ["business", "dashboard", "menu", range, sort],
+    queryFn: () => api<{ items: MenuRow[] }>(`/business/dashboard/menu?range=${range}&sort=${sort}`, { token }),
+    enabled: !!token,
+  });
+
+  return (
+    <div className="rounded-2xl border border-border bg-surface p-5 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-fg">Menu breakdown</h3>
+        <select
+          value={sort}
+          onChange={(e) => setSort(e.target.value as "mentions" | "rating")}
+          className="text-xs rounded-lg border border-border-strong bg-background px-2 py-1 text-fg-secondary cursor-pointer"
+        >
+          <option value="mentions">Sort by mentions</option>
+          <option value="rating">Sort by rating</option>
+        </select>
+      </div>
+      {isPending ? (
+        <Skeleton className="h-40 rounded-xl" />
+      ) : !data?.items.length ? (
+        <EmptyChart message="Menu breakdown appears once customers start mentioning items in their ratings." />
+      ) : (
+        <div className="overflow-x-auto -mx-1">
+          <table className="w-full text-left text-sm min-w-120">
+            <thead>
+              <tr className="border-b border-border">
+                {["Dish", "Mentions", "Avg rating", "Trend", "5★ share", "≤3★ share"].map((h) => (
+                  <th key={h} className="px-3 py-2 text-xs font-semibold text-fg-tertiary uppercase tracking-wider whitespace-nowrap">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {data.items.map((row) => (
+                <tr key={row.menuItemId} className="border-b border-border last:border-0">
+                  <td className="px-3 py-2.5 font-medium text-fg-secondary whitespace-nowrap">{row.name}</td>
+                  <td className="px-3 py-2.5 text-fg-tertiary">{row.mentions}</td>
+                  <td className="px-3 py-2.5 text-fg-secondary">
+                    {row.lowData ? <span className="text-fg-quaternary">not enough data</span> : row.avgRating?.toFixed(1)}
+                  </td>
+                  <td className="px-3 py-2.5">
+                    <span className={row.trend === "up" ? "text-success" : row.trend === "down" ? "text-danger" : "text-fg-quaternary"}>
+                      {row.trend === "up" ? "↑" : row.trend === "down" ? "↓" : "–"}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2.5 text-fg-tertiary">{row.fiveStarShare}%</td>
+                  <td className="px-3 py-2.5 text-fg-tertiary">{row.threeOrBelowShare}%</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AspectsSection({ token, range }: { token: string; range: Range }) {
+  const { data, isPending } = useQuery({
+    queryKey: ["business", "dashboard", "aspects", range],
+    queryFn: () => api<AspectsPayload>(`/business/dashboard/aspects?range=${range}`, { token }),
+    enabled: !!token,
+  });
+  return (
+    <div className="rounded-2xl border border-border bg-surface p-5 space-y-3">
+      <h3 className="text-sm font-semibold text-fg">What comes up in reviews</h3>
+      {isPending ? (
+        <Skeleton className="h-40 rounded-xl" />
+      ) : !data?.aspects.length ? (
+        <EmptyChart message="Aspect themes appear once customers start selecting what stood out." />
+      ) : (
+        <AspectsComparisonBar aspects={data.aspects} />
+      )}
+    </div>
+  );
+}
+
+function ShiftsSection({ token, range }: { token: string; range: Range }) {
+  const { data, isPending } = useQuery({
+    queryKey: ["business", "dashboard", "shifts", range],
+    queryFn: () => api<ShiftsPayload>(`/business/dashboard/shifts?range=${range}`, { token }),
+    enabled: !!token,
+  });
+  const usableBands = data?.bands.filter((b) => !b.lowData) || [];
+  return (
+    <div className="rounded-2xl border border-border bg-surface p-5 space-y-3">
+      <h3 className="text-sm font-semibold text-fg">Rating by shift</h3>
+      {isPending ? (
+        <Skeleton className="h-40 rounded-xl" />
+      ) : usableBands.length < 2 ? (
+        <EmptyChart message="Shift comparison needs at least 10 rated sessions per band — check back once volume builds up." />
+      ) : (
+        <ShiftBar bands={data!.bands} />
+      )}
+    </div>
+  );
+}
+
+function CompareSection({ token, days }: { token: string; days: number }) {
+  const today = new Date();
+  const toStr = (d: Date) => d.toISOString().slice(0, 10);
+  const bTo = toStr(today);
+  const bFrom = toStr(new Date(today.getTime() - days * 86400000));
+  const aTo = bFrom;
+  const aFrom = toStr(new Date(today.getTime() - 2 * days * 86400000));
+
+  const { data, isPending } = useQuery({
+    queryKey: ["business", "dashboard", "compare", days],
+    queryFn: () => api<ComparePayload>(`/business/dashboard/compare?aFrom=${aFrom}&aTo=${aTo}&bFrom=${bFrom}&bTo=${bTo}`, { token }),
+    enabled: !!token,
+  });
+
+  return (
+    <div className="rounded-2xl border border-border bg-surface p-5 space-y-3">
+      <h3 className="text-sm font-semibold text-fg">This period vs. the one before</h3>
+      {isPending ? (
+        <Skeleton className="h-24 rounded-xl" />
+      ) : !data ? null : (
+        <div className="grid grid-cols-2 gap-4 text-sm">
+          {(["a", "b"] as const).map((k) => (
+            <div key={k} className="space-y-1.5">
+              <p className="text-xs font-medium text-fg-quaternary uppercase tracking-wider">{k === "a" ? "Previous period" : "This period"}</p>
+              <p className="text-fg-secondary">Avg rating: <span className="font-semibold text-fg">{data[k].avgRating ?? "—"}</span></p>
+              <p className="text-fg-secondary">Scans: <span className="font-semibold text-fg">{data[k].scans}</span></p>
+              <p className="text-fg-secondary">Completion: <span className="font-semibold text-fg">{data[k].completionRate}%</span></p>
+            </div>
+          ))}
+        </div>
+      )}
+      <p className="text-xs text-fg-quaternary">This gets more useful every period you stay — it&apos;s your own history.</p>
+    </div>
+  );
+}
+
+function SuggestionsSection({ token }: { token: string }) {
+  const { data, isPending } = useQuery({
+    queryKey: ["business", "dashboard", "suggestions"],
+    queryFn: () => api<{ suggestions: string[] }>("/business/dashboard/suggestions", { token }),
+    enabled: !!token,
+  });
+  if (isPending) return <Skeleton className="h-24 rounded-2xl" />;
+  if (!data?.suggestions.length) return null; // nothing rather than something generic
+  return (
+    <div className="rounded-2xl border border-border bg-surface p-5 space-y-3">
+      <h3 className="text-sm font-semibold text-fg">Growth suggestions</h3>
+      {data.suggestions.map((s, i) => (
+        <div key={i} className="flex items-start gap-2.5 text-sm">
+          <SparkleIcon className="w-4 h-4 text-brand shrink-0 mt-0.5" />
+          <span className="text-fg-secondary">{s}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Root ─────────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
   const { token, authChecked, toast } = useBusiness();
   const enabled = authChecked && !!token;
+  const [range, setRange] = useState<Range>("30d");
 
   const { data: business, isPending: businessLoading } = useQuery({
     queryKey: ["business", "me"],
     queryFn: () => api<Row>("/business/me", { token }),
     enabled,
   });
-  const plan = business?.planId as Plan | undefined;
+  const tier: "none" | "basic" | "full" = (business?.planId as { features?: { analytics?: "none" | "basic" | "full" } })?.features?.analytics || "none";
 
   const { data: qr, isPending: qrLoading } = useQuery({
     queryKey: ["business", "me", "qr"],
     queryFn: () => api<{ serial: string; type: string }[]>("/business/me/qr", { token }),
     enabled,
   });
-
-  const {
-    data: analytics,
-    isPending: analyticsLoading,
-    error: analyticsError,
-  } = useQuery({
-    queryKey: ["business", "me", "analytics"],
-    queryFn: () => api<AnalyticsPayload>("/business/me/analytics", { token }),
-    enabled,
-    meta: { silent: true }, // plan-gated — rendered inline via UpgradeTeaser, not a toast
-  });
-  const analyticsBlocked = analyticsError instanceof ApiError ? analyticsError.message : analyticsError ? "Analytics unavailable right now." : "";
-
-  const suggestionsEnabled = Boolean(plan?.features?.suggestions);
-  const analyticsFull = plan?.features?.analytics === "full";
-
   const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
-  const primaryQr = qr?.[0];
-  const reviewUrl = primaryQr ? `${baseUrl}/r/${encodeURIComponent(primaryQr.serial)}` : "";
+  const reviewUrl = qr?.[0] ? `${baseUrl}/r/${encodeURIComponent(qr[0].serial)}` : "";
+
+  const dashEnabled = enabled && !!business;
+  const summaryQ = useQuery({
+    queryKey: ["business", "dashboard", "summary", range],
+    queryFn: () => api<SummaryPayload>(`/business/dashboard/summary?range=${range}`, { token }),
+    enabled: dashEnabled,
+    retry: false,
+    meta: { silent: true },
+  });
+  const ratingsQ = useQuery({
+    queryKey: ["business", "dashboard", "ratings", range],
+    queryFn: () => api<RatingsPayload>(`/business/dashboard/ratings?range=${range}`, { token }),
+    enabled: dashEnabled && tier !== "none",
+    meta: { silent: true },
+  });
+  const funnelQ = useQuery({
+    queryKey: ["business", "dashboard", "funnel", range],
+    queryFn: () => api<FunnelPayload>(`/business/dashboard/funnel?range=${range}`, { token }),
+    enabled: dashEnabled && tier !== "none",
+    meta: { silent: true },
+  });
+  const timingQ = useQuery({
+    queryKey: ["business", "dashboard", "timing", range],
+    queryFn: () => api<TimingPayload>(`/business/dashboard/timing?range=${range}`, { token }),
+    enabled: dashEnabled && tier !== "none",
+    meta: { silent: true },
+  });
+  const [timingMode, setTimingMode] = useState<"hour" | "weekday">("hour");
+  const devicesQ = useQuery({
+    queryKey: ["business", "dashboard", "devices", range],
+    queryFn: () => api<DevicesPayload>(`/business/dashboard/devices?range=${range}`, { token }),
+    enabled: dashEnabled && tier !== "none",
+    meta: { silent: true },
+  });
+
+  if (businessLoading || qrLoading) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-8 w-48" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">{[...Array(4)].map((_, i) => <Skeleton key={i} className="h-24" />)}</div>
+        <Skeleton className="h-64 rounded-2xl" />
+      </div>
+    );
+  }
+
+  if (tier === "none") {
+    const totalScans = errorTotalScans(summaryQ.error);
+    return <FreeTierView business={business} reviewUrl={reviewUrl} totalScans={totalScans} toast={toast} />;
+  }
+
+  const summary = summaryQ.data;
+  const isNew = (summary?.reviewsStarted.value ?? 0) < 20;
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-lg font-semibold text-fg">Dashboard</h2>
-        {businessLoading ? (
-          <Skeleton className="h-4 w-40 mt-1.5" />
-        ) : (
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-fg">Dashboard</h2>
           <p className="text-sm text-fg-tertiary mt-0.5">Welcome back, {business?.name}</p>
-        )}
-      </div>
-
-      {/* Plan card */}
-      <div className="rounded-2xl border border-border bg-surface p-6 space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-fg">Your Plan</h3>
-          {businessLoading ? (
-            <Skeleton className="h-5 w-28" />
-          ) : plan ? (
-            <span className="text-lg font-bold text-fg">
-              {plan.name} <span className="text-sm font-normal text-fg-tertiary">₹{plan.price}{plan.billingType === "monthly" ? "/mo" : plan.billingType === "annually" ? "/yr" : ""}</span>
-            </span>
-          ) : (
-            <span className="text-sm text-fg-tertiary">No plan assigned</span>
-          )}
         </div>
-        {businessLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-4 w-full" />)}
-          </div>
-        ) : (
-          plan?.features && (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              <FeatureRow label="QR code + basic functionality" on />
-              <FeatureRow label={`Analytics: ${plan.features.analytics === "full" ? "Full" : plan.features.analytics === "basic" ? "Basic" : "None"}`} on={plan.features.analytics !== "none"} />
-              <FeatureRow label="Scanner device data" on={Boolean(plan.features.userData)} />
-            </div>
-          )
-        )}
+        <RangeToggle range={range} onChange={setRange} />
       </div>
 
-      {/* QR / link */}
-      {qrLoading ? (
-        <Skeleton className="h-48 rounded-2xl" />
-      ) : reviewUrl ? (
-        <QrCard reviewUrl={reviewUrl} businessName={business?.name || ""} toast={toast} badgeLabel="Live" />
-      ) : (
-        <UpgradeTeaser message="No QR code is linked to your account yet — contact your platform admin to get one set up." />
+      {reviewUrl && <QrCard reviewUrl={reviewUrl} businessName={business?.name || ""} toast={toast} badgeLabel="Live" />}
+
+      {summary && isNew && (
+        <div className="rounded-xl border border-info/20 bg-info/5 px-4 py-3 text-sm text-fg-secondary flex items-center gap-2">
+          <InfoIcon className="w-4 h-4 text-info shrink-0" />
+          {summary.reviewsStarted.value} review{summary.reviewsStarted.value === 1 ? "" : "s"} collected in the last 30 days. Charts unlock at 20.
+        </div>
       )}
 
-      {/* Analytics */}
-      <div className="space-y-4">
-        <h3 className="text-sm font-semibold text-fg">Analytics</h3>
-        {analyticsLoading ? (
+      {/* Stat cards */}
+      {summaryQ.isPending ? (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">{[...Array(4)].map((_, i) => <Skeleton key={i} className="h-24" />)}</div>
+      ) : summary ? (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard label="Reviews started" value={String(summary.reviewsStarted.value)} delta={deltaLabel(summary.reviewsStarted.value, summary.reviewsStarted.prev)} />
+          <StatCard
+            label="Average rating"
+            value={summary.avgRating.ratingCount < 5 ? `${summary.avgRating.ratingCount} so far` : summary.avgRating.value?.toFixed(1) || "—"}
+            delta={summary.avgRating.ratingCount >= 5 ? deltaLabel(summary.avgRating.value, summary.avgRating.prev) : undefined}
+          />
+          <StatCard label="Google clicks" value={String(summary.googleClicks.value)} delta={deltaLabel(summary.googleClicks.value, summary.googleClicks.prev)} />
+          <StatCard
+            label="Completion rate"
+            value={`${summary.completionRate.value}%`}
+            delta={deltaLabel(summary.completionRate.value, summary.completionRate.prev, "pt")}
+            note={summary.completionRate.value !== null && summary.completionRate.value < 20 ? "Low completion often means the code is at the counter rather than on the table." : undefined}
+          />
+        </div>
+      ) : null}
+
+      {/* Recent activity — featured when there's not much else to show yet */}
+      {summary && (isNew ? (
+        <div className="rounded-2xl border border-border bg-surface p-5 space-y-3">
+          <h3 className="text-sm font-semibold text-fg">Recent activity</h3>
+          <RecentActivityFeed rows={summary.recentActivity} featured />
+        </div>
+      ) : null)}
+
+      {/* Rating trend + distribution */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="rounded-2xl border border-border bg-surface p-5 space-y-3">
+          <h3 className="text-sm font-semibold text-fg">Rating over time</h3>
+          {ratingsQ.isPending ? (
+            <Skeleton className="h-56 rounded-xl" />
+          ) : !ratingsQ.data?.ratingCount ? (
+            <EmptyChart message="Rating trend appears once you have a few days of ratings." />
+          ) : (
+            <RatingTrendChart points={ratingsQ.data.series} />
+          )}
+        </div>
+        <div className="rounded-2xl border border-border bg-surface p-5 space-y-3">
+          <h3 className="text-sm font-semibold text-fg">Rating distribution</h3>
+          {ratingsQ.isPending ? (
+            <Skeleton className="h-56 rounded-xl" />
+          ) : !ratingsQ.data?.ratingCount ? (
+            <EmptyChart message="Distribution appears once ratings start coming in." />
+          ) : (
+            <RatingDistributionBar distribution={ratingsQ.data.distribution} />
+          )}
+        </div>
+      </div>
+
+      {/* Funnel */}
+      <div className="rounded-2xl border border-border bg-surface p-5 space-y-3">
+        <h3 className="text-sm font-semibold text-fg">Scan-to-review funnel</h3>
+        {funnelQ.isPending ? (
+          <Skeleton className="h-56 rounded-xl" />
+        ) : !funnelQ.data?.stages.some((s) => s.value > 0) ? (
+          <EmptyChart message="The funnel fills in as scans come through." />
+        ) : (
           <>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-24" />)}
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
-              {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-40 rounded-2xl" />)}
-            </div>
-            <Skeleton className="h-48 rounded-2xl mt-4" />
-          </>
-        ) : analytics ? (
-          <>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              {[
-                { label: "Scans", value: analytics.summary.byType.scan ?? 0 },
-                { label: "Google Clicks", value: analytics.summary.byType.google_click ?? 0 },
-                { label: "Review Copies", value: analytics.summary.byType.review_copy ?? 0 },
-                { label: "Conversion Rate", value: `${analytics.summary.conversionRate}%` },
-              ].map(({ label, value }) => (
-                <div key={label} className="rounded-2xl border border-border bg-surface p-5 space-y-2">
-                  <p className="text-xs font-medium text-fg-tertiary uppercase tracking-wider">{label}</p>
-                  <p className="text-3xl font-bold text-fg font-mono tabular-nums">{value}</p>
-                </div>
+            <ConversionFunnelChart stages={funnelQ.data.stages.map((s) => ({ id: s.label, value: s.value }))} />
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-1">
+              {funnelQ.data.stages.map((s) => (
+                <p key={s.key} className="text-xs text-fg-quaternary leading-snug" title={FUNNEL_HINT[s.key]}>
+                  <span className="font-medium text-fg-tertiary">{s.label}:</span> {FUNNEL_HINT[s.key]}
+                </p>
               ))}
             </div>
-
-            {analytics.breakdown && (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {(["device", "browser", "os"] as const).map((field) => (
-                  <div key={field} className="rounded-2xl border border-border bg-surface p-5 space-y-3">
-                    <p className="text-xs font-medium text-fg-tertiary uppercase tracking-wider capitalize">{field}</p>
-                    {analytics.breakdown![field].length ? (
-                      analyticsFull ? (
-                        field === "device" ? (
-                          <DeviceDonut data={analytics.breakdown!.device} />
-                        ) : field === "browser" ? (
-                          <BrowserBar data={analytics.breakdown!.browser} />
-                        ) : (
-                          <OsRadialBar data={analytics.breakdown!.os} />
-                        )
-                      ) : (
-                        <ul className="space-y-1.5">
-                          {analytics.breakdown![field].map((row) => (
-                            <li key={row._id || "unknown"} className="flex items-center justify-between text-sm">
-                              <span className="text-fg-secondary capitalize">{row._id || "unknown"}</span>
-                              <span className="text-fg-tertiary">{row.count}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      )
-                    ) : (
-                      <p className="text-xs text-fg-quaternary">No data yet</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {analyticsFull && (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <div className="rounded-2xl border border-border bg-surface p-5 space-y-3">
-                  <p className="text-xs font-medium text-fg-tertiary uppercase tracking-wider">Activity by Type</p>
-                  <ActivityByTypeBar
-                    scans={analytics.summary.byType.scan ?? 0}
-                    reviewCopies={analytics.summary.byType.review_copy ?? 0}
-                    googleClicks={analytics.summary.byType.google_click ?? 0}
-                  />
-                </div>
-                <div className="rounded-2xl border border-border bg-surface p-5 space-y-3">
-                  <p className="text-xs font-medium text-fg-tertiary uppercase tracking-wider">Engagement Profile</p>
-                  <EngagementRadar
-                    scans={analytics.summary.byType.scan ?? 0}
-                    reviewCopies={analytics.summary.byType.review_copy ?? 0}
-                    googleClicks={analytics.summary.byType.google_click ?? 0}
-                    conversionRate={analytics.summary.conversionRate}
-                  />
-                </div>
-                <div className="rounded-2xl border border-border bg-surface p-5 space-y-3">
-                  <p className="text-xs font-medium text-fg-tertiary uppercase tracking-wider">Conversion Funnel</p>
-                  <ConversionFunnelChart
-                    stages={[
-                      { id: "Scans", value: analytics.summary.byType.scan ?? 0 },
-                      { id: "Review Copies", value: analytics.summary.byType.review_copy ?? 0 },
-                      { id: "Google Clicks", value: analytics.summary.byType.google_click ?? 0 },
-                    ]}
-                  />
-                </div>
-              </div>
-            )}
-
-            {analytics.recentEvents && (
-              <div className="rounded-2xl border border-border bg-surface p-5 space-y-3">
-                <p className="text-xs font-medium text-fg-tertiary uppercase tracking-wider">Recent Scans</p>
-                {analytics.recentEvents.length ? (
-                  <ul className="divide-y divide-border">
-                    {analytics.recentEvents.slice(0, 10).map((e, i) => (
-                      <li key={i} className="flex items-center justify-between gap-3 py-2 text-sm">
-                        <span className="text-fg-secondary">{e.eventType} · {e.device || "unknown"} · {e.browser || "unknown"}</span>
-                        <span className="text-xs text-fg-quaternary shrink-0">{new Date(e.createdAt).toLocaleString()}</span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-sm text-fg-tertiary">No activity yet.</p>
-                )}
-              </div>
-            )}
           </>
-        ) : (
-          <UpgradeTeaser message={analyticsBlocked || "Analytics unavailable."} />
         )}
       </div>
 
-      {/* Growth suggestions */}
-      <div className="space-y-4">
-        <h3 className="text-sm font-semibold text-fg">Growth Suggestions</h3>
-        {businessLoading ? (
-          <Skeleton className="h-32 rounded-2xl" />
-        ) : suggestionsEnabled ? (
-          <div className="rounded-2xl border border-border bg-surface p-5 space-y-3">
-            {STATIC_SUGGESTIONS.map((t, i) => (
-              <div key={i} className="flex items-start gap-2.5 text-sm">
-                <SparkleIcon className="w-4 h-4 text-brand shrink-0 mt-0.5" />
-                <span className="text-fg-secondary">{t}</span>
-              </div>
-            ))}
+      {/* Timing + devices */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="rounded-2xl border border-border bg-surface p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-fg">When people scan</h3>
+            <div className="flex gap-1">
+              {(["hour", "weekday"] as const).map((m) => (
+                <button key={m} onClick={() => setTimingMode(m)} className={`px-2 py-1 rounded-md text-xs font-medium cursor-pointer ${timingMode === m ? "bg-brand/15 text-brand" : "text-fg-tertiary hover:text-fg"}`}>
+                  {m === "hour" ? "By hour" : "By day"}
+                </button>
+              ))}
+            </div>
           </div>
-        ) : (
-          <UpgradeTeaser message="Growth suggestions aren't included in your current plan." />
-        )}
+          {timingQ.isPending ? (
+            <Skeleton className="h-56 rounded-xl" />
+          ) : !timingQ.data || !(timingMode === "hour" ? timingQ.data.byHour : timingQ.data.byWeekday).some((d) => d.scans > 0) ? (
+            <EmptyChart message="Timing patterns appear once there's more than a day or two of scans." />
+          ) : (
+            <TimingBar
+              mode={timingMode}
+              data={timingMode === "hour" ? timingQ.data.byHour.map((h) => ({ key: h.hour, scans: h.scans })) : timingQ.data.byWeekday.map((d) => ({ key: d.weekday, scans: d.scans }))}
+            />
+          )}
+        </div>
+        <div className="rounded-2xl border border-border bg-surface p-5 space-y-3">
+          <h3 className="text-sm font-semibold text-fg">Device split</h3>
+          {devicesQ.isPending ? (
+            <Skeleton className="h-56 rounded-xl" />
+          ) : !devicesQ.data || Object.values(devicesQ.data.devices).every((v) => v === 0) ? (
+            <EmptyChart message="Device data appears as scans come in." />
+          ) : (
+            <DeviceDonut data={Object.entries(devicesQ.data.devices).map(([_id, count]) => ({ _id, count }))} />
+          )}
+        </div>
       </div>
+
+      {/* Recent activity — secondary panel once there's other content to look at */}
+      {summary && !isNew && (
+        <div className="rounded-2xl border border-border bg-surface p-5 space-y-3">
+          <h3 className="text-sm font-semibold text-fg">Recent activity</h3>
+          <RecentActivityFeed rows={summary.recentActivity} featured={false} />
+        </div>
+      )}
+
+      {/* Full tier */}
+      {tier === "full" ? (
+        <>
+          <MenuBreakdownSection token={token} range={range} />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <AspectsSection token={token} range={range} />
+            <ShiftsSection token={token} range={range} />
+          </div>
+          <CompareSection token={token} days={range === "7d" ? 7 : range === "90d" ? 90 : 30} />
+          <SuggestionsSection token={token} />
+        </>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <LockedCard title="Menu breakdown" description="Per-dish ratings, mentions and trend — see which dish is actually the problem." />
+          <LockedCard title="Complaint & praise themes" description="What comes up in low ratings vs high ratings, side by side." />
+          <LockedCard title="Shift view" description="Average rating by time of day — spot a staffing issue your other data can't show." />
+          <LockedCard title="Growth suggestions" description="Rules-based tips generated from your own numbers, not generic advice." />
+        </div>
+      )}
     </div>
   );
 }
