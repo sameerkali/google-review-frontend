@@ -221,7 +221,7 @@ function MenuBreakdownSection({ token, range }: { token: string; range: Range })
 
   return (
     <div className="rounded-2xl border border-border bg-surface p-5 space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <h3 className="text-sm font-semibold text-fg">Menu breakdown</h3>
         <select
           value={sort}
@@ -332,7 +332,7 @@ function CompareSection({ token, days }: { token: string; days: number }) {
       {isPending ? (
         <Skeleton className="h-24 rounded-xl" />
       ) : !data ? null : (
-        <div className="grid grid-cols-2 gap-4 text-sm">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
           {(["a", "b"] as const).map((k) => (
             <div key={k} className="space-y-1.5">
               <p className="text-xs font-medium text-fg-quaternary uppercase tracking-wider">{k === "a" ? "Previous period" : "This period"}</p>

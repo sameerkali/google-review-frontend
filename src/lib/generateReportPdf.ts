@@ -86,7 +86,7 @@ export function generateReportPdf(reports: ReportPayload[], businessName: string
     doc.text(RANGE_LABEL[r.range], marginX, y);
     y += 22;
 
-    // Stat line
+    // Stat lines — split in two so neither wraps or overflows the margin.
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
     const avgText = r.summary.avgRating.ratingCount >= 5 ? `${r.summary.avgRating.value?.toFixed(1)}★ avg` : `${r.summary.avgRating.ratingCount} ratings so far`;
@@ -95,7 +95,22 @@ export function generateReportPdf(reports: ReportPayload[], businessName: string
       marginX,
       y
     );
-    y += 20;
+    y += 16;
+
+    const line2: string[] = [];
+    if (r.summary.draftEditRate.value !== null) line2.push(`${r.summary.draftEditRate.value}% edited their draft before copying`);
+    const { qr, nfc, direct } = r.referrer;
+    if (nfc > 0 || direct > 0) {
+      const sourceParts = [`${qr} via QR`, ...(nfc > 0 ? [`${nfc} via NFC`] : []), ...(direct > 0 ? [`${direct} direct`] : [])];
+      line2.push(sourceParts.join(", "));
+    }
+    if (line2.length) {
+      doc.setTextColor(120);
+      doc.text(line2.join("  ·  "), marginX, y);
+      doc.setTextColor(20);
+      y += 16;
+    }
+    y += 4;
 
     // Rating distribution table
     autoTable(doc, {
