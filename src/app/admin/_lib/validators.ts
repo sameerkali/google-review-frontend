@@ -1,7 +1,8 @@
 /* ─── Validation helpers (shared by every admin form) ────────────── */
 export const validators: Record<string, (v: string) => string | null> = {
   email: (v) => (!v?.trim() ? "Email is required" : !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? "Invalid email address" : null),
-  phone: (v) => (v && !/^\+?[\d\s\-().]{7,}$/.test(v) ? "Invalid phone number" : null),
+  phone: (v) => (v && !/^\d{10}$/.test(v) ? "Phone number must be exactly 10 digits" : null),
+  password: (v) => (v && (v.length < 4 || v.length > 14) ? "Password must be 4–14 characters" : null),
   googleReviewUrl: (v) => (v && !v.startsWith("http") ? "Must be a valid URL starting with http" : null),
   website: (v) => (v && !v.startsWith("http") ? "Must be a valid URL starting with http" : null),
   price: (v) => (v && isNaN(Number(v)) ? "Must be a number" : null),
@@ -22,12 +23,17 @@ export const FIELD_OPTIONS: Record<string, string[]> = {
 export const HARDWARE_STATUS_OPTIONS = ["available", "assigned", "lost", "damaged"];
 export const BUSINESS_STATUS_OPTIONS = ["active", "suspended", "expired"];
 
+/** Strips everything but digits and caps at 10 — used on every phone
+    input's onChange so it's physically impossible to type past the limit
+    or enter a non-digit, not just flagged after the fact. */
+export const sanitizePhone = (v: string): string => v.replace(/\D/g, "").slice(0, 10);
+
 export function validate(fields: string[], form: Record<string, string>): Record<string, string> {
   const errs: Record<string, string> = {};
   for (const f of fields) {
     const fn = validators[f];
     if (!fn) {
-      if (!form[f]?.trim() && ["name", "serial", "code", "reviewText", "businessId"].includes(f)) {
+      if (!form[f]?.trim() && ["name", "serial", "code"].includes(f)) {
         errs[f] = `${f} is required`;
       }
       continue;
@@ -51,11 +57,9 @@ export const FIELD_LABELS: Record<string, string> = {
   price: "Price",
   type: "Hardware Type",
   serial: "Serial Number",
-  businessId: "Business ID",
-  reviewText: "Review Text",
   status: "Status",
 };
 
 export const REQUIRED_FIELDS: Record<string, boolean> = {
-  name: true, serial: true, code: true, reviewText: true, businessId: true, email: true,
+  name: true, serial: true, code: true, email: true,
 };

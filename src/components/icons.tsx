@@ -41,6 +41,7 @@ import {
   ChatCircleText,
   Storefront,
   Sparkle,
+  ForkKnife,
   EyeSlashIcon as PhosphorEyeSlash,
   DownloadSimpleIcon as PhosphorDownloadSimple,
   type Icon,
@@ -59,6 +60,7 @@ export const BusinessesIcon = make(Buildings);
 export const PlansIcon = make(CreditCard);
 export const HardwareIcon = make(HardDrives);
 export const ReviewsIcon = make(Star);
+export const StarIcon = make(Star, "bold");
 export const StarFillIcon = make(Star, "fill");
 export const AnalyticsIcon = make(ChartBar);
 export const PlusIcon = make(Plus, "bold");
@@ -90,6 +92,7 @@ export const GoogleLogoIcon = make(GoogleLogo);
 export const ChatIcon = make(ChatCircleText);
 export const StorefrontIcon = make(Storefront);
 export const SparkleIcon = make(Sparkle, "bold");
+export const MenuFoodIcon = make(ForkKnife);
 export const EyeSlashIcon = make(PhosphorEyeSlash);
 export const DownloadIcon = make(PhosphorDownloadSimple, "bold");
 
@@ -98,6 +101,6 @@ export const TAB_ICONS = {
   businesses: BusinessesIcon,
   plans: PlansIcon,
   hardware: HardwareIcon,
-  reviews: ReviewsIcon,
+  menu: MenuFoodIcon,
   analytics: AnalyticsIcon,
 } as const;

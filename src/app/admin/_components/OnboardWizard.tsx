@@ -4,25 +4,25 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { Row, ToastFn } from "@/lib/types";
-import { validate } from "../_lib/validators";
-import { AlertIcon, CheckIcon, CloseIcon, CopyIcon, PlusIcon } from "@/components/icons";
+import { sanitizePhone, validate, validators } from "../_lib/validators";
+import { AlertIcon, CheckIcon, CloseIcon, CopyIcon } from "@/components/icons";
 import { generatePassword } from "../_lib/generatePassword";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
 import { QrCard } from "@/components/QrCard";
 import { Modal, ModalHeader } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
-import { Field, Input, Select, Textarea, Label } from "@/components/ui/Input";
+import { Field, Input, Select, Label } from "@/components/ui/Input";
 
 /* ─── Onboarding Wizard ──────────────────────────────────────────────
    Single guided flow that replaces the old "register hardware, then
-   business, then hunt for its ID to add reviews" 3-tab process: business
-   details → QR code → review suggestions → the QR is generated immediately. */
-type WizardStep = "details" | "code" | "reviews" | "success";
+   business, then hunt for its ID to add menu items" 3-tab process: business
+   details → QR code → menu → the QR is generated immediately. */
+type WizardStep = "details" | "code" | "menu" | "success";
 
 const WIZARD_STEPS: { key: WizardStep; label: string }[] = [
   { key: "details", label: "Details" },
   { key: "code", label: "QR Code" },
-  { key: "reviews", label: "Reviews" },
+  { key: "menu", label: "Menu" },
 ];
 
 const DETAIL_FIELDS: { f: string; label: string; required?: boolean }[] = [
@@ -58,12 +58,14 @@ export function OnboardWizard({
   const [detailTouched, setDetailTouched] = useState<Record<string, boolean>>({});
   const [planId, setPlanId] = useState("");
   const [portalPassword, setPortalPassword] = useState("");
+  const [passwordErr, setPasswordErr] = useState("");
   // The code field is either what the admin typed, or — until they touch it —
   // a suggestion derived from the business name. Derived at render time
   // (not synced via an effect) so there's nothing to keep in sync.
   const [codeInput, setCodeInput] = useState("");
   const [codeTouched, setCodeTouched] = useState(false);
-  const [reviews, setReviews] = useState<string[]>([""]);
+  const [menuItems, setMenuItems] = useState<string[]>([]);
+  const [menuDraft, setMenuDraft] = useState("");
   const [serverError, setServerError] = useState("");
   const [result, setResult] = useState<{ businessName: string; reviewUrl: string; codeNotConfirmed?: boolean } | null>(null);
   const [copiedCreds, setCopiedCreds] = useState(false);
@@ -93,7 +95,9 @@ export function OnboardWizard({
     setCodeTouched(false);
     setPlanId("");
     setPortalPassword("");
-    setReviews([""]);
+    setPasswordErr("");
+    setMenuItems([]);
+    setMenuDraft("");
     setServerError("");
     setResult(null);
   };
@@ -118,30 +122,32 @@ export function OnboardWizard({
         },
       });
 
-      // Review suggestions are best-effort follow-ups: a failure here must
-      // not fail (or retry) the business that was just successfully created.
-      const texts = reviews.map((r) => r.trim()).filter(Boolean);
-      let failedReviewCount = 0;
-      for (const reviewText of texts) {
+      // Menu items are best-effort follow-ups: a failure here must not fail
+      // (or retry) the business that was just successfully created. Include
+      // whatever's still sitting in the draft field (typed but never
+      // terminated with a comma) so it isn't silently dropped on submit.
+      const names = [...menuItems, menuDraft].map((r) => r.trim()).filter(Boolean);
+      let failedItemCount = 0;
+      for (const name of names) {
         try {
-          await api("/admin/review-suggestions", { method: "POST", token, body: { businessId: created._id, reviewText } });
+          await api("/admin/menu-items", { method: "POST", token, body: { businessId: created._id, name } });
         } catch {
-          failedReviewCount++;
+          failedItemCount++;
         }
       }
-      return { business: created, failedReviewCount };
+      return { business: created, failedItemCount };
     },
     meta: { toastOnError: false }, // inline serverError banner below
-    onSuccess: ({ business: created, failedReviewCount }) => {
+    onSuccess: ({ business: created, failedItemCount }) => {
       queryClient.invalidateQueries({ queryKey: ["admin", "businesses", "list"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "businesses", "all"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "overview"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "hardware", "all"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "hardware", "list"] });
-      queryClient.invalidateQueries({ queryKey: ["admin", "reviews", "businesses"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "menu-items", "businesses"] });
 
-      if (failedReviewCount > 0) {
-        toast("error", `Business created, but ${failedReviewCount} review suggestion${failedReviewCount > 1 ? "s" : ""} failed to save — add ${failedReviewCount > 1 ? "them" : "it"} again from the Reviews tab`);
+      if (failedItemCount > 0) {
+        toast("error", `Business created, but ${failedItemCount} menu item${failedItemCount > 1 ? "s" : ""} failed to save — add ${failedItemCount > 1 ? "them" : "it"} again from the Menu tab`);
       }
 
       // Don't celebrate a QR that isn't actually live — only show it once the
@@ -182,14 +188,34 @@ export function OnboardWizard({
     const errs = validate(detailFieldNames, details);
     setDetailErrors(errs);
     setDetailTouched(Object.fromEntries(detailFieldNames.map((f) => [f, true])));
-    if (Object.values(errs).some(Boolean)) return;
+    const pwErr = validators.password(portalPassword) || "";
+    setPasswordErr(pwErr);
+    if (Object.values(errs).some(Boolean) || pwErr) return;
     setServerError("");
     setStep("code");
   };
 
-  const addReview = () => setReviews((r) => (r.length >= 5 ? r : [...r, ""]));
-  const removeReview = (i: number) => setReviews((r) => r.filter((_, idx) => idx !== i));
-  const updateReview = (i: number, v: string) => setReviews((r) => r.map((x, idx) => (idx === i ? v : x)));
+  // Typing a comma commits everything before it as its own chip and keeps
+  // typing the next item in the same field — "chips, coke, chicken fry"
+  // becomes three separate items without a row-per-item form.
+  const onMenuDraftChange = (raw: string) => {
+    const parts = raw.split(",");
+    const remainder = parts.pop() ?? "";
+    const newItems = parts.map((p) => p.trim()).filter(Boolean);
+    if (newItems.length) setMenuItems((items) => [...items, ...newItems].slice(0, 30));
+    setMenuDraft(remainder);
+  };
+  const onMenuDraftKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const v = menuDraft.trim();
+      if (v) setMenuItems((items) => [...items, v].slice(0, 30));
+      setMenuDraft("");
+    } else if (e.key === "Backspace" && !menuDraft && menuItems.length) {
+      setMenuItems((items) => items.slice(0, -1));
+    }
+  };
+  const removeMenuItem = (i: number) => setMenuItems((r) => r.filter((_, idx) => idx !== i));
 
   const stepIndex = WIZARD_STEPS.findIndex((s) => s.key === step);
 
@@ -236,16 +262,19 @@ export function OnboardWizard({
                   <Input
                     id={`wiz-${f}`}
                     autoFocus={i === 0}
-                    type={f === "email" ? "email" : "text"}
+                    type={f === "email" ? "email" : f === "phone" ? "tel" : "text"}
+                    inputMode={f === "phone" ? "numeric" : undefined}
+                    maxLength={f === "phone" ? 10 : undefined}
                     value={details[f]}
                     onChange={(e) => {
-                      const next = { ...details, [f]: e.target.value };
+                      const raw = f === "phone" ? sanitizePhone(e.target.value) : e.target.value;
+                      const next = { ...details, [f]: raw };
                       setDetails(next);
                       if (detailTouched[f]) validateDetailField(f, next);
                     }}
                     onBlur={() => { setDetailTouched((t) => ({ ...t, [f]: true })); validateDetailField(f, details); }}
                     aria-invalid={!!detailErrors[f]}
-                    placeholder={f === "googleReviewUrl" ? "https://maps.google.com/..." : f === "website" ? "https://example.com" : label}
+                    placeholder={f === "googleReviewUrl" ? "https://maps.google.com/..." : f === "website" ? "https://example.com" : f === "phone" ? "10-digit number" : label}
                     error={!!detailErrors[f]}
                   />
                 </Field>
@@ -267,16 +296,25 @@ export function OnboardWizard({
                     id="wiz-password"
                     type="text"
                     value={portalPassword}
-                    onChange={(e) => setPortalPassword(e.target.value)}
+                    maxLength={14}
+                    onChange={(e) => { setPortalPassword(e.target.value); if (passwordErr) setPasswordErr(""); }}
                     placeholder="Leave blank to set up later"
                     className="flex-1 min-w-0 font-mono"
+                    aria-invalid={!!passwordErr}
+                    error={!!passwordErr}
                   />
                   <Button type="button" variant="secondary" onClick={() => setPortalPassword(generatePassword())} className="shrink-0">
                     Generate
                   </Button>
                 </div>
+                {passwordErr && (
+                  <p role="alert" className="mt-1.5 flex items-center gap-1 text-xs text-danger">
+                    <AlertIcon className="w-3 h-3 shrink-0" />
+                    {passwordErr}
+                  </p>
+                )}
                 <p className="mt-1.5 text-xs text-fg-quaternary">
-                  Lets the business owner log into their own dashboard at /business/login to see their stats and manage reviews. You&apos;ll see this password once more on the next screen — share it with them.
+                  4–14 characters if set. Lets the business owner log into their own dashboard at /business/login to see their stats. You&apos;ll see this password once more on the next screen — share it with them.
                 </p>
               </div>
             </div>
@@ -329,43 +367,37 @@ export function OnboardWizard({
             </div>
           )}
 
-          {step === "reviews" && (
-            <div className="space-y-4">
+          {step === "menu" && (
+            <div className="space-y-3">
               <p className="text-sm text-fg-tertiary">
-                Pre-written reviews shown to customers after they scan — optional, but they significantly increase conversion. You can add more later too.
+                Menu items shown as chips on screen one of the review flow — optional, but the customer needs
+                at least a few to pick from. Type a name and a comma to add it, then keep typing the next one.
+                You can add more later too.
               </p>
-              {reviews.map((r, i) => (
-                <div key={i} className="flex gap-2 items-start">
-                  <Textarea
-                    autoFocus={i === 0}
-                    value={r}
-                    onChange={(e) => updateReview(i, e.target.value)}
-                    rows={2}
-                    placeholder={`Suggestion ${i + 1}, e.g. "Great coffee and quick service!"`}
-                    className="flex-1"
-                  />
-                  {reviews.length > 1 && (
+              <div className="rounded-xl border border-border-strong bg-background px-3 py-2.5 flex flex-wrap gap-2 items-center focus-within:border-brand/50 transition-colors">
+                {menuItems.map((item, i) => (
+                  <span key={`${item}-${i}`} className="inline-flex items-center gap-1.5 rounded-full bg-brand/15 text-brand border border-brand/30 pl-3 pr-1.5 py-1 text-xs font-medium">
+                    {item}
                     <button
                       type="button"
-                      onClick={() => removeReview(i)}
-                      aria-label={`Remove suggestion ${i + 1}`}
-                      className="mt-1 rounded-lg p-2 text-fg-tertiary hover:text-danger hover:bg-danger/10 transition-colors cursor-pointer shrink-0"
+                      onClick={() => removeMenuItem(i)}
+                      aria-label={`Remove ${item}`}
+                      className="rounded-full p-0.5 hover:bg-brand/20 transition-colors cursor-pointer"
                     >
-                      <CloseIcon className="w-4 h-4" />
+                      <CloseIcon className="w-3 h-3" />
                     </button>
-                  )}
-                </div>
-              ))}
-              {reviews.length < 5 && (
-                <button
-                  type="button"
-                  onClick={addReview}
-                  className="flex items-center gap-1.5 text-xs font-medium text-brand hover:text-brand-hover transition-colors cursor-pointer"
-                >
-                  <PlusIcon className="w-3.5 h-3.5" />
-                  Add another suggestion
-                </button>
-              )}
+                  </span>
+                ))}
+                <input
+                  autoFocus
+                  value={menuDraft}
+                  onChange={(e) => onMenuDraftChange(e.target.value)}
+                  onKeyDown={onMenuDraftKeyDown}
+                  placeholder={menuItems.length ? "Add another…" : 'e.g. "chips, coke, chicken fry"'}
+                  className="flex-1 min-w-32 bg-transparent text-sm text-fg placeholder:text-fg-quaternary outline-none py-1"
+                />
+              </div>
+              <p className="text-xs text-fg-quaternary">{menuItems.length}/30 items added</p>
             </div>
           )}
 
@@ -430,10 +462,10 @@ export function OnboardWizard({
           {step === "code" && (
             <>
               <Button onClick={() => setStep("details")} variant="secondary">Back</Button>
-              <Button onClick={() => setStep("reviews")} variant="primary" className="ml-auto">Continue</Button>
+              <Button onClick={() => setStep("menu")} variant="primary" className="ml-auto">Continue</Button>
             </>
           )}
-          {step === "reviews" && (
+          {step === "menu" && (
             <>
               <Button onClick={() => setStep("code")} variant="secondary" disabled={onboardMutation.isPending}>Back</Button>
               <Button onClick={() => onboardMutation.mutate()} variant="primary" loading={onboardMutation.isPending} loadingText="Creating…" className="ml-auto">

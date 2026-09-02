@@ -33,8 +33,8 @@ export function GoogleReviewCard({ className = "" }: { className?: string }) {
             className="w-12 h-12 rounded-full object-cover shrink-0"
           />
           <div>
-            <p className="text-[15px] font-semibold text-zinc-900">Anmol Kumar</p>
-            <p className="text-xs text-zinc-500">2 minutes ago</p>
+            <p className="text-[15px] font-semibold text-zinc-900">Your Customer</p>
+            <p className="text-xs text-zinc-500">Just now</p>
           </div>
         </div>
         <GoogleG className="w-12 h-12 shrink-0" />

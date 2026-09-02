@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { Row, ToastFn } from "@/lib/types";
-import { BUSINESS_STATUS_OPTIONS, validate } from "../_lib/validators";
+import { BUSINESS_STATUS_OPTIONS, sanitizePhone, validate, validators } from "../_lib/validators";
 import { AlertIcon } from "@/components/icons";
 import { generatePassword } from "../_lib/generatePassword";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
@@ -49,6 +49,7 @@ export function BusinessEditModal({
   const [status, setStatus] = useState(business?.status || "active");
   const [plan, setPlan] = useState(planId(business));
   const [newPassword, setNewPassword] = useState("");
+  const [passwordErr, setPasswordErr] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [serverError, setServerError] = useState("");
 
@@ -77,7 +78,9 @@ export function BusinessEditModal({
     const fieldNames = FIELDS.map((f) => f.f);
     const errs = validate(fieldNames, form);
     setErrors(errs);
-    if (Object.values(errs).some(Boolean)) return;
+    const pwErr = validators.password(newPassword) || "";
+    setPasswordErr(pwErr);
+    if (Object.values(errs).some(Boolean) || pwErr) return;
     setServerError("");
     saveMutation.mutate({
       name: form.name.trim(),
@@ -113,9 +116,11 @@ export function BusinessEditModal({
               <Field key={f} label={`${label}${required ? " *" : ""}`} htmlFor={`biz-edit-${f}`} error={errors[f]}>
                 <Input
                   id={`biz-edit-${f}`}
-                  type={f === "email" ? "email" : "text"}
+                  type={f === "email" ? "email" : f === "phone" ? "tel" : "text"}
+                  inputMode={f === "phone" ? "numeric" : undefined}
+                  maxLength={f === "phone" ? 10 : undefined}
                   value={form[f]}
-                  onChange={(e) => setForm({ ...form, [f]: e.target.value })}
+                  onChange={(e) => setForm({ ...form, [f]: f === "phone" ? sanitizePhone(e.target.value) : e.target.value })}
                   aria-invalid={!!errors[f]}
                   error={!!errors[f]}
                 />
@@ -144,15 +149,24 @@ export function BusinessEditModal({
                   id="biz-edit-password"
                   type="text"
                   value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
+                  maxLength={14}
+                  onChange={(e) => { setNewPassword(e.target.value); if (passwordErr) setPasswordErr(""); }}
                   placeholder="Leave blank to keep current password"
                   className="flex-1 min-w-0 font-mono"
+                  aria-invalid={!!passwordErr}
+                  error={!!passwordErr}
                 />
                 <Button type="button" variant="secondary" onClick={() => setNewPassword(generatePassword())} className="shrink-0">
                   Generate
                 </Button>
               </div>
-              {newPassword.trim() && (
+              {passwordErr && (
+                <p role="alert" className="mt-1.5 flex items-center gap-1 text-xs text-danger">
+                  <AlertIcon className="w-3 h-3 shrink-0" />
+                  {passwordErr}
+                </p>
+              )}
+              {!passwordErr && newPassword.trim() && (
                 <p className="mt-1.5 text-xs text-warning">New password: <span className="font-mono">{newPassword.trim()}</span> — copy it now, it won&apos;t be shown again after saving.</p>
               )}
             </div>

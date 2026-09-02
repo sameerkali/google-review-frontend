@@ -1,24 +1,31 @@
 "use client";
 
-import { use, useEffect, useRef, useState } from "react";
+import { use, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
-import { AlertIcon, CheckIcon, CopyIcon, StarFillIcon } from "@/components/icons";
+import { api, ApiError } from "@/lib/api";
+import { buildDraft, type Aspect } from "@/lib/buildDraft";
+import { AlertIcon, SearchIcon, StarFillIcon, StarIcon } from "@/components/icons";
 import { Spinner } from "@/components/Loaders";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { GoogleG } from "@/components/GoogleReviewCard";
 
-type Suggestion = { id: string; text: string };
-type Business = { name: string; logoUrl?: string; googleReviewUrl: string };
-type BizData = {
-  business: Business;
-  suggestions: Suggestion[];
-  hardware: { code: string };
-};
+type MenuItem = { id: string; name: string; category: string | null };
+type SessionData = { token: string; business: { name: string; logoUrl: string | null; googleReviewUrl: string | null } };
 
-// Which of the two chosen directions renders — flip by hand as needed,
-// no UI for switching it (this is a design choice, not a user setting).
-const PLAYFUL_DEFAULT = true;
+type Step = "items" | "rating" | "aspects" | "review";
+const STEPS: Step[] = ["items", "rating", "aspects", "review"];
+
+const ASPECTS: { key: Aspect; label: string }[] = [
+  { key: "staff", label: "Staff" },
+  { key: "speed", label: "Speed" },
+  { key: "taste", label: "Taste" },
+  { key: "portion", label: "Portion" },
+  { key: "price", label: "Price" },
+  { key: "cleanliness", label: "Cleanliness" },
+  { key: "ambience", label: "Ambience" },
+  { key: "music", label: "Music" },
+];
+
+const VISIBLE_ITEM_COUNT = 8;
 
 function initials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -26,199 +33,160 @@ function initials(name: string) {
   return (parts[0][0] + (parts[1]?.[0] ?? "")).toUpperCase();
 }
 
-type CardProps = {
-  business: Business;
-  suggestions: Suggestion[];
-  copiedId: string | null;
-  onCopy: (s: Suggestion) => void;
-  onGoogle: () => void;
-};
-
-function IdentityAvatar({ business, ringClassName, textClassName }: { business: Business; ringClassName: string; textClassName: string }) {
+function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
-    <div className={`w-[88px] h-[88px] rounded-full p-1 mx-auto ${ringClassName}`}>
-      {business.logoUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={business.logoUrl} alt={business.name} className="w-full h-full rounded-full object-cover bg-white dark:bg-zinc-900" />
-      ) : (
-        <div className={`w-full h-full rounded-full bg-white dark:bg-zinc-900 flex items-center justify-center font-semibold text-2xl ${textClassName}`}>
-          {initials(business.name)}
-        </div>
-      )}
-    </div>
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-full border px-4 py-2 text-sm font-medium transition-colors duration-150 cursor-pointer ${
+        active
+          ? "bg-brand/15 text-brand border-brand/30"
+          : "bg-surface text-fg-secondary border-border hover:border-border-strong"
+      }`}
+    >
+      {children}
+    </button>
   );
 }
 
-function DecorativeStars({ className = "w-4 h-4" }: { className?: string }) {
+function ScreenShell({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-center gap-1">
-      {Array.from({ length: 5 }).map((_, i) => (
-        <StarFillIcon key={i} className={className} style={{ color: "#FBBC04" }} />
-      ))}
-    </div>
-  );
-}
-
-/* Consumer-app energy: rounded everything, a mint-to-sky ground, review
-   suggestions you swipe through like cards. */
-function PlayfulReviewCard({ business, suggestions, copiedId, onCopy, onGoogle }: CardProps) {
-  return (
-    <div className="w-full text-center">
-      <IdentityAvatar
-        business={business}
-        ringClassName="bg-[linear-gradient(135deg,#ff8a65,#7c6cf0)]"
-        textClassName="text-[#7c6cf0] dark:text-[#b3a6ff]"
-      />
-      <h1 className="text-xl font-semibold text-[#22242b] dark:text-white mt-4">{business.name}</h1>
-      <p className="text-sm text-[#6a6d7a] dark:text-[#a7abc0] mt-1.5">Tell us how it went!</p>
-      <div className="mt-4">
-        <DecorativeStars />
+    <div className="w-full space-y-6 animate-rise-in">
+      <div className="text-center space-y-1.5">
+        <h1 className="text-xl font-semibold text-fg">{title}</h1>
+        {subtitle && <p className="text-sm text-fg-tertiary">{subtitle}</p>}
       </div>
-
-      {suggestions.length > 0 && (
-        <div className="flex gap-3 overflow-x-auto pb-1 mt-6 -mx-6 px-6 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {suggestions.map((s) => {
-            const isCopied = copiedId === s.id;
-            return (
-              <div key={s.id} className="shrink-0 w-[210px] snap-start rounded-2xl bg-white dark:bg-white/[0.06] dark:border dark:border-white/10 p-3.5 text-left shadow-[0_8px_20px_-10px_rgba(34,36,43,0.2)] dark:shadow-none">
-                <p className="text-[12.5px] leading-relaxed text-[#4a4d59] dark:text-[#d3d5e2] min-h-[62px]">{s.text}</p>
-                <button
-                  onClick={() => onCopy(s)}
-                  className={`mt-2.5 w-full flex items-center justify-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold transition-all duration-150 cursor-pointer active:scale-95 ${
-                    isCopied
-                      ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400"
-                      : "bg-[#f1eefe] text-[#7c6cf0] hover:bg-[#e6e0fd] dark:bg-white/10 dark:text-[#cabdff] dark:hover:bg-white/15"
-                  }`}
-                >
-                  {isCopied ? (<><CheckIcon className="w-3.5 h-3.5" /> Copied</>) : (<><CopyIcon className="w-3.5 h-3.5" /> Copy</>)}
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      <button
-        onClick={onGoogle}
-        className="mt-6 w-full rounded-full bg-[#ff5a36] py-4 text-white font-semibold text-[15px] flex items-center justify-center gap-2 hover:-translate-y-0.5 active:scale-95 active:translate-y-0 transition-transform duration-150 cursor-pointer shadow-[0_12px_26px_-10px_rgba(255,90,54,0.55)]"
-      >
-        <GoogleG className="w-[18px] h-[18px]" />
-        Leave a Google Review
-      </button>
-    </div>
-  );
-}
-
-/* The business's own warmth leads; Google shows up as a small trusted
-   badge riding the CTA corner, not the whole page's voice. */
-function WarmReviewCard({ business, suggestions, copiedId, onCopy, onGoogle }: CardProps) {
-  return (
-    <div className="w-full text-center">
-      <IdentityAvatar
-        business={business}
-        ringClassName="bg-[conic-gradient(from_200deg,#ff8a5c,#ff5a36,#ffb37a,#ff8a5c)]"
-        textClassName="text-[#ff5a36] dark:text-[#ff9270]"
-      />
-      <h1 className="text-[22px] font-semibold text-[#2c1a10] dark:text-[#fdf1e9] mt-4 tracking-tight">{business.name}</h1>
-      <p className="text-sm text-[#8a6f61] dark:text-[#cba790] mt-1.5">We&apos;d love your feedback!</p>
-      <div className="mt-4 mb-2">
-        <DecorativeStars />
-      </div>
-
-      {suggestions.length > 0 && (
-        <div className="flex flex-col gap-2.5 mt-6">
-          {suggestions.map((s) => {
-            const isCopied = copiedId === s.id;
-            return (
-              <div key={s.id} className="flex items-center gap-3 rounded-2xl bg-white dark:bg-white/[0.05] border border-[#ffe3d1] dark:border-white/10 p-3.5 text-left">
-                <p className="flex-1 text-[13px] leading-relaxed text-[#4a3226] dark:text-[#ecd9cc] min-w-0">{s.text}</p>
-                <button
-                  onClick={() => onCopy(s)}
-                  className={`shrink-0 flex items-center justify-center rounded-full p-2.5 transition-all duration-150 cursor-pointer active:scale-95 ${
-                    isCopied
-                      ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400"
-                      : "bg-[#fff0e6] text-[#ff5a36] hover:bg-[#ffe3d1] dark:bg-white/10 dark:text-[#ffb08c] dark:hover:bg-white/15"
-                  }`}
-                >
-                  {isCopied ? <CheckIcon className="w-4 h-4" /> : <CopyIcon className="w-4 h-4" />}
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      <div className="relative mt-6">
-        <div className="absolute -top-2.5 right-3.5 w-[30px] h-[30px] rounded-full bg-white dark:bg-zinc-900 shadow-[0_2px_8px_rgba(0,0,0,0.15)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.4)] flex items-center justify-center">
-          <GoogleG className="w-4 h-4" />
-        </div>
-        <button
-          onClick={onGoogle}
-          className="w-full rounded-full bg-[#ff5a36] py-4 text-white font-semibold text-[15px] hover:brightness-95 active:scale-95 transition-all duration-150 cursor-pointer shadow-[0_10px_24px_-8px_rgba(255,90,54,0.5)]"
-        >
-          Leave a Google Review
-        </button>
-      </div>
+      {children}
     </div>
   );
 }
 
 export default function ReviewPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = use(params);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [googleUrlError, setGoogleUrlError] = useState("");
-  // Toggle between the two chosen review-page designs — edit the boolean
-  // above (PLAYFUL_DEFAULT) to switch which one ships.
-  const [playful] = useState(PLAYFUL_DEFAULT);
 
-  const { data, isPending, isError } = useQuery({
-    queryKey: ["public", "review", code],
-    queryFn: () => api<BizData>(`/r/${code}`),
+  const [step, setStep] = useState<Step>("items");
+  const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
+  const [itemSearch, setItemSearch] = useState("");
+  const [freeTextItem, setFreeTextItem] = useState("");
+  const [rating, setRating] = useState(0);
+  const [aspects, setAspects] = useState<Aspect[]>([]);
+  const [draftText, setDraftText] = useState("");
+  const [originalDraft, setOriginalDraft] = useState("");
+  const [copied, setCopied] = useState(false);
+  const [googleError, setGoogleError] = useState("");
+  const reviewTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Created once per page load — never refetched (a refetch would mint a
+  // second, throwaway session), matches the 24-char sessionToken contract
+  // in the plan's data model.
+  const { data: session, isPending: sessionPending, isError: sessionError, error: sessionErrorObj } = useQuery({
+    queryKey: ["public", "feedback", "session", code],
+    queryFn: () => api<SessionData>("/api/v1/feedback/session", { method: "POST", body: { code } }),
+    enabled: !!code,
+    staleTime: Infinity,
     refetchOnWindowFocus: false,
-    meta: { silent: true }, // rendered inline below, not a toast
+    retry: false,
+    meta: { silent: true },
   });
-  const loading = isPending;
-  const error = isError ? "This QR code is not recognised. Please try again." : "";
+  const token = session?.token;
 
-  // Fire the scan beacon once per successful load of a given code — not on
-  // every background refetch (e.g. reconnect) of the same query.
-  const analyticsSent = useRef<string | null>(null);
-  useEffect(() => {
-    if (!data || analyticsSent.current === code) return;
-    analyticsSent.current = code;
-    void api("/analytics", { method: "POST", body: { code } });
-  }, [data, code]);
+  const { data: menuItems = [], isPending: menuPending } = useQuery({
+    queryKey: ["public", "feedback", "menu", token],
+    queryFn: () => api<MenuItem[]>(`/api/v1/feedback/${token}/menu`),
+    enabled: !!token,
+    staleTime: Infinity,
+    meta: { silent: true },
+  });
 
-  const handleCopy = async (s: Suggestion) => {
-    await navigator.clipboard.writeText(s.text);
-    setCopiedId(s.id);
-    void api("/copy", { method: "POST", body: { code } });
-    setTimeout(() => setCopiedId(null), 2500);
+  const filteredItems = useMemo(() => {
+    const term = itemSearch.trim().toLowerCase();
+    const list = term ? menuItems.filter((m) => m.name.toLowerCase().includes(term)) : menuItems;
+    return list.slice(0, term ? list.length : VISIBLE_ITEM_COUNT);
+  }, [menuItems, itemSearch]);
+
+  const toggleItem = (id: string) =>
+    setSelectedItemIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+
+  const toggleAspect = (a: Aspect) =>
+    setAspects((prev) => (prev.includes(a) ? prev.filter((x) => x !== a) : [...prev, a]));
+
+  const patchSession = (body: Record<string, unknown>) => {
+    if (!token) return;
+    void api(`/api/v1/feedback/${token}`, { method: "PATCH", body });
   };
 
-  const handleGoogle = () => {
-    setGoogleUrlError("");
-    let url = data?.business.googleReviewUrl?.trim();
+  const goToRating = () => {
+    patchSession({ menuItemIds: selectedItemIds, freeTextItem: freeTextItem.trim() });
+    setStep("rating");
+  };
+
+  const selectRating = (n: number) => {
+    setRating(n);
+    patchSession({ rating: n });
+    setStep("aspects");
+  };
+
+  const goToReview = () => {
+    patchSession({ aspects });
+    const selectedNames = menuItems.filter((m) => selectedItemIds.includes(m.id)).map((m) => m.name);
+    const items = selectedNames.length ? selectedNames : freeTextItem.trim() ? [freeTextItem.trim()] : [];
+    // Seed defaults to Math.random() inside buildDraft — safe here since this
+    // runs in a click handler, not during render.
+    const draft = buildDraft({ rating, items, aspects });
+    setDraftText(draft);
+    setOriginalDraft(draft);
+    if (token) void api(`/api/v1/feedback/${token}/draft`, { method: "POST", body: { draftGenerated: draft } });
+    setStep("review");
+  };
+
+  useEffect(() => {
+    if (step === "review") reviewTextareaRef.current?.focus();
+  }, [step]);
+
+  // Synchronous, inside the tap — no `await` between the tap and the
+  // clipboard write, or iOS Safari silently drops it (see plan section 3.5).
+  const handleCopyAndGo = () => {
+    setGoogleError("");
+    const text = draftText;
+    navigator.clipboard.writeText(text).catch(() => {
+      const el = document.createElement("textarea");
+      el.value = text;
+      el.style.position = "fixed";
+      el.style.opacity = "0";
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand("copy");
+      el.remove();
+    });
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2500);
+
+    if (token) {
+      void api(`/api/v1/feedback/${token}/copied`, {
+        method: "POST",
+        keepalive: true,
+        body: { edited: text.trim() !== originalDraft.trim(), length: text.length },
+      });
+    }
+
+    let url = session?.business.googleReviewUrl?.trim();
     if (!url) {
-      setGoogleUrlError("No Google Review URL has been set for this business.");
+      setGoogleError("No Google Review URL has been set for this business.");
       return;
     }
     if (!/^https?:\/\//i.test(url)) url = "https://" + url;
-    try { new URL(url); } catch {
-      setGoogleUrlError("The Google Review URL saved for this business is invalid. Please ask the business owner to update it.");
+    try {
+      new URL(url);
+    } catch {
+      setGoogleError("The Google Review URL saved for this business is invalid. Please ask the business owner to update it.");
       return;
     }
-    void api("/open-google", { method: "POST", body: { code } });
-    const a = document.createElement("a");
-    a.href = url;
-    a.target = "_blank";
-    a.rel = "noopener";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+
+    if (token) void api(`/api/v1/feedback/${token}/clicked`, { method: "POST", keepalive: true });
+    window.location.href = url;
   };
 
-  if (loading) {
+  if (sessionPending) {
     return (
       <div className="min-h-dvh flex items-center justify-center bg-background relative">
         <ThemeToggle className="fixed top-4 right-4" />
@@ -227,7 +195,12 @@ export default function ReviewPage({ params }: { params: Promise<{ code: string 
     );
   }
 
-  if (error || !data) {
+  if (sessionError || !session) {
+    // An ApiError means the server responded (e.g. a real 404 for an unknown
+    // code); anything else means the request never got a response at all —
+    // wrong API URL, backend not running, no network. Those need a different
+    // fix than "the code is wrong," so don't show the same message for both.
+    const unreachable = !(sessionErrorObj instanceof ApiError);
     return (
       <div className="min-h-dvh flex items-center justify-center bg-background p-6 relative">
         <ThemeToggle className="fixed top-4 right-4" />
@@ -235,42 +208,172 @@ export default function ReviewPage({ params }: { params: Promise<{ code: string 
           <div className="w-12 h-12 rounded-2xl bg-danger/10 flex items-center justify-center mx-auto mb-1">
             <AlertIcon className="w-6 h-6 text-danger" />
           </div>
-          <p className="text-fg-secondary text-lg font-medium">QR Code Not Found</p>
-          <p className="text-fg-tertiary text-sm max-w-xs">{error}</p>
+          <p className="text-fg-secondary text-lg font-medium">{unreachable ? "Can't Reach the Server" : "QR Code Not Found"}</p>
+          <p className="text-fg-tertiary text-sm max-w-xs">
+            {unreachable
+              ? "The review service isn't responding right now. If you're testing locally, make sure the backend is running and reachable at the configured API URL."
+              : "This QR code is not recognised. Please try again."}
+          </p>
         </div>
       </div>
     );
   }
 
-  const { business, suggestions } = data;
-
-  // Each design keeps its own light and dark palette (dark variants tuned
-  // by hand, not the app's neutral tokens, so the playful/warm character
-  // survives instead of collapsing to plain grey) — driven by the site's
-  // real theme via the `dark:` class on <html>, same as everywhere else.
-  const pageBg = playful
-    ? "bg-[linear-gradient(165deg,#eafff3_0%,#eaf2ff_100%)] dark:bg-[linear-gradient(165deg,#0b1f1a_0%,#0d1330_100%)]"
-    : "bg-[#fff4ec] dark:bg-[#1c140f]";
+  const { business } = session;
+  const stepIndex = STEPS.indexOf(step);
 
   return (
-    <div className={`min-h-dvh flex flex-col items-center justify-center p-6 relative ${pageBg}`}>
-      <ThemeToggle className="fixed top-4 right-4 bg-white/70 dark:bg-black/40 backdrop-blur-md border border-black/10 dark:border-white/10 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-white/90 dark:hover:bg-black/60 shadow-sm" />
+    <div className="min-h-dvh flex flex-col items-center justify-center p-6 relative bg-background">
+      <ThemeToggle className="fixed top-4 right-4" />
 
-      <div className="w-full max-w-sm animate-rise-in">
-        {playful ? (
-          <PlayfulReviewCard business={business} suggestions={suggestions} copiedId={copiedId} onCopy={handleCopy} onGoogle={handleGoogle} />
-        ) : (
-          <WarmReviewCard business={business} suggestions={suggestions} copiedId={copiedId} onCopy={handleCopy} onGoogle={handleGoogle} />
-        )}
-
-        {googleUrlError && (
-          <div className="mt-4 rounded-xl border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/40 px-4 py-3 text-sm text-red-700 dark:text-red-300 flex items-start gap-2">
-            <AlertIcon className="w-4 h-4 shrink-0 mt-0.5" />
-            {googleUrlError}
+      <div className="w-full max-w-sm space-y-6">
+        {/* Business identity + progress */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-surface border border-border flex items-center justify-center shrink-0 overflow-hidden">
+              {business.logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={business.logoUrl} alt={business.name} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-xs font-semibold text-fg-tertiary">{initials(business.name)}</span>
+              )}
+            </div>
+            <p className="text-sm font-semibold text-fg">{business.name}</p>
           </div>
+          <div className="flex gap-1.5">
+            {STEPS.map((s, i) => (
+              <div key={s} className={`h-1 flex-1 rounded-full transition-colors duration-300 ${i <= stepIndex ? "bg-brand" : "bg-surface-inset"}`} />
+            ))}
+          </div>
+        </div>
+
+        {/* Screen 1 — What did you have? */}
+        {step === "items" && (
+          <ScreenShell title="What did you have?" subtitle="Pick what you remember — or skip this.">
+            {menuPending ? (
+              <div className="flex justify-center py-8"><Spinner size="md" /></div>
+            ) : (
+              <div className="space-y-4">
+                {menuItems.length > VISIBLE_ITEM_COUNT && (
+                  <div className="relative">
+                    <SearchIcon className="w-4 h-4 text-fg-quaternary absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <input
+                      type="text"
+                      value={itemSearch}
+                      onChange={(e) => setItemSearch(e.target.value)}
+                      placeholder="Search the menu…"
+                      className="w-full rounded-xl border border-border bg-surface pl-10 pr-3 py-2.5 text-sm text-fg placeholder:text-fg-quaternary outline-none focus:border-brand/50 transition-colors"
+                    />
+                  </div>
+                )}
+                <div className="flex flex-wrap gap-2 justify-center">
+                  {filteredItems.map((m) => (
+                    <Chip key={m.id} active={selectedItemIds.includes(m.id)} onClick={() => toggleItem(m.id)}>
+                      {m.name}
+                    </Chip>
+                  ))}
+                  {!filteredItems.length && <p className="text-sm text-fg-quaternary py-2">No matching items.</p>}
+                </div>
+                <input
+                  type="text"
+                  value={freeTextItem}
+                  onChange={(e) => setFreeTextItem(e.target.value)}
+                  placeholder="Something else? Type it here"
+                  className="w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm text-fg placeholder:text-fg-quaternary outline-none focus:border-brand/50 transition-colors"
+                />
+                <div className="flex items-center justify-between gap-3 pt-1">
+                  <button onClick={goToRating} className="text-sm font-medium text-fg-tertiary hover:text-fg transition-colors cursor-pointer">
+                    Skip
+                  </button>
+                  <button
+                    onClick={goToRating}
+                    className="rounded-full bg-brand hover:bg-brand-hover px-6 py-2.5 text-sm font-semibold text-white transition-colors duration-150 cursor-pointer"
+                  >
+                    Continue
+                  </button>
+                </div>
+              </div>
+            )}
+          </ScreenShell>
         )}
 
-        <p className="text-center text-xs text-black/35 dark:text-white/35 mt-5">Powered by Expendifii</p>
+        {/* Screen 2 — How was it? One tap advances, no branching. */}
+        {step === "rating" && (
+          <ScreenShell title="How was it?">
+            <div className="flex items-center justify-center gap-2 py-4">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button
+                  key={n}
+                  onClick={() => selectRating(n)}
+                  aria-label={`${n} star${n > 1 ? "s" : ""}`}
+                  className="p-1.5 cursor-pointer active:scale-90 transition-transform duration-100"
+                >
+                  {n <= rating ? (
+                    <StarFillIcon className="w-9 h-9 text-warning" />
+                  ) : (
+                    <StarIcon className="w-9 h-9 text-fg-quaternary" />
+                  )}
+                </button>
+              ))}
+            </div>
+          </ScreenShell>
+        )}
+
+        {/* Screen 3 — Anything stand out? */}
+        {step === "aspects" && (
+          <ScreenShell title="Anything stand out?" subtitle="Pick what applies — or skip this.">
+            <div className="space-y-4">
+              <div className="flex flex-wrap gap-2 justify-center">
+                {ASPECTS.map((a) => (
+                  <Chip key={a.key} active={aspects.includes(a.key)} onClick={() => toggleAspect(a.key)}>
+                    {a.label}
+                  </Chip>
+                ))}
+              </div>
+              <div className="flex items-center justify-between gap-3 pt-1">
+                <button onClick={goToReview} className="text-sm font-medium text-fg-tertiary hover:text-fg transition-colors cursor-pointer">
+                  Skip
+                </button>
+                <button
+                  onClick={goToReview}
+                  className="rounded-full bg-brand hover:bg-brand-hover px-6 py-2.5 text-sm font-semibold text-white transition-colors duration-150 cursor-pointer"
+                >
+                  Continue
+                </button>
+              </div>
+            </div>
+          </ScreenShell>
+        )}
+
+        {/* Screen 4 — Your review. Same button at every rating, no branching. */}
+        {step === "review" && (
+          <ScreenShell title="Your review">
+            <div className="space-y-3">
+              <p className="text-xs text-fg-tertiary">Edit this however you like. It is your review.</p>
+              <textarea
+                ref={reviewTextareaRef}
+                value={draftText}
+                onChange={(e) => setDraftText(e.target.value)}
+                rows={5}
+                className="w-full rounded-2xl border border-border bg-surface px-4 py-3.5 text-sm text-fg leading-relaxed outline-none focus:border-brand/50 transition-colors resize-none"
+              />
+              <button
+                onClick={handleCopyAndGo}
+                className="w-full rounded-full bg-brand hover:bg-brand-hover py-3.5 text-sm font-semibold text-white transition-colors duration-150 cursor-pointer active:scale-[0.98]"
+              >
+                {copied ? "Copied — opening Google…" : "Copy and open Google"}
+              </button>
+              {googleError && (
+                <div className="rounded-xl border border-danger/20 bg-danger/10 px-4 py-3 text-sm text-danger flex items-start gap-2">
+                  <AlertIcon className="w-4 h-4 shrink-0 mt-0.5" />
+                  {googleError}
+                </div>
+              )}
+            </div>
+          </ScreenShell>
+        )}
+
+        <p className="text-center text-xs text-fg-quaternary">Powered by Expendifii</p>
       </div>
     </div>
   );

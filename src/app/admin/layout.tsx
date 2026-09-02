@@ -23,7 +23,7 @@ const NAV: { href: string; key: keyof typeof TAB_ICONS; label: string; hidden?: 
   // tab; kept here (hidden) so the page still gets the right header title
   // and sidebar highlight when visited directly.
   { href: "/admin/hardware", key: "hardware", label: "Hardware", hidden: true },
-  { href: "/admin/reviews", key: "reviews", label: "Reviews" },
+  { href: "/admin/menu", key: "menu", label: "Menu" },
   { href: "/admin/analytics", key: "analytics", label: "Analytics" },
 ];
 

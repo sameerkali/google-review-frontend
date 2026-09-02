@@ -10,47 +10,47 @@ import { Modal, ModalHeader, ModalBody, ModalFooter } from "@/components/ui/Moda
 import { Button } from "@/components/ui/Button";
 import { Field, Select, Textarea } from "@/components/ui/Input";
 
+type ParsedItem = { name: string; price?: number };
+
 const EXAMPLE = JSON.stringify(
   [
-    "Great coffee and quick service!",
-    "Loved the friendly staff and cozy atmosphere.",
-    "Staff went above and beyond to help us — highly recommend.",
+    { id: 1, name: "Cold Brew", price: 150 },
+    { id: 2, name: "Cappuccino", price: 120 },
+    { id: 3, name: "Club Sandwich", price: 220 },
   ],
   null,
   2
 );
 
-/* Accepts a plain array of comment strings (the documented format), but also
-   tolerates {comments:[...]}, {items:[...]}, and objects with a reviewText
-   field — so JSON exported from the old {businessId, reviewText} shape, or
-   pasted from elsewhere, still works. The business itself always comes from
-   the dropdown, never from the JSON, so admins never have to hand-copy an id. */
-function extractComments(parsed: unknown): string[] | null {
+/* Accepts the documented {id, name, price} shape — `id` is read and ignored
+   (Mongo assigns its own on insert; it's only there so a menu exported
+   elsewhere with its own ids can be pasted in unmodified) — but also
+   tolerates {items:[...]} and a plain array of name strings with no price,
+   so JSON from an earlier version of this uploader still works. The business
+   itself always comes from the dropdown, never from the JSON, so admins
+   never have to hand-copy an id. */
+function extractItems(parsed: unknown): ParsedItem[] | null {
   const obj = parsed as Record<string, unknown> | null;
-  const arr = Array.isArray(parsed)
-    ? parsed
-    : Array.isArray(obj?.comments)
-    ? (obj!.comments as unknown[])
-    : Array.isArray(obj?.items)
-    ? (obj!.items as unknown[])
-    : null;
+  const arr = Array.isArray(parsed) ? parsed : Array.isArray(obj?.items) ? (obj!.items as unknown[]) : null;
   if (!arr) return null;
 
-  const texts: string[] = [];
+  const items: ParsedItem[] = [];
   for (const it of arr) {
-    if (typeof it === "string") { texts.push(it); continue; }
-    if (it && typeof it === "object" && typeof (it as Record<string, unknown>).reviewText === "string") {
-      texts.push((it as { reviewText: string }).reviewText);
+    if (typeof it === "string") { items.push({ name: it }); continue; }
+    if (it && typeof it === "object" && typeof (it as Record<string, unknown>).name === "string") {
+      const rawPrice = (it as Record<string, unknown>).price;
+      const price = typeof rawPrice === "number" && !isNaN(rawPrice) ? rawPrice : undefined;
+      items.push({ name: (it as { name: string }).name, price });
       continue;
     }
     return null;
   }
-  return texts;
+  return items;
 }
 
-/* Bulk-imports review suggestions ("comments") from a JSON file or pasted JSON,
-   instead of adding one at a time through the inline form. */
-export function BulkReviewUploadModal({
+/* Bulk-imports menu items from a JSON file or pasted JSON, instead of adding
+   one at a time through the inline form. */
+export function BulkMenuUploadModal({
   open, businesses, token, onClose, toast,
 }: {
   open: boolean;
@@ -67,17 +67,17 @@ export function BulkReviewUploadModal({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const uploadMutation = useMutation({
-    mutationKey: ["admin", "reviews", "bulk-upload"],
-    mutationFn: (items: { businessId: string; reviewText: string }[]) =>
-      api<{ created: number; skipped: number }>("/admin/review-suggestions/bulk", { method: "POST", token, body: { items } }),
+    mutationKey: ["admin", "menu-items", "bulk-upload"],
+    mutationFn: (items: { businessId: string; name: string; price?: number }[]) =>
+      api<{ created: number; skipped: number }>("/admin/menu-items/bulk", { method: "POST", token, body: { items } }),
     meta: { toastOnError: false }, // inline `error` state below
     onSuccess: (res) => {
-      queryClient.invalidateQueries({ queryKey: ["admin", "reviews", "businesses"] });
-      queryClient.invalidateQueries({ queryKey: ["admin", "reviews", "list"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "menu-items", "businesses"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "menu-items", "list"] });
       if (res.skipped) {
-        toast("info", `Uploaded ${res.created} comment${res.created !== 1 ? "s" : ""} — ${res.skipped} row${res.skipped !== 1 ? "s" : ""} skipped`);
+        toast("info", `Uploaded ${res.created} item${res.created !== 1 ? "s" : ""} — ${res.skipped} row${res.skipped !== 1 ? "s" : ""} skipped`);
       } else {
-        toast("success", `Uploaded ${res.created} comment${res.created !== 1 ? "s" : ""}`);
+        toast("success", `Uploaded ${res.created} item${res.created !== 1 ? "s" : ""}`);
       }
       setText("");
       onClose();
@@ -104,7 +104,7 @@ export function BulkReviewUploadModal({
 
   const upload = () => {
     if (!businessId) {
-      setError("Select which business these comments belong to first");
+      setError("Select which business this menu belongs to first");
       return;
     }
     let parsed: unknown;
@@ -114,39 +114,41 @@ export function BulkReviewUploadModal({
       setError("That's not valid JSON — check for missing commas or quotes");
       return;
     }
-    const comments = extractComments(parsed);
-    if (!comments) {
-      setError('Expected a JSON array of comment strings, e.g. ["Great service!", "Loved it"]');
+    const items = extractItems(parsed);
+    if (!items) {
+      setError('Expected a JSON array of {"name": "...", "price": ...} items, or plain name strings');
       return;
     }
-    const texts = comments.map((t) => t.trim()).filter(Boolean);
-    if (!texts.length) {
-      setError("No comment text found in that JSON");
+    const cleaned = items.map((it) => ({ name: it.name.trim(), price: it.price })).filter((it) => it.name);
+    if (!cleaned.length) {
+      setError("No item names found in that JSON");
       return;
     }
 
     setError("");
-    uploadMutation.mutate(texts.map((reviewText) => ({ businessId, reviewText })));
+    uploadMutation.mutate(cleaned.map(({ name, price }) => ({ businessId, name, price })));
   };
 
   return (
-    <Modal open={open} onClose={uploadMutation.isPending ? undefined : onClose} maxWidth="2xl" labelledBy="bulk-upload-title">
+    <Modal open={open} onClose={uploadMutation.isPending ? undefined : onClose} maxWidth="2xl" labelledBy="bulk-menu-title">
       <div className="max-h-[85vh] flex flex-col">
         <ModalHeader onClose={uploadMutation.isPending ? undefined : onClose}>
-          <h2 id="bulk-upload-title" className="text-sm font-semibold text-fg">Bulk Upload Review Comments</h2>
+          <h2 id="bulk-menu-title" className="text-sm font-semibold text-fg">Bulk Upload Menu Items</h2>
         </ModalHeader>
 
         <div className="overflow-y-auto">
           <ModalBody>
             <p className="text-xs text-fg-tertiary leading-relaxed">
-              Pick the business below, then upload or paste just the comment text — no business ID
-              needed, it&apos;s attached automatically. You can still add comments one at a time from
-              the form on this page, and you can run this upload as many times as you like.
+              Pick the business below, then upload or paste each item&apos;s name and price — no
+              business ID needed, it&apos;s attached automatically, and any <code>id</code> field is
+              ignored. Price is optional; plain name strings still work too. You can still add items
+              one at a time from the form on this page, and you can run this upload as many times as
+              you like.
             </p>
 
-            <Field label="Business *" htmlFor="bulk-business" error={error && !businessId ? error : undefined}>
+            <Field label="Business *" htmlFor="bulk-menu-business" error={error && !businessId ? error : undefined}>
               <Select
-                id="bulk-business"
+                id="bulk-menu-business"
                 value={businessId}
                 onChange={(e) => { setBusinessId(e.target.value); if (error) setError(""); }}
                 error={!!(error && !businessId)}
@@ -174,7 +176,7 @@ export function BulkReviewUploadModal({
 
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label htmlFor="bulk-json" className="text-xs font-medium text-fg-tertiary uppercase tracking-wider">Paste JSON</label>
+                <label htmlFor="bulk-menu-json" className="text-xs font-medium text-fg-tertiary uppercase tracking-wider">Paste JSON</label>
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   className="flex items-center gap-1.5 rounded-lg border border-border-strong px-2.5 py-1 text-xs text-fg-tertiary hover:text-fg hover:border-fg-quaternary transition-colors cursor-pointer"
@@ -191,7 +193,7 @@ export function BulkReviewUploadModal({
                 />
               </div>
               <Textarea
-                id="bulk-json"
+                id="bulk-menu-json"
                 value={text}
                 onChange={(e) => { setText(e.target.value); if (error) setError(""); }}
                 placeholder={EXAMPLE}
