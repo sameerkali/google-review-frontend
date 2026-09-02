@@ -14,7 +14,9 @@ import { TimingBar } from "@/components/charts/TimingBar";
 import { DeviceDonut } from "@/components/charts/DeviceDonut";
 import { AspectsComparisonBar } from "@/components/charts/AspectsComparisonBar";
 import { ShiftBar } from "@/components/charts/ShiftBar";
-import { InfoIcon, LockIcon, SparkleIcon, StarFillIcon } from "@/components/icons";
+import { InfoIcon, LockIcon, SparkleIcon, StarFillIcon, DownloadIcon } from "@/components/icons";
+import { Button } from "@/components/ui/Button";
+import { generateReportPdf, type ReportPayload } from "@/lib/generateReportPdf";
 
 // ── Types matching the backend response shapes ────────────────────────────────
 
@@ -58,6 +60,31 @@ function timeAgo(iso: string): string {
 }
 
 // ── Small shared pieces ────────────────────────────────────────────────────────
+
+function DownloadReportButton({ token, businessName, toast }: { token: string; businessName: string; toast: (k: "success" | "error" | "info", m: string) => void }) {
+  const [loading, setLoading] = useState(false);
+
+  const download = async () => {
+    setLoading(true);
+    try {
+      const reports = await Promise.all(
+        (["7d", "30d", "90d"] as Range[]).map((r) => api<ReportPayload>(`/business/dashboard/report?range=${r}`, { token }))
+      );
+      generateReportPdf(reports, businessName);
+    } catch {
+      toast("error", "Could not generate the report");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Button variant="secondary" onClick={download} loading={loading} loadingText="Preparing…">
+      <DownloadIcon className="w-4 h-4" />
+      Download report (PDF)
+    </Button>
+  );
+}
 
 function RangeToggle({ range, onChange }: { range: Range; onChange: (r: Range) => void }) {
   return (
@@ -421,7 +448,10 @@ export default function DashboardPage() {
           <h2 className="text-lg font-semibold text-fg">Dashboard</h2>
           <p className="text-sm text-fg-tertiary mt-0.5">Welcome back, {business?.name}</p>
         </div>
-        <RangeToggle range={range} onChange={setRange} />
+        <div className="flex items-center gap-2 flex-wrap">
+          <RangeToggle range={range} onChange={setRange} />
+          <DownloadReportButton token={token} businessName={business?.name || "Business"} toast={toast} />
+        </div>
       </div>
 
       {reviewUrl && <QrCard reviewUrl={reviewUrl} businessName={business?.name || ""} toast={toast} badgeLabel="Live" posterHref={posterHref} />}
