@@ -147,7 +147,7 @@ function RecentActivityFeed({ rows, featured }: { rows: ActivityRow[]; featured:
 
 // ── Free / no-plan tier ────────────────────────────────────────────────────────
 
-function FreeTierView({ business, reviewUrl, totalScans, toast }: { business?: Row; reviewUrl: string; totalScans: number | null; toast: (k: "success" | "error" | "info", m: string) => void }) {
+function FreeTierView({ business, reviewUrl, posterHref, totalScans, toast }: { business?: Row; reviewUrl: string; posterHref?: string; totalScans: number | null; toast: (k: "success" | "error" | "info", m: string) => void }) {
   return (
     <div className="space-y-6">
       <div>
@@ -155,7 +155,7 @@ function FreeTierView({ business, reviewUrl, totalScans, toast }: { business?: R
         <p className="text-sm text-fg-tertiary mt-0.5">Welcome back, {business?.name}</p>
       </div>
       {reviewUrl ? (
-        <QrCard reviewUrl={reviewUrl} businessName={business?.name || ""} toast={toast} badgeLabel="Live" />
+        <QrCard reviewUrl={reviewUrl} businessName={business?.name || ""} toast={toast} badgeLabel="Live" posterHref={posterHref} />
       ) : null}
       <div className="rounded-2xl border border-border bg-surface p-6 space-y-4">
         <div>
@@ -358,6 +358,9 @@ export default function DashboardPage() {
   });
   const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
   const reviewUrl = qr?.[0] ? `${baseUrl}/r/${encodeURIComponent(qr[0].serial)}` : "";
+  const posterHref = qr?.[0]
+    ? `/business/poster/size?serial=${encodeURIComponent(qr[0].serial)}&name=${encodeURIComponent(business?.name || "Business")}`
+    : undefined;
 
   const dashEnabled = enabled && !!business;
   const summaryQ = useQuery({
@@ -405,7 +408,7 @@ export default function DashboardPage() {
 
   if (tier === "none") {
     const totalScans = errorTotalScans(summaryQ.error);
-    return <FreeTierView business={business} reviewUrl={reviewUrl} totalScans={totalScans} toast={toast} />;
+    return <FreeTierView business={business} reviewUrl={reviewUrl} posterHref={posterHref} totalScans={totalScans} toast={toast} />;
   }
 
   const summary = summaryQ.data;
@@ -421,7 +424,7 @@ export default function DashboardPage() {
         <RangeToggle range={range} onChange={setRange} />
       </div>
 
-      {reviewUrl && <QrCard reviewUrl={reviewUrl} businessName={business?.name || ""} toast={toast} badgeLabel="Live" />}
+      {reviewUrl && <QrCard reviewUrl={reviewUrl} businessName={business?.name || ""} toast={toast} badgeLabel="Live" posterHref={posterHref} />}
 
       {summary && isNew && (
         <div className="rounded-xl border border-info/20 bg-info/5 px-4 py-3 text-sm text-fg-secondary flex items-center gap-2">
@@ -548,23 +551,25 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Full tier */}
+      {/* Full tier — menu breakdown last: it's the biggest widget on the page,
+          and the quicker/smaller ones (aspects, shifts, compare, suggestions)
+          are worth seeing before scrolling past it. */}
       {tier === "full" ? (
         <>
-          <MenuBreakdownSection token={token} range={range} />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <AspectsSection token={token} range={range} />
             <ShiftsSection token={token} range={range} />
           </div>
           <CompareSection token={token} days={range === "7d" ? 7 : range === "90d" ? 90 : 30} />
           <SuggestionsSection token={token} />
+          <MenuBreakdownSection token={token} range={range} />
         </>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <LockedCard title="Menu breakdown" description="Per-dish ratings, mentions and trend — see which dish is actually the problem." />
           <LockedCard title="Complaint & praise themes" description="What comes up in low ratings vs high ratings, side by side." />
           <LockedCard title="Shift view" description="Average rating by time of day — spot a staffing issue your other data can't show." />
           <LockedCard title="Growth suggestions" description="Rules-based tips generated from your own numbers, not generic advice." />
+          <LockedCard title="Menu breakdown" description="Per-dish ratings, mentions and trend — see which dish is actually the problem." />
         </div>
       )}
     </div>
