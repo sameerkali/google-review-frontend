@@ -1,33 +1,29 @@
-# Review by Expendifii — Final Plan
+# Review by Expendifii — Build Doc
 
 **Sameer / Expendifii**
 Frontend: Next.js 16 App Router (Turbopack), React 19, TanStack Query, Tailwind v4, Nivo, qrcode
 Backend: separate service at `NEXT_PUBLIC_API_URL`
-Status: **fully built and deployed. Zero customers.**
+Status: fully built and deployed. Zero customers.
 
 ---
 
-# PART 0 — WHAT CHANGED IN THIS PLAN
+# PART 0 — SCOPE
 
-Earlier versions of this document assumed you had a prototype. You do not. You have a complete three-portal SaaS in production: admin panel with onboarding wizard, hardware inventory, plan tiers, poster generator, business dashboard with plan-gated Nivo analytics, and a public customer flow.
+You have a complete three-portal SaaS in production: admin panel with onboarding wizard, hardware inventory, plan tiers, poster generator, business dashboard with plan-gated Nivo analytics, and a public customer flow.
 
-That changes the advice in one important way. The earlier plan said "do not build the admin panel, dashboard or analytics yet." That instruction is now void — they exist, they work, and you should **leave them alone**. Do not rebuild, do not polish, do not extend.
-
-What actually remains is much smaller than it looked:
+Almost all of it stays. The work is one route, one screen, one page.
 
 | Area | Status | Action |
 |---|---|---|
 | Admin panel, hardware, plans | Built | Leave alone |
 | Poster generator | Built | Leave alone |
 | Business dashboard + analytics | Built | Leave alone, feed it new data later |
-| Three-portal auth | Built | One security fix (below) |
-| Analytics event model | Built | Extend with two event types |
-| **`/r/[code]` customer flow** | **Built the wrong way** | **Rebuild. This is the only real work.** |
-| Review suggestion pool (admin + business screens) | Built | Repurpose into Menu management |
-| Landing page copy | Built, risky | Strip, day 1 |
+| Three-portal auth | Built | One security fix |
+| Analytics event model | Built | Add two event types |
+| **`/r/[code]` customer flow** | **Built the wrong way** | **Rebuild — the only real work** |
+| Review suggestion pool (admin + business) | Built | Rename into Menu management |
+| Landing page copy | Built, risky | Strip |
 | Payments | Not built | Correct. Leave until 10 paying customers. |
-
-**One screen to rebuild, one screen to repurpose, one page to edit.** That is the whole scope.
 
 ---
 
@@ -39,39 +35,27 @@ A feedback tool for small F&B and local services. Customer scans a QR at the tab
 
 ### What is being dropped
 
-The pre-written review suggestion pool, and everything that serves it: the customer picking a card, the admin bulk JSON upload, the per-business unused/reserved/used counters, and the business-side pool management screen.
+The pre-written review suggestion pool and everything serving it: the customer picking a card, the admin bulk JSON upload, the unused/reserved/used counters, and the business-side pool screen.
 
-Google's Maps policy requires a review to reflect the poster's own experience. Third-party text fails that whether a human or an AI wrote it, and Google now acts against the tools as well as the businesses using them. You have zero customers, so this costs you nothing today. In six months with forty cafes on it, it would cost you the business.
+Google's Maps policy requires a review to reflect the poster's own experience. Third-party text fails that whether a human or an AI wrote it, and Google now acts against the tools as well as the businesses. At zero customers this costs nothing. With forty cafes on it, it would cost you the business.
 
 ### Pricing
 
-**₹500 setup, first month included. ₹299/month after. UPI mandate set up on day one.**
+**₹500 setup, first month included. ₹299/month after. UPI mandate set up at signup.**
 
-Asking for autopay 30 days later is a second sale you will lose. Set it at signup.
+Asking for autopay later is a second sale you will lose.
 
 - Customers 1–3: free setup. You need proof more than ₹1,500.
-- The ₹499 tier already exists in your Plans model. Do not sell it until the menu-item data exists to fill it.
-- Annual ₹2,999 offered at day 30, never at signup.
+- The ₹499 tier exists in your Plans model. Do not sell it until menu-item data exists to fill it.
+- Annual ₹2,999 offered after a month of results, never at signup.
 
 ### Never build
 
 - A Google button that only appears above 4 stars. That is review gating, explicitly against policy, and Google targets the tools that do it.
 - An LLM writing the review text. Straight back into prohibited content.
-- Anything on the admin or dashboard side until you have paying customers asking for it.
+- Anything on the admin or dashboard side until a paying customer asks for it.
 
-### Sequence
-
-| Stage | Start when | Time |
-|---|---|---|
-| **1. Security fix + copy strip + flow rebuild** | Now | **8–10 days** |
-| 2. First 10 customers, manual ops | Flow shipped | 6–10 weeks |
-| 3. Razorpay autopay + dunning | 10 paying customers | 2 weeks |
-| 4. WhatsApp automation | 20 customers | 2 wks + 3 wks approvals |
-| 5. Menu-item analytics into existing dashboard | 20 customers, 3 months data | 1–2 weeks |
-
-Stage 5 is short precisely because the dashboard, the plan gating and the chart components already exist. You are adding data sources, not building a dashboard.
-
-### Your sales line
+### Sales line
 
 Local businesses give 5–10% off for reviews. That is ₹80 on a ₹800 bill, per review, and an explicit Google violation that gets listings flagged.
 
@@ -79,36 +63,85 @@ Local businesses give 5–10% off for reviews. That is ₹80 on a ₹800 bill, p
 
 ---
 
-# PART 2 — THE 8–10 DAYS
+# PART 2 — THE SESSION
 
-**Day 1** — Security fix and copy strip. Half a day.
-**Days 2–7** — Rebuild `/r/[code]`. Repurpose Reviews → Menu.
-**Day 8** — Seed a demo business through the existing onboarding wizard. Print 5 posters with the existing generator.
-**Days 9–10** — Walk Mahipalpur. Start with the owner you already know.
+Ordered by dependency. Work top to bottom.
 
-## Day 1, item 1 — the credentials
+### 1. Credentials
 
-`.env.local` contains a plaintext line reading `admin admin123`. Two things:
+`.env.local` contains a plaintext line reading `admin admin123`.
 
-1. **Change that password now**, before any of the rest. `admin/admin123` is in every credential-stuffing list in existence, and your admin panel can create businesses, delete data and issue portal passwords.
-2. Confirm `.env.local` is in `.gitignore` (it is untracked today — keep it that way) and remove the stray line from the file. A note-to-self does not belong in an env file.
+- [ ] Change the admin password to something strong
+- [ ] Delete the stray line from `.env.local`
+- [ ] Confirm `.env.local` is in `.gitignore` (untracked today — keep it that way)
+- [ ] Confirm the backend actually expires tokens rather than issuing indefinite ones
 
-While you are in there: the `Cmd+Shift+F` shortcut to `/admin/login` is harmless as long as the login itself is strong. It is not obscurity you are relying on, so leave it.
+`admin/admin123` is on every credential-stuffing list, and that account creates businesses, deletes data and issues portal passwords. Do this before anything else.
 
-Also worth doing before you have customers: your backend has no visible client-side token expiry handling — a 401 anywhere triggers `signOut()`. That is acceptable, but confirm the backend actually expires tokens rather than issuing indefinite ones.
+The `Cmd+Shift+F` shortcut to `/admin/login` is fine to keep — you are not relying on obscurity once the password is strong.
 
-## Day 1, item 2 — strip the landing page
+### 2. Strip the landing page
 
 Delete from `page.tsx` and anywhere else it appears:
 
-- Every instance of "copy a ready-made review" and variations
-- The screenshot captioned "copies a ready-made suggestion"
-- The fabricated review card in the hero
-- "Reviews start with a scan, not a request"
-- "No excuse to skip it"
-- Anything implying you write, supply or provide reviews
+- [ ] Every instance of "copy a ready-made review" and variations
+- [ ] The screenshot captioned "copies a ready-made suggestion"
+- [ ] The fabricated review card in the hero
+- [ ] "Reviews start with a scan, not a request"
+- [ ] "No excuse to skip it"
+- [ ] Anything implying you write, supply or provide reviews
 
-If an owner Googles you the evening after your pitch and lands on "copy a ready-made review," you lose him. The full rewrite comes after your first conversations, when you know which sentences landed.
+If an owner Googles you after your pitch and lands on "copy a ready-made review," you lose him.
+
+### 3. Backend — menu
+
+- [ ] `menuItems` collection
+- [ ] Admin menu endpoints (mirror the existing review-suggestion endpoints)
+- [ ] Business-side menu endpoints
+- [ ] Bulk upload, reusing the existing JSON upload mechanism
+
+### 4. Backend — feedback sessions
+
+- [ ] `feedbackSessions` collection + indexes
+- [ ] Session endpoints
+- [ ] Extend `GET /r/:code` to return menu + aspect config
+- [ ] Redis rate limits on session creation
+- [ ] Two new event types in the existing log: `feedback_rated`, `feedback_drafted`
+
+### 5. Draft engine
+
+- [ ] `lib/buildDraft.js` (code in Part 3.3)
+- [ ] Unit tests (listed in Part 3.3)
+
+Write the tests. This function is your legal position, and it needs to be provable rather than assumed.
+
+### 6. Rename Reviews → Menu
+
+- [ ] Admin `/admin/reviews` → `/admin/menu`
+- [ ] Business `/business/reviews` → `/business/menu`
+- [ ] Onboarding wizard step 3: Reviews → Menu
+
+Same UI shape, different payload. Mostly a rename.
+
+### 7. Rebuild `/r/[code]`
+
+- [ ] Four screens in one client component with a step index
+- [ ] Remove the `PLAYFUL_DEFAULT` boolean — pick one design
+- [ ] Clipboard handler inside the user gesture (code in Part 3.6)
+- [ ] Check the build output: no Nivo, no dashboard code in this route's bundle
+
+### 8. Verify
+
+- [ ] Full flow on a real budget Android on mobile data, not devtools
+- [ ] Google button appears identically at 1 star and 5 stars
+- [ ] Draft never mentions anything the customer did not select
+- [ ] `/r/[code]` bundle under 100 KB of JS
+- [ ] Seed a demo business through the existing wizard, with a real menu
+- [ ] Print a poster with the existing generator and scan it off paper
+
+### 9. Stop coding
+
+- [ ] Go show it to the restaurant owner you already know
 
 ---
 
@@ -116,26 +149,26 @@ If an owner Googles you the evening after your pitch and lands on "copy a ready-
 
 ## 3.1 What to reuse
 
-Do not start from scratch. Almost everything you need is already in the codebase:
+Do not start from scratch. Most of what you need exists:
 
 | Need | Reuse |
 |---|---|
-| Business record, QR code linking | `businesses` + hardware model, unchanged |
-| Public route resolution | Existing `GET /r/:code` — extend the response |
-| Analytics events | Existing `scan` / `review_copy` / `google_click` event log |
-| Menu management UI | The admin **Reviews** screen, repurposed |
-| Bulk menu upload | The existing bulk JSON upload on that screen |
-| Business-side menu editing | The business **Reviews** screen, repurposed |
+| Business record, QR linking | Existing models, unchanged |
+| Public route resolution | Existing `GET /r/:code`, extended |
+| Analytics events | Existing `scan` / `review_copy` / `google_click` log |
+| Menu management UI | Admin Reviews screen, renamed |
+| Bulk menu upload | Existing bulk JSON upload |
+| Business-side menu editing | Business Reviews screen, renamed |
 | Poster printing | Poster generator, unchanged |
-| Onboarding | 3-step wizard — step 3 becomes Menu instead of Reviews |
+| Onboarding | 3-step wizard, step 3 repointed |
 | Plan gating | Existing `analytics: none/basic/full` flags |
 
 ## 3.2 New customer flow — `/r/[code]`
 
-Replaces the current suggestion-card page entirely. Mobile only, no auth.
+Replaces the suggestion-card page entirely. Mobile only, no auth.
 
 **Screen 1 — What did you have?**
-Menu chips from the business's menu, multi-select. 6–8 visible, search below, free-text "something else". Skippable.
+Menu chips, multi-select. 6–8 visible, search below, free-text "something else". Skippable.
 
 **Screen 2 — How was it?**
 Five stars, nothing else on screen. One tap advances.
@@ -150,11 +183,11 @@ Button: **Copy and open Google**
 
 Same button at every star rating. No branching, ever.
 
-**Design:** kill the `PLAYFUL_DEFAULT` hardcoded boolean. One design, chosen deliberately. Two half-used themes with no switch is dead weight in a flow where every KB matters.
+Kill `PLAYFUL_DEFAULT`. Two half-used themes with no switch is dead weight on the one route where every KB matters.
 
 ## 3.3 Draft engine
 
-Pure function. No API call, no model. Unit tested.
+Pure function. No API call, no model.
 
 ```js
 // lib/buildDraft.js
@@ -295,16 +328,16 @@ Indexes: `{ businessId: 1, startedAt: -1 }`, `{ sessionToken: 1 }` unique.
 
 **Privacy:** store the generated draft and whether it was edited. Do **not** store the customer's final edited text. You do not need it, and not holding it is a cleaner answer if anyone ever asks whether you author reviews.
 
-**Deprecate:** the `reviewSuggestions` collection and its unused/reserved/used counters. Keep the data in place for now, stop writing to it, drop it once the new flow is live and stable.
+**Deprecate:** `reviewSuggestions` and its counters. Stop writing to it, keep the data in place, drop it once the new flow is stable.
 
-**Extend the existing event log** with two new types alongside `scan` / `review_copy` / `google_click`:
+**Extend the event log** alongside `scan` / `review_copy` / `google_click`:
 
 ```
-feedback_rated      // screen 2 completed — your real funnel midpoint
+feedback_rated      // screen 2 completed
 feedback_drafted    // screen 4 reached
 ```
 
-Your current funnel is scan → copy → click. The new one is scan → rated → drafted → copied → clicked, and the drop-off between rated and drafted is the number that tells you whether the flow works.
+Your funnel becomes scan → rated → drafted → copied → clicked. The drop between rated and drafted tells you whether the flow works, and right now you would be blind to it.
 
 ## 3.5 Endpoints
 
@@ -324,15 +357,15 @@ GET    /business/menu                    business-side list
 POST   /business/menu                    business-side add
 ```
 
-The menu endpoints mirror the shape of your existing review-suggestion endpoints, so the admin and business screens should be a rename and a field change rather than new work.
+The menu endpoints mirror your existing review-suggestion endpoints, so the screens should be a rename and a field change rather than new work.
 
 Rate-limit session creation in Redis: 10 per QR per minute, 20 per IP per minute. Without it anyone can inflate a client's numbers. Session tokens expire after 30 minutes.
 
 ## 3.6 Frontend notes
 
-- Keep all four screens in one client component with a step index. No route changes between screens, no TanStack refetch per step.
+- All four screens in one client component with a step index. No route changes between screens, no TanStack refetch per step.
 - Server-render screen 1. This runs on airport-area 4G on budget phones.
-- JS budget under 100 KB for `/r/[code]`. Nivo, chart code and anything from the dashboard bundle must not leak into this route — check the build output.
+- JS budget under 100 KB for `/r/[code]`. Nivo and dashboard code must not leak into this route — check the build output.
 - Test on a real budget Android, not devtools.
 - **Clipboard write must be inside the user gesture.** Do not `await` between the tap and the write or iOS Safari silently fails:
 
@@ -351,24 +384,24 @@ const onCopyAndGo = (text, googleUrl) => {
 };
 ```
 
-## 3.7 Screen migration: Reviews → Menu
+## 3.7 Reviews → Menu
 
-**Admin `/admin/reviews`** becomes **`/admin/menu`**:
-- Per-business pool of suggestions → per-business menu items
+**Admin `/admin/reviews`** → **`/admin/menu`**
+- Per-business suggestion pool → per-business menu items
 - Unused / reserved / used counters → active / inactive, plus mention count later
 - Bulk JSON upload → bulk menu upload, same mechanism
 
-**Business `/business/reviews`** becomes **`/business/menu`**:
+**Business `/business/reviews`** → **`/business/menu`**
 - Add/delete suggestions → add/delete/reorder menu items
-- This is a better screen for the owner anyway. Managing a menu is a thing he understands; managing a "review suggestion pool" was always going to be an awkward conversation.
+- Better screen anyway. Managing a menu is something an owner understands; managing a "review suggestion pool" was always going to be an awkward conversation.
 
-**Onboarding wizard** step 3 changes from "Reviews" to "Menu". Same three-step flow, same UI, different payload.
+**Onboarding wizard** step 3: Reviews → Menu. Same flow, different payload.
 
 ## 3.8 Google linking — no API, no cost
 
 Keep using the `googleReviewUrl` you already store. It works as a deep link.
 
-If you ever want a `place_id`, Google's **Place ID Finder** gives it free in a browser, no key, no billing. Skip the Places API entirely until past 100 businesses.
+If you ever want a `place_id`, Google's **Place ID Finder** gives it free in a browser, no key, no billing. Skip the Places API until past 100 businesses.
 
 ## 3.9 Site copy
 
@@ -419,47 +452,51 @@ If you ever want a `place_id`, Google's **Place ID Finder** gives it free in a b
 
 ---
 
-# PART 4 — AFTER THE REBUILD
+# PART 4 — AFTER THIS SESSION
 
-## Stage 2 — First 10 customers, manual ops
+Each stage unlocks on a customer count, not a date. Do not start one early.
 
-Build nothing. Your admin panel already does the setup work; the rest is legwork.
+## Next — first 10 customers, manual ops
 
-| Step | Tool | Time |
-|---|---|---|
-| Onboard business | Existing wizard | 5 min |
-| Menu entry | Repurposed menu screen | 15–30 min |
-| Google review URL | Copy from his listing | 2 min |
-| Print poster | Existing generator | ₹5 |
-| Placement, in person | You | 10 min |
-| Payment | UPI direct to you | 2 min |
+Build nothing. The admin panel already does the setup; the rest is legwork.
 
-Full 30 minutes of menu setup for everyone. Do not tier setup effort by customer value until you have sixty customers.
+| Step | Tool |
+|---|---|
+| Onboard business | Existing wizard |
+| Menu entry | Renamed menu screen |
+| Google review URL | Copy from his listing |
+| Print poster | Existing generator |
+| Placement, in person | You |
+| Payment | UPI direct to you |
 
-**Placement is everything.** Table, not counter. At the till the customer is paying, holding a bag, with someone behind them — five seconds. On the table or the bill folder, they have minutes. Same QR, several times the completion rate.
+Full menu setup for everyone. Do not tier setup effort by customer value until you have sixty customers.
 
-**Per customer, first 30 days:**
-- Day 1 — you place the code yourself
-- Day 3 — WhatsApp him the first review, typed by you
-- Day 7 — Monday summary, four lines, by hand
-- Day 14 — visit, check placement, move it if needed
-- Day 30 — show before/after count, offer annual
+**Placement is everything.** Table, not counter. At the till the customer is paying, holding a bag, with someone behind them — five seconds. On the table or the bill folder, they have minutes. Same QR, several times the completion rate. Place it yourself; do not hand over a poster and leave.
 
-**Record from customer one:** his Google review count and rating on install day (screenshot it), then weekly: scans, rated, drafted, copied, clicked, and count and rating at day 30.
+**Per customer, first month:**
+- You place the code yourself
+- WhatsApp him the first review that comes through, typed by you
+- Weekly summary, four lines, by hand
+- Visit, check placement, move it if needed
+- Show the before/after count, then offer annual
+
+**Record from customer one:** his Google review count and rating on install day (screenshot it), then weekly: scans, rated, drafted, copied, clicked.
 
 Scan-to-click is the number the product lives on. Under 20% means placement or flow is wrong, and no dashboard will fix it.
 
-## Stage 3 — Payments, at 10 paying customers
+**Give the first three away.** Free setup. What you ask for instead: permission to name them on the site, an honest conversation, and a referral if it works. Once you can say three cafes in Mahipalpur use this and here is what happened to their review count, the ₹500 sells itself.
 
-Nothing exists here yet, which is correct. Below ten customers, Razorpay payment links over WhatsApp take two minutes a month.
+## At 10 paying customers — payments
 
-At ten: Razorpay Subscriptions with **UPI Autopay**, not links. Card mandates fail often on renewal in India; UPI Autopay is what owners actually keep. Enable the Subscriptions module (ask support, off by default) and UPI Autopay. Create plans in the Razorpay dashboard and map them to your existing Plans model rather than duplicating tiers.
+Below ten, Razorpay payment links over WhatsApp take two minutes a month. At ten, switch to Subscriptions with **UPI Autopay**, not links. Card mandates fail often on renewal in India; UPI Autopay is what owners actually keep.
+
+Enable the Subscriptions module (ask support, off by default) and UPI Autopay. Create plans in the Razorpay dashboard and map them to your existing Plans model rather than duplicating tiers.
 
 Webhooks: `subscription.activated`, `charged`, `pending`, `halted`, `cancelled`, `payment.failed`. Verify signatures, idempotent handlers.
 
 **Dunning:**
 
-| Day | Action |
+| Day after failure | Action |
 |---|---|
 | 0 | WhatsApp: payment failed, here is the link |
 | 1 | Retry |
@@ -472,40 +509,46 @@ Never cut access on the first failure. The day-7 call has the highest recovery r
 
 **Pause, not cancel:** ₹99/month keeps data and QR live, reports stop.
 
-Your business model already has a suspended/expired state and the admin Overview already surfaces it under "Needs Attention" — wire dunning into that rather than building a new status system.
+Your model already has suspended/expired states and the admin Overview surfaces them under "Needs Attention" — wire dunning into that rather than building a new status system.
 
-## Stage 4 — WhatsApp, at 20 customers
+## At 20 customers — WhatsApp
 
-Use an Indian BSP (AiSensy, Interakt, Wati, Gupshup), not Meta Cloud API direct. ₹999–2,500/month buys weeks of your time.
+Use an Indian BSP (AiSensy, Interakt, Wati, Gupshup), not Meta Cloud API direct. ₹999–2,500/month buys back your time.
 
-Needs a dedicated number, Meta Business verification, and **templates approved before you can send** — 1–3 days each, rejections common. Start three weeks before you need it.
+Needs a dedicated number, Meta Business verification, and **templates approved before you can send** — rejections are common. Start the approvals well before you need them.
 
-Monday 9am digest, six lines max, never missed. Low-rating alert at 3+ ratings of ≤2 stars in 7 days. BullMQ repeatable jobs on Redis, idempotency key per (business, week).
+Monday digest, six lines max, never missed. Low-rating alert at 3+ ratings of ≤2 stars in 7 days. BullMQ repeatable jobs on Redis, idempotency key per (business, week).
 
 By then you will have hand-written a hundred of these and will know exactly what to put in them.
 
-## Stage 5 — Analytics, at 20 customers with 3 months data
+## At 20 customers with 3 months of data — analytics
 
-Short stage, because the dashboard, plan gating and Nivo components already exist. You are feeding them new data, not building screens.
+Short, because the dashboard, plan gating and Nivo components already exist. You are feeding them new data, not building screens.
 
-**Basic tier (existing):** ratings over time, the extended funnel, device split, peak hours.
-**Full tier (new data):**
+**Basic (existing):** ratings over time, the extended funnel, device split, peak hours.
+**Full (new data):**
 - Menu-item breakdown — *"Cold coffee: 4.8 across 34 mentions. Paneer roll: 3.1 across 12."*
 - Low-rating themes from the aspects array
 - Shift view from `startedAt` hour bands
 - Comparison over time
 - Monthly PDF via Puppeteer on a Next.js print route
 
-Pre-aggregate nightly into a `dailyStats` collection. Do not compute Nivo charts from raw `feedbackSessions` at request time — fine at 10 businesses, painful at 200. Cache in Redis, 15-minute TTL.
+Pre-aggregate nightly into `dailyStats`. Do not compute Nivo charts from raw `feedbackSessions` at request time — fine at 10 businesses, painful at 200. Cache in Redis, 15-minute TTL.
 
-**Also replace the static growth-suggestion tips** with real ones once this data exists. The code comment already admits they are not a real engine, and an owner will notice.
+**Replace the static growth-suggestion tips** with real ones once this data exists. The code comment already admits they are not a real engine, and an owner will notice.
 
 ---
 
 # FINAL WORD
 
-You have far more built than you thought, and less left to do than the last version of this plan implied.
+Change the admin password. Strip the landing copy. Rebuild one route and rename one screen.
 
-Change the admin password. Strip the landing copy. Rebuild one route and rename one screen. Then stop coding and go walk Mahipalpur.
+Then stop coding and go show it to someone.
 
-The thing standing between you and customer one is not a missing feature.
+
+
+
+
+
+
+backend path : /Users/sameerfaridi/Desktop/qr_code/backend/package.json

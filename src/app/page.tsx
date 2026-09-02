@@ -26,7 +26,7 @@ const SERVICE_JSON_LD = {
   name: "Review by Expendifii",
   serviceType: "QR code Google review collection",
   description:
-    "A QR-code-based system for collecting Google reviews. Customers scan a QR code, copy a ready-made review suggestion, and are taken directly to the business's Google review page — no app, login, or account required. Each business is onboarded and managed by a platform operator, who also provides a printable poster and QR code generator (multiple print sizes and designs) and an analytics dashboard tracking scans, review copies, and Google clicks as a conversion funnel.",
+    "A QR-code-based system for collecting Google reviews. Customers scan a QR code and are guided straight to the business's Google review page — no app, login, or account required. Each business is onboarded and managed by a platform operator, who also provides a printable poster and QR code generator (multiple print sizes and designs) and an analytics dashboard tracking scans and Google clicks as a conversion funnel.",
   provider: { "@type": "Organization", name: "Expendifii" },
   audience: {
     "@type": "Audience",
@@ -49,9 +49,9 @@ const FLOW_STEPS = [
   },
   {
     title: "A customer scans and leaves a review",
-    body: "No app, no login. They copy a ready-made suggestion, then tap through straight to the business's real Google review page.",
+    body: "No app, no login. A couple of taps and they land straight on the business's real Google review page.",
     src: "/screenshots/review-flow.png",
-    alt: "Customer-facing review page showing suggested reviews with a copy button and a Leave a Google Review button",
+    alt: "Customer-facing review page with a Leave a Google Review button",
   },
   {
     title: "The business sees real conversion",
