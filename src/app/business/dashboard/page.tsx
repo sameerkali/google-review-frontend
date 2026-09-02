@@ -23,12 +23,13 @@ import { generateReportPdf, type ReportPayload } from "@/lib/generateReportPdf";
 type Range = "7d" | "30d" | "90d";
 interface Stat { value: number | null; prev: number | null }
 interface AvgRatingStat { value: number | null; ratingCount: number; prev: number | null; prevRatingCount: number }
+interface DraftEditStat { value: number | null; copiedCount: number; prev: number | null }
 interface ActivityRow { rating: number; items: string[]; aspects: string[]; startedAt: string }
-interface SummaryPayload { reviewsStarted: Stat; avgRating: AvgRatingStat; googleClicks: Stat; completionRate: Stat; recentActivity: ActivityRow[] }
+interface SummaryPayload { reviewsStarted: Stat; avgRating: AvgRatingStat; googleClicks: Stat; completionRate: Stat; draftEditRate: DraftEditStat; recentActivity: ActivityRow[] }
 interface RatingsPayload { series: { date: string; avg: number | null; count: number; rolling7d: number | null }[]; distribution: Record<string, number>; ratingCount: number }
 interface FunnelPayload { stages: { key: string; label: string; value: number }[] }
 interface TimingPayload { byHour: { hour: number; scans: number; avgRating: number | null }[]; byWeekday: { weekday: number; scans: number }[] }
-interface DevicesPayload { devices: { android: number; ios: number; other: number } }
+interface DevicesPayload { devices: { android: number; ios: number; other: number }; referrer: { qr: number; nfc: number; direct: number } }
 interface MenuRow { menuItemId: string; name: string; mentions: number; avgRating: number | null; trend: "up" | "down" | "flat"; fiveStarShare: number; threeOrBelowShare: number; lowData: boolean }
 interface AspectsPayload { aspects: { aspect: string; total: number; lowRated: number; highRated: number }[] }
 interface ShiftsPayload { bands: { label: string; sessions: number; avgRating: number | null; lowData: boolean }[] }
@@ -115,10 +116,14 @@ function deltaLabel(cur: number | null, prev: number | null, suffix = ""): { tex
 
 function StatCard({ label, value, delta, note }: { label: string; value: string; delta?: { text: string; tone: "up" | "down" | "flat" | "none" }; note?: string }) {
   const toneClass = delta?.tone === "up" ? "text-success" : delta?.tone === "down" ? "text-danger" : "text-fg-quaternary";
+  // A short numeric value ("4.3", "82%") reads as a headline stat at 3xl;
+  // a longer fallback string ("No copies yet") would overflow a 2-up mobile
+  // card at that size, so it drops down a size instead of truncating.
+  const valueSizeClass = value.length > 7 ? "text-lg" : "text-3xl";
   return (
-    <div className="rounded-2xl border border-border bg-surface p-5 space-y-2">
-      <p className="text-xs font-medium text-fg-tertiary uppercase tracking-wider">{label}</p>
-      <p className="text-3xl font-bold text-fg font-mono tabular-nums">{value}</p>
+    <div className="rounded-2xl border border-border bg-surface p-5 space-y-2 min-w-0">
+      <p className="text-xs font-medium text-fg-tertiary uppercase tracking-wider truncate">{label}</p>
+      <p className={`${valueSizeClass} font-bold text-fg font-mono tabular-nums truncate`}>{value}</p>
       {delta && <p className={`text-xs font-medium ${toneClass}`}>{delta.text} vs previous period</p>}
       {note && <p className="text-xs text-warning">{note}</p>}
     </div>
@@ -463,11 +468,13 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Stat cards */}
+      {/* Stat cards — 2 up on phones, 3 on tablets, all 5 in one row from
+          lg up. Never fewer than 2 columns so a value never renders full-width
+          (that reads as a headline number, not a stat among peers). */}
       {summaryQ.isPending ? (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">{[...Array(4)].map((_, i) => <Skeleton key={i} className="h-24" />)}</div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">{[...Array(5)].map((_, i) => <Skeleton key={i} className="h-24" />)}</div>
       ) : summary ? (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
           <StatCard label="Reviews started" value={String(summary.reviewsStarted.value)} delta={deltaLabel(summary.reviewsStarted.value, summary.reviewsStarted.prev)} />
           <StatCard
             label="Average rating"
@@ -480,6 +487,12 @@ export default function DashboardPage() {
             value={`${summary.completionRate.value}%`}
             delta={deltaLabel(summary.completionRate.value, summary.completionRate.prev, "pt")}
             note={summary.completionRate.value !== null && summary.completionRate.value < 20 ? "Low completion often means the code is at the counter rather than on the table." : undefined}
+          />
+          <StatCard
+            label="Draft edit rate"
+            value={summary.draftEditRate.value === null ? "No copies yet" : `${summary.draftEditRate.value}%`}
+            delta={summary.draftEditRate.value !== null ? deltaLabel(summary.draftEditRate.value, summary.draftEditRate.prev, "pt") : undefined}
+            note={summary.draftEditRate.copiedCount >= 5 && summary.draftEditRate.value !== null && summary.draftEditRate.value < 20 ? "Most customers copy the draft as-is — a good sign it reads naturally." : undefined}
           />
         </div>
       ) : null}
@@ -537,10 +550,10 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* Timing + devices */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="rounded-2xl border border-border bg-surface p-5 space-y-3">
-          <div className="flex items-center justify-between">
+      {/* Timing + devices + scan source */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="rounded-2xl border border-border bg-surface p-5 space-y-3 min-w-0">
+          <div className="flex items-center justify-between flex-wrap gap-2">
             <h3 className="text-sm font-semibold text-fg">When people scan</h3>
             <div className="flex gap-1">
               {(["hour", "weekday"] as const).map((m) => (
@@ -561,7 +574,7 @@ export default function DashboardPage() {
             />
           )}
         </div>
-        <div className="rounded-2xl border border-border bg-surface p-5 space-y-3">
+        <div className="rounded-2xl border border-border bg-surface p-5 space-y-3 min-w-0">
           <h3 className="text-sm font-semibold text-fg">Device split</h3>
           {devicesQ.isPending ? (
             <Skeleton className="h-56 rounded-xl" />
@@ -569,6 +582,20 @@ export default function DashboardPage() {
             <EmptyChart message="Device data appears as scans come in." />
           ) : (
             <DeviceDonut data={Object.entries(devicesQ.data.devices).map(([_id, count]) => ({ _id, count }))} />
+          )}
+        </div>
+        <div className="rounded-2xl border border-border bg-surface p-5 space-y-3 min-w-0 sm:col-span-2 xl:col-span-1">
+          <h3 className="text-sm font-semibold text-fg">Scan source</h3>
+          {devicesQ.isPending ? (
+            <Skeleton className="h-56 rounded-xl" />
+          ) : !devicesQ.data || Object.values(devicesQ.data.referrer).every((v) => v === 0) ? (
+            <EmptyChart message="Scan source appears as codes get used." />
+          ) : (
+            <DeviceDonut
+              data={Object.entries(devicesQ.data.referrer)
+                .filter(([, count]) => count > 0)
+                .map(([_id, count]) => ({ _id: _id.toUpperCase(), count }))}
+            />
           )}
         </div>
       </div>

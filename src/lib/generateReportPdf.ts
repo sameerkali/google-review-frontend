@@ -14,9 +14,11 @@ export interface ReportPayload {
     avgRating: { value: number | null; ratingCount: number };
     googleClicks: { value: number; prev: number | null };
     completionRate: { value: number };
+    draftEditRate: { value: number | null };
   };
   distribution: Record<string, number>;
   funnel: { key: string; label: string; value: number }[];
+  referrer: { qr: number; nfc: number; direct: number };
   menu?: { name: string; mentions: number; avgRating: number | null }[];
   aspects?: { aspect: string; total: number; lowRated: number; highRated: number }[];
 }
