@@ -23,7 +23,7 @@ export const FIELD_OPTIONS: Record<string, string[]> = {
 export const HARDWARE_STATUS_OPTIONS = ["available", "assigned", "lost", "damaged"];
 export const BUSINESS_STATUS_OPTIONS = ["active", "suspended", "expired"];
 
-/** Strips everything but digits and caps at 10 — used on every phone
+/** Strips everything but digits and caps at 10 - used on every phone
     input's onChange so it's physically impossible to type past the limit
     or enter a non-digit, not just flagged after the fact. */
 export const sanitizePhone = (v: string): string => v.replace(/\D/g, "").slice(0, 10);

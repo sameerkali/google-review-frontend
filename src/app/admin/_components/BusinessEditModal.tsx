@@ -61,7 +61,7 @@ export function BusinessEditModal({
       queryClient.invalidateQueries({ queryKey: ["admin", "businesses", "list"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "businesses", "all"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "overview"] });
-      toast("success", newPassword.trim() ? "Business updated — portal password changed" : "Business updated");
+      toast("success", newPassword.trim() ? "Business updated - portal password changed" : "Business updated");
       onClose();
     },
     onError: (e) => {
@@ -167,7 +167,7 @@ export function BusinessEditModal({
                 </p>
               )}
               {!passwordErr && newPassword.trim() && (
-                <p className="mt-1.5 text-xs text-warning">New password: <span className="font-mono">{newPassword.trim()}</span> — copy it now, it won&apos;t be shown again after saving.</p>
+                <p className="mt-1.5 text-xs text-warning">New password: <span className="font-mono">{newPassword.trim()}</span> - copy it now, it won&apos;t be shown again after saving.</p>
               )}
             </div>
           </ModalBody>

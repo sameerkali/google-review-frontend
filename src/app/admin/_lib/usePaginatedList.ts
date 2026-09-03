@@ -35,7 +35,7 @@ export function usePaginatedList(
       const res = await api<ListResponse | Row[]>(`${endpoint}?${qs}`, { token });
       if (!Array.isArray(res)) return res;
       // A backend that predates server-side pagination ignores page/limit/search and
-      // returns everything — apply both client-side against the full list it gave us,
+      // returns everything - apply both client-side against the full list it gave us,
       // rather than showing the whole thing regardless of what was picked.
       const term = search.trim().toLowerCase();
       const filtered = term ? res.filter((r) => JSON.stringify(r).toLowerCase().includes(term)) : res;

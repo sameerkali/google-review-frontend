@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/Button";
 import { Field, Input } from "@/components/ui/Input";
 import { ArrowLeftIcon, DownloadIcon } from "@/components/icons";
 
-/* Step 4 of 4 — edit the text sections on the left, watch the canvas
+/* Step 4 of 4 - edit the text sections on the left, watch the canvas
    redraw live on the right (same draw code as the download itself), then
    export. The QR code always encodes the business's real review URL and is
    never editable. */
@@ -79,7 +79,7 @@ function PosterEditor() {
           <p className="text-xs font-medium text-brand uppercase tracking-wider mb-1">Step 4 of 4</p>
           <h2 className="text-lg font-semibold text-fg">Customize Poster</h2>
           <p className="text-sm text-fg-tertiary mt-0.5">
-            For <span className="text-fg font-medium">{businessName}</span> — {category.label} — {design.label}, {size.label} ({size.sublabel}). The QR always points to their real review link.
+            For <span className="text-fg font-medium">{businessName}</span> - {category.label} - {design.label}, {size.label} ({size.sublabel}). The QR always points to their real review link.
           </p>
         </div>
         <Button onClick={download} loading={downloading} loadingText="Preparing…" variant="primary" disabled={rendering}>
@@ -115,7 +115,7 @@ function PosterEditor() {
           </button>
         </div>
 
-        {/* Live preview — the wrapper is pinned to the poster's real aspect
+        {/* Live preview - the wrapper is pinned to the poster's real aspect
             ratio from first paint (the canvas itself only gets its true
             width/height once drawQrPoster runs in an effect), so the
             skeleton fills exactly where the artwork lands, no layout jump. */}

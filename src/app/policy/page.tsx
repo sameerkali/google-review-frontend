@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ArrowLeftIcon, CheckIcon } from "@/components/icons";
 
 export const metadata: Metadata = {
-  title: "Policy — Review by Expendifii",
+  title: "Policy - Review by Expendifii",
   description: "How Review by Expendifii keeps review collection clean: what we do, what we never do, and our refund policy.",
 };
 

@@ -10,7 +10,7 @@ const SURFACE = { light: "#ffffff", dark: "#18181b" };
 const BORDER = { light: "#e4e4e7", dark: "#3f3f46" };
 
 /* Same four categorical hex values already in globals.css (--chart-series-*)
-   — duplicated here as plain strings because Nivo's `colors` prop needs
+   - duplicated here as plain strings because Nivo's `colors` prop needs
    static JS values, not CSS custom properties, since it paints via inline
    SVG attributes rather than stylesheet rules. Validated against this
    app's actual card surfaces via the dataviz skill's palette validator. */
@@ -19,7 +19,7 @@ const CATEGORICAL = {
   dark: ["#3987e5", "#d95926", "#199e70", "#c98500"],
 };
 
-/* Sequential/ordinal ramp — mode-invariant per the palette spec (one ramp,
+/* Sequential/ordinal ramp - mode-invariant per the palette spec (one ramp,
    not a light/dark pair), light→dark steps for ordered stages (funnel). */
 export const SEQUENTIAL_ORDINAL = ["#6da7ec", "#2a78d6", "#184f95"];
 

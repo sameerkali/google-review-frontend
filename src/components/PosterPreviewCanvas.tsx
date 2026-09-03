@@ -4,7 +4,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import { drawQrPoster, type PosterSizeKey, type PosterDesignKey, type QrPosterFields } from "@/lib/qrPoster";
 
 /* Renders a poster onto a real (full-resolution) canvas and lets CSS scale
-   it down for display — used for the design-picker thumbnails and the
+   it down for display - used for the design-picker thumbnails and the
    editor's live preview, so both share exactly the same drawing code the
    final download uses. Forwards the canvas ref so a caller (the editor's
    download button) can read the exact same element that's on screen. */

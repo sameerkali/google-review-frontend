@@ -15,7 +15,7 @@ export function QrCard({
   businessName: string;
   toast: ToastFn;
   badgeLabel?: string;
-  /** Force a stacked layout — the row split relies on a viewport-width
+  /** Force a stacked layout - the row split relies on a viewport-width
       breakpoint, which is wrong inside a narrow container like a modal. */
   compact?: boolean;
   /** When provided (Businesses list → "View QR"), swaps the one-click

@@ -4,7 +4,7 @@ import { ResponsiveBar } from "@nivo/bar";
 import { useTheme } from "@/components/ThemeProvider";
 import { getCategoricalColors, getNivoTheme } from "@/lib/nivoTheme";
 
-/* Low-rated vs high-rated mention counts, side by side per aspect — reads as
+/* Low-rated vs high-rated mention counts, side by side per aspect - reads as
    "what's working / what isn't" rather than a complaints list, which lands
    as an attack. */
 export function AspectsComparisonBar({ aspects }: { aspects: { aspect: string; lowRated: number; highRated: number }[] }) {

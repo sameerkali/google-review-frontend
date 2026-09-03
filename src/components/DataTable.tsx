@@ -4,7 +4,7 @@ import type { Row, ToastFn } from "@/lib/types";
 import { Skeleton } from "@/components/Loaders";
 import { TrayIcon } from "./icons";
 
-/* Populated Mongoose refs (e.g. businessId) arrive as full objects, not ids —
+/* Populated Mongoose refs (e.g. businessId) arrive as full objects, not ids -
    render something human-readable instead of the default "[object Object]". */
 function cellText(value: unknown): string {
   if (value == null) return "—";
@@ -101,7 +101,7 @@ export function DataTable({
 
   return (
     <>
-      {/* Card layout — small screens, where a wide table would force horizontal scrolling */}
+      {/* Card layout - small screens, where a wide table would force horizontal scrolling */}
       <div className="space-y-3 sm:hidden">
         {rows.map((row, i) => (
           <div key={row._id ?? i} className="rounded-2xl border border-border bg-surface p-4 space-y-2.5">
@@ -123,7 +123,7 @@ export function DataTable({
         ))}
       </div>
 
-      {/* Table layout — sm and up */}
+      {/* Table layout - sm and up */}
       <div className="hidden sm:block rounded-2xl border border-border overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead>

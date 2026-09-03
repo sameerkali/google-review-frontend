@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/Button";
 import { Field, Input, Select, Label } from "@/components/ui/Input";
 
 /* Full edit for a hardware/QR record: rename its serial, change type/status,
-   or reassign it to a different business — the "U" in CRUD for hardware. */
+   or reassign it to a different business - the "U" in CRUD for hardware. */
 export function HardwareEditModal({
   hardware, businesses, token, onClose, toast,
 }: {

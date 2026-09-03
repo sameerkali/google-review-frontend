@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 
 type Direction = "TOP" | "LEFT" | "BOTTOM" | "RIGHT";
 
-/* Vendored from Aceternity UI — a pill button with a rotating gradient
+/* Vendored from Aceternity UI - a pill button with a rotating gradient
    border that snaps to a bright highlight on hover. `as` lets it render as
    a <button> or <a> (e.g. `as="a" href="..."`); `href` is typed explicitly
    since it isn't part of HTMLAttributes but is the whole point of using

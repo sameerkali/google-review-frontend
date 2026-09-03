@@ -55,7 +55,7 @@ export function getPosterDesign(key: string | null): PosterDesignMeta {
 
 /* ─── Categories ────────────────────────────────────────────────────── */
 
-/* Each category lists which designs are relevant to it — cafe gets the
+/* Each category lists which designs are relevant to it - cafe gets the
    illustrated "cafe" design on top of the generic set; salon/doctor don't
    have illustrated designs yet (no assets), so they get the generic set
    only. Adding a salon/doctor illustration later is just adding its
@@ -527,7 +527,7 @@ export function slugifyForFilename(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "business";
 }
 
-/* Draws the poster onto a given canvas at the chosen size/design — shapes,
+/* Draws the poster onto a given canvas at the chosen size/design - shapes,
    text, and the QR bitmap itself, entirely via the Canvas 2D API. Used both
    for the one-click default download and for the live preview in the
    poster editor, where every text field is user-editable; only the QR
@@ -575,7 +575,7 @@ export async function downloadCanvasPng(canvas: HTMLCanvasElement, filename: str
   URL.revokeObjectURL(url);
 }
 
-/* One-click default poster (no customization) — draws to an offscreen
+/* One-click default poster (no customization) - draws to an offscreen
    canvas and downloads immediately. */
 export async function downloadQrPoster({
   reviewUrl,

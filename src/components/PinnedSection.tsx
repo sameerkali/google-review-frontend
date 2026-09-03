@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 /* Pins its children to the viewport (fixed, low z-index) while a same-height
-   spacer holds their place in normal document flow — so whatever comes
+   spacer holds their place in normal document flow - so whatever comes
    after in the page scrolls up and visually covers this section instead of
    scrolling it away with the rest of the page. Height is measured from the
    rendered content itself, not assumed, so it stays correct across
@@ -13,7 +13,7 @@ export function PinnedSection({ children }: { children: ReactNode }) {
   const [height, setHeight] = useState(0);
 
   // The browser restores scroll position on reload/back-forward navigation
-  // by default — landing mid-page here would show the hero already covered,
+  // by default - landing mid-page here would show the hero already covered,
   // looking exactly like it's missing rather than like intended scroll
   // behavior. This page's hero should always be visible on a fresh load.
   useEffect(() => {

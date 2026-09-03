@@ -12,7 +12,7 @@ export interface RatingPoint {
 
 /* Daily average rating with a 7-day rolling average overlaid, so a single
    bad day doesn't read as a collapse. Points with no ratings that day are
-   left as gaps (null), not zeroes — zero would misrepresent "no data" as
+   left as gaps (null), not zeroes - zero would misrepresent "no data" as
    "rated zero stars." */
 export function RatingTrendChart({ points }: { points: RatingPoint[] }) {
   const { theme } = useTheme();
@@ -24,9 +24,9 @@ export function RatingTrendChart({ points }: { points: RatingPoint[] }) {
   ];
 
   // nivo's "point" x-scale ignores a numeric tickValues (that only works on
-  // linear/time scales) and falls back to rendering every point — with 30-90
+  // linear/time scales) and falls back to rendering every point - with 30-90
   // days of data that's every date crammed onto the axis. Pick an explicit,
-  // evenly-spaced subset of actual date values instead — indices spaced by
+  // evenly-spaced subset of actual date values instead - indices spaced by
   // even fractional steps (not a fixed modulo stride with the last point
   // always forced in), so the last two ticks never land a day apart.
   const maxTicks = 6;

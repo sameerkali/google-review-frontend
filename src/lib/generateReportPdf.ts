@@ -1,7 +1,7 @@
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 
-/* Client-side PDF generation — no headless-browser/Puppeteer backend needed.
+/* Client-side PDF generation - no headless-browser/Puppeteer backend needed.
    Everything drawn here comes from the same JSON the dashboard already
    renders (see /business/dashboard/report), fetched once per range. */
 
@@ -25,7 +25,7 @@ export interface ReportPayload {
 
 const RANGE_LABEL: Record<ReportPayload["range"], string> = { "7d": "Last 7 days", "30d": "Last 30 days", "90d": "Last 90 days" };
 
-/* Rule-based, one-paragraph plain-language summary — same "rules, not ML"
+/* Rule-based, one-paragraph plain-language summary - same "rules, not ML"
    approach as the growth-suggestions engine, not a generated sentence. */
 function summarize(r: ReportPayload): string {
   const { reviewsStarted, avgRating, completionRate } = r.summary;
@@ -69,7 +69,7 @@ export function generateReportPdf(reports: ReportPayload[], businessName: string
 
   doc.setFontSize(18);
   doc.setFont("helvetica", "bold");
-  doc.text(`${businessName} — Performance Report`, marginX, y);
+  doc.text(`${businessName} - Performance Report`, marginX, y);
   y += 20;
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
@@ -86,7 +86,7 @@ export function generateReportPdf(reports: ReportPayload[], businessName: string
     doc.text(RANGE_LABEL[r.range], marginX, y);
     y += 22;
 
-    // Stat lines — split in two so neither wraps or overflows the margin.
+    // Stat lines - split in two so neither wraps or overflows the margin.
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
     const avgText = r.summary.avgRating.ratingCount >= 5 ? `${r.summary.avgRating.value?.toFixed(1)}★ avg` : `${r.summary.avgRating.ratingCount} ratings so far`;
@@ -123,7 +123,7 @@ export function generateReportPdf(reports: ReportPayload[], businessName: string
       headStyles: { fillColor: [59, 108, 240] },
       tableWidth: 200,
     });
-    // @ts-expect-error — jspdf-autotable attaches this at runtime; not in its type defs.
+    // @ts-expect-error - jspdf-autotable attaches this at runtime; not in its type defs.
     y = (doc.lastAutoTable?.finalY ?? y) + 20;
 
     // Funnel table
@@ -141,7 +141,7 @@ export function generateReportPdf(reports: ReportPayload[], businessName: string
       headStyles: { fillColor: [59, 108, 240] },
       tableWidth: 300,
     });
-    // @ts-expect-error — see above.
+    // @ts-expect-error - see above.
     y = (doc.lastAutoTable?.finalY ?? y) + 20;
 
     if (r.tier === "full" && r.menu?.length) {
@@ -160,7 +160,7 @@ export function generateReportPdf(reports: ReportPayload[], businessName: string
         headStyles: { fillColor: [59, 108, 240] },
         tableWidth: 300,
       });
-      // @ts-expect-error — see above.
+      // @ts-expect-error - see above.
       y = (doc.lastAutoTable?.finalY ?? y) + 16;
 
       if (sorted.length > 5) {
@@ -178,7 +178,7 @@ export function generateReportPdf(reports: ReportPayload[], businessName: string
           headStyles: { fillColor: [59, 108, 240] },
           tableWidth: 300,
         });
-        // @ts-expect-error — see above.
+        // @ts-expect-error - see above.
         y = (doc.lastAutoTable?.finalY ?? y) + 20;
       }
     }
@@ -198,7 +198,7 @@ export function generateReportPdf(reports: ReportPayload[], businessName: string
         headStyles: { fillColor: [59, 108, 240] },
         tableWidth: 300,
       });
-      // @ts-expect-error — see above.
+      // @ts-expect-error - see above.
       y = (doc.lastAutoTable?.finalY ?? y) + 20;
     }
 

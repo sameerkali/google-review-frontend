@@ -4,7 +4,7 @@ import { ResponsiveBar } from "@nivo/bar";
 import { useTheme } from "@/components/ThemeProvider";
 import { getCategoricalColors, getNivoTheme } from "@/lib/nivoTheme";
 
-/* Count per star, 1 to 5. The single most useful Basic widget — a 4.6
+/* Count per star, 1 to 5. The single most useful Basic widget - a 4.6
    average with a bimodal distribution is a different business than a 4.6
    with everything clustered at 4-5, and the average alone can't show that. */
 export function RatingDistributionBar({ distribution }: { distribution: Record<string, number> }) {

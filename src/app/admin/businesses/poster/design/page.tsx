@@ -7,7 +7,7 @@ import { designsForCategory, getPosterCategory, getPosterSize, qrPosterDefaults,
 import { PosterPreviewCanvas } from "@/components/PosterPreviewCanvas";
 import { ArrowLeftIcon } from "@/components/icons";
 
-/* Step 3 of 4 — pick a design, narrowed to whatever's relevant for the
+/* Step 3 of 4 - pick a design, narrowed to whatever's relevant for the
    chosen category. Each option renders a real, full-resolution preview at
    the size chosen in step 2 (same draw code the final download uses), so
    this is a true WYSIWYG picker rather than static thumbnails. */
@@ -42,7 +42,7 @@ function DesignStep() {
         <p className="text-xs font-medium text-brand uppercase tracking-wider mb-1">Step 3 of 4</p>
         <h2 className="text-lg font-semibold text-fg">Choose a design</h2>
         <p className="text-sm text-fg-tertiary mt-0.5">
-          For <span className="text-fg font-medium">{name}</span> — {category.label} — {size.label} ({size.sublabel})
+          For <span className="text-fg font-medium">{name}</span> - {category.label} - {size.label} ({size.sublabel})
         </p>
       </div>
 

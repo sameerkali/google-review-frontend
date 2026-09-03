@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-/* Global hidden shortcut — Cmd+Shift+F (Ctrl+Shift+F on Windows/Linux) jumps
+/* Global hidden shortcut - Cmd+Shift+F (Ctrl+Shift+F on Windows/Linux) jumps
    straight to the admin login, from anywhere in the app. Ignored while
    typing in a field so it can't hijack normal text input. */
 export function AdminShortcut() {

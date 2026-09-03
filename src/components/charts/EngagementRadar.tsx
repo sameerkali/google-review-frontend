@@ -6,7 +6,7 @@ import { getNivoTheme } from "@/lib/nivoTheme";
 
 /* Normalizes scan/copy/click counts to a 0–100 index relative to scans (the
    top of the funnel), plus conversion rate on its own already-percentage
-   scale — so the four axes share one comparable range instead of raw
+   scale - so the four axes share one comparable range instead of raw
    counts of wildly different magnitude dominating the shape. */
 export function EngagementRadar({
   scans, reviewCopies, googleClicks, conversionRate,

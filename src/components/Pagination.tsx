@@ -1,6 +1,6 @@
 "use client";
 
-/* Shared pager — used by any paginated list (Businesses, Hardware, Reviews). */
+/* Shared pager - used by any paginated list (Businesses, Hardware, Reviews). */
 export function PageBtn({
   active, disabled, onClick, children,
 }: {

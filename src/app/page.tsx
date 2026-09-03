@@ -18,7 +18,7 @@ import {
   CheckIcon,
 } from "@/components/icons";
 
-/* A plain-language, factual description of the service — read by search
+/* A plain-language, factual description of the service - read by search
    crawlers and AI agents, not rendered visually. Kept in sync with what the
    product actually does (see /policy for the full honesty statement). */
 const SERVICE_JSON_LD = {
@@ -27,7 +27,7 @@ const SERVICE_JSON_LD = {
   name: "Review by Expendifii",
   serviceType: "QR code Google review collection",
   description:
-    "A QR-code-based feedback system. Customers scan a QR code at the table, answer three quick tap questions about their visit, and get a short draft built only from their own answers — which they can edit before posting it to the business's real Google review page. No app, login, or account required, and the same flow and the same Google button show up whatever they rate the visit. Each business is onboarded and managed by a platform operator, who also provides a printable poster and QR code generator and an analytics dashboard tracking scans and Google clicks as a conversion funnel.",
+    "A QR-code-based feedback system. Customers scan a QR code at the table, answer three quick tap questions about their visit, and get a short draft built only from their own answers - which they can edit before posting it to the business's real Google review page. No app, login, or account required, and the same flow and the same Google button show up whatever they rate the visit. Each business is onboarded and managed by a platform operator, who also provides a printable poster and QR code generator and an analytics dashboard tracking scans and Google clicks as a conversion funnel.",
   provider: { "@type": "Organization", name: "Expendifii" },
   audience: {
     "@type": "Audience",
@@ -38,19 +38,19 @@ const SERVICE_JSON_LD = {
 const FLOW_STEPS = [
   {
     title: "The operator sets up the business",
-    body: "A business is onboarded from the admin panel — plan, contact details, and a physical QR code assigned from tracked hardware stock.",
+    body: "A business is onboarded from the admin panel - plan, contact details, and a physical QR code assigned from tracked hardware stock.",
     src: "/screenshots/admin-overview.png",
     alt: "Admin panel overview showing total businesses, hardware stock, and recent scan activity",
   },
   {
     title: "A print-ready poster is generated",
-    body: "Pick a size and a design — the QR is real and already embedded, previewed at full resolution exactly as it will print.",
+    body: "Pick a size and a design - the QR is real and already embedded, previewed at full resolution exactly as it will print.",
     src: "/screenshots/poster-designs.png",
     alt: "Poster design picker showing six live QR poster templates for a Cafe",
   },
   {
     title: "The business sees real conversion",
-    body: "Scans, copies, and Google clicks tracked as an actual funnel — not just a scan counter — plus device and browser breakdowns.",
+    body: "Scans, copies, and Google clicks tracked as an actual funnel - not just a scan counter - plus device and browser breakdowns.",
     src: "/screenshots/business-dashboard.png",
     alt: "Business dashboard showing scan/click analytics charts and a conversion funnel",
   },
@@ -63,12 +63,12 @@ export default function Home() {
       <AuthLandingRedirect />
 
       <main>
-        {/* Theme toggle floats fixed over everything — the landing page has
+        {/* Theme toggle floats fixed over everything - the landing page has
             no nav bar for it to live in, and it needs to stay reachable
             whether the wave (always dark) or a themed section is underneath. */}
         <ThemeToggle className="fixed top-4 right-4 z-20 bg-surface/80 backdrop-blur-md border border-border shadow-sm" />
 
-        {/* Hero — no nav bar at all. Wave colors are the brand blue family only,
+        {/* Hero - no nav bar at all. Wave colors are the brand blue family only,
             fixed dark regardless of page theme (same precedent as the
             brand-blue final CTA band below). Pinned to the viewport while
             everything below scrolls up and over it (see PinnedSection). */}
@@ -104,7 +104,7 @@ export default function Home() {
 
                 {/* What actually shows up on the business's Google listing,
                     and the real, scannable QR code that leads there (encodes
-                    this page's own URL) — stacked, not overlapping, so
+                    this page's own URL) - stacked, not overlapping, so
                     nothing ever covers the review text. */}
                 <div className="flex justify-center lg:justify-end">
                   <div className="w-full max-w-[420px] space-y-4">
@@ -124,7 +124,7 @@ export default function Home() {
           </WavyBackground>
         </PinnedSection>
 
-        {/* Everything below the hero — higher z-index and its own opaque
+        {/* Everything below the hero - higher z-index and its own opaque
             background, so it visually scrolls up and covers the pinned
             hero instead of scrolling past it. */}
         <div className="relative z-10 bg-background">
@@ -178,7 +178,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Full flow, in screenshots — real product UI, not stock photos or
+        {/* Full flow, in screenshots - real product UI, not stock photos or
             mockups. Each caption states plainly what's happening, so the
             section is legible from its text alone (to a screen reader, a
             crawler, or an agent parsing the page), not just the image. */}
@@ -188,7 +188,7 @@ export default function Home() {
               How a review actually gets collected.
             </h2>
             <p className="text-fg-tertiary text-sm max-w-[52ch] mb-10">
-              Real screens from the product, in order — from setup to a posted review.
+              Real screens from the product, in order - from setup to a posted review.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               {FLOW_STEPS.map((step, i) => (
@@ -198,7 +198,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Honesty block — on the landing page, not buried in a policy footnote. */}
+        {/* Honesty block - on the landing page, not buried in a policy footnote. */}
         <section className="border-t border-border">
           <div className="max-w-3xl mx-auto px-6 py-16 lg:py-24">
             <h2 className="text-2xl md:text-3xl font-semibold text-fg text-center mb-10">
@@ -221,7 +221,7 @@ export default function Home() {
           <div className="max-w-5xl mx-auto px-6 py-16 lg:py-24">
             <h2 className="text-2xl md:text-3xl font-semibold text-fg text-center mb-2">Pricing</h2>
             <p className="text-fg-tertiary text-sm text-center max-w-[52ch] mx-auto mb-12">
-              Setup — ₹500 one time, first month included. Cancel any month — your QR keeps working for 30 days after you stop.
+              Setup - ₹500 one time, first month included. Cancel any month - your QR keeps working for 30 days after you stop.
             </p>
             <div className="grid sm:grid-cols-2 gap-6 max-w-3xl mx-auto">
               <PricingCard

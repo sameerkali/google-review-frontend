@@ -1,4 +1,4 @@
-/* Pure draft-assembly engine — no API call, no model. Given what the
+/* Pure draft-assembly engine - no API call, no model. Given what the
    customer actually tapped, it snaps together one honest, editable sentence
    or two. Nothing appears here that the customer didn't select; low ratings
    are never softened. See review-expendifii-final-plan.md section 3.2. */
@@ -84,9 +84,9 @@ export function buildDraft(
   if (!rating) return "";
   const b = band(rating);
 
-  // One item only — listing three reads manufactured.
+  // One item only - listing three reads manufactured.
   const item = items.length ? items[0].toLowerCase() : null;
-  // One aspect only — two sentences maximum.
+  // One aspect only - two sentences maximum.
   const aspect = aspects.length ? ASPECT_TEXT[b][aspects[0]] || "" : "";
 
   if (!item) {

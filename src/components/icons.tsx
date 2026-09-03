@@ -1,6 +1,6 @@
 "use client";
 
-/* ─── Shared icon set — @phosphor-icons/react, re-exported under the app's
+/* ─── Shared icon set - @phosphor-icons/react, re-exported under the app's
    existing icon names so every call site (`<XIcon className="w-4 h-4" />`)
    keeps working unchanged. Weight is fixed per-icon to keep a single
    consistent line weight across the app. ─── */

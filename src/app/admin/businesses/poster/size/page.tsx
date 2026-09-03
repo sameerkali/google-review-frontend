@@ -6,7 +6,7 @@ import Link from "next/link";
 import { POSTER_SIZES, getPosterCategory } from "@/lib/qrPoster";
 import { ArrowLeftIcon, QrIcon } from "@/components/icons";
 
-/* Step 2 of 4 — pick a print size (aspect ratio + target resolution). */
+/* Step 2 of 4 - pick a print size (aspect ratio + target resolution). */
 function SizeStep() {
   const searchParams = useSearchParams();
   const serial = searchParams.get("serial") || "";
@@ -31,7 +31,7 @@ function SizeStep() {
         <p className="text-xs font-medium text-brand uppercase tracking-wider mb-1">Step 2 of 4</p>
         <h2 className="text-lg font-semibold text-fg">Choose a size</h2>
         <p className="text-sm text-fg-tertiary mt-0.5">
-          For <span className="text-fg font-medium">{name}</span> — {category.label} — pick the print size, then a design.
+          For <span className="text-fg font-medium">{name}</span> - {category.label} - pick the print size, then a design.
         </p>
       </div>
 

@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     ],
     apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
   },
-  // iOS ignores the web manifest for "add to home screen" behavior — without
+  // iOS ignores the web manifest for "add to home screen" behavior - without
   // these, Safari treats the install as a plain bookmark (no standalone
   // splash screen, so launches show raw blank white until the page paints
   // instead of the icon + background_color splash Android already gets from
@@ -43,7 +43,7 @@ export const viewport: Viewport = {
 };
 
 // Runs before first paint so the correct theme class is present before
-// hydration — otherwise a stored/system light preference would flash dark.
+// hydration - otherwise a stored/system light preference would flash dark.
 const THEME_BOOT_SCRIPT = `
 (function () {
   try {
@@ -65,7 +65,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <head>
         {/* Next's appleWebApp metadata only emits the modern unprefixed
-            mobile-web-app-capable tag — older iOS Safari versions only
+            mobile-web-app-capable tag - older iOS Safari versions only
             recognize this vendor-prefixed one for standalone/splash mode. */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />

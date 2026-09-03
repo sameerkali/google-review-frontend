@@ -143,7 +143,7 @@ export default function OverviewPage() {
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-fg-tertiary">Nothing needs attention — every active business has a QR linked.</p>
+              <p className="text-sm text-fg-tertiary">Nothing needs attention - every active business has a QR linked.</p>
             )}
           </div>
 
@@ -177,7 +177,7 @@ export default function OverviewPage() {
             {lowStock && (
               <p className="flex items-center gap-1.5 text-xs text-warning">
                 <AlertIcon className="w-3.5 h-3.5 shrink-0" />
-                Running low on unassigned stock — register more hardware soon.
+                Running low on unassigned stock - register more hardware soon.
               </p>
             )}
           </div>
@@ -200,7 +200,7 @@ export default function OverviewPage() {
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-fg-tertiary">No activity yet — scans and clicks will show up here.</p>
+              <p className="text-sm text-fg-tertiary">No activity yet - scans and clicks will show up here.</p>
             )}
           </div>
         </div>

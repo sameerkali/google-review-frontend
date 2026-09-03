@@ -6,7 +6,7 @@ import { getCategoricalColors, getNivoTheme } from "@/lib/nivoTheme";
 
 const WEEKDAY_LABEL = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-/* Scans by hour of day, or by day of week — same shape either way (an
+/* Scans by hour of day, or by day of week - same shape either way (an
    index + a count). Used for "when do people scan" placement questions. */
 export function TimingBar({ data, mode }: { data: { key: number; scans: number }[]; mode: "hour" | "weekday" }) {
   const { theme } = useTheme();

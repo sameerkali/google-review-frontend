@@ -3,7 +3,7 @@ import { ApiError } from "@/lib/api";
 import { notifyToast, portalFromKey, triggerSignOut } from "@/lib/authBridge";
 
 /* Retries transient/network/5xx failures with a short capped backoff; never
-   retries a 4xx ApiError (401/403/404/409/422 etc.) — retrying a doomed
+   retries a 4xx ApiError (401/403/404/409/422 etc.) - retrying a doomed
    request just delays the error feedback the UI is waiting to show. */
 function shouldRetry(failureCount: number, error: unknown): boolean {
   if (error instanceof ApiError) {

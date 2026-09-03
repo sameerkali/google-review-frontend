@@ -76,7 +76,7 @@ export default function ReviewPage({ params }: { params: Promise<{ code: string 
   const [googleError, setGoogleError] = useState("");
   const reviewTextareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Created once per page load — never refetched (a refetch would mint a
+  // Created once per page load - never refetched (a refetch would mint a
   // second, throwaway session), matches the 24-char sessionToken contract
   // in the plan's data model.
   const { data: session, isPending: sessionPending, isError: sessionError, error: sessionErrorObj } = useQuery({
@@ -130,7 +130,7 @@ export default function ReviewPage({ params }: { params: Promise<{ code: string 
     patchSession({ aspects });
     const selectedNames = menuItems.filter((m) => selectedItemIds.includes(m.id)).map((m) => m.name);
     const items = selectedNames.length ? selectedNames : freeTextItem.trim() ? [freeTextItem.trim()] : [];
-    // Seed defaults to Math.random() inside buildDraft — safe here since this
+    // Seed defaults to Math.random() inside buildDraft - safe here since this
     // runs in a click handler, not during render.
     const draft = buildDraft({ rating, items, aspects });
     setDraftText(draft);
@@ -143,7 +143,7 @@ export default function ReviewPage({ params }: { params: Promise<{ code: string 
     if (step === "review") reviewTextareaRef.current?.focus();
   }, [step]);
 
-  // Synchronous, inside the tap — no `await` between the tap and the
+  // Synchronous, inside the tap - no `await` between the tap and the
   // clipboard write, or iOS Safari silently drops it (see plan section 3.5).
   const handleCopyAndGo = () => {
     setGoogleError("");
@@ -197,7 +197,7 @@ export default function ReviewPage({ params }: { params: Promise<{ code: string 
 
   if (sessionError || !session) {
     // An ApiError means the server responded (e.g. a real 404 for an unknown
-    // code); anything else means the request never got a response at all —
+    // code); anything else means the request never got a response at all -
     // wrong API URL, backend not running, no network. Those need a different
     // fix than "the code is wrong," so don't show the same message for both.
     const unreachable = !(sessionErrorObj instanceof ApiError);
@@ -247,9 +247,9 @@ export default function ReviewPage({ params }: { params: Promise<{ code: string 
           </div>
         </div>
 
-        {/* Screen 1 — What did you have? */}
+        {/* Screen 1 - What did you have? */}
         {step === "items" && (
-          <ScreenShell title="What did you have?" subtitle="Pick what you remember — or skip this.">
+          <ScreenShell title="What did you have?" subtitle="Pick what you remember - or skip this.">
             {menuPending ? (
               <div className="flex justify-center py-8"><Spinner size="md" /></div>
             ) : (
@@ -297,7 +297,7 @@ export default function ReviewPage({ params }: { params: Promise<{ code: string 
           </ScreenShell>
         )}
 
-        {/* Screen 2 — How was it? One tap advances, no branching. */}
+        {/* Screen 2 - How was it? One tap advances, no branching. */}
         {step === "rating" && (
           <ScreenShell title="How was it?">
             <div className="flex items-center justify-center gap-2 py-4">
@@ -319,9 +319,9 @@ export default function ReviewPage({ params }: { params: Promise<{ code: string 
           </ScreenShell>
         )}
 
-        {/* Screen 3 — Anything stand out? */}
+        {/* Screen 3 - Anything stand out? */}
         {step === "aspects" && (
-          <ScreenShell title="Anything stand out?" subtitle="Pick what applies — or skip this.">
+          <ScreenShell title="Anything stand out?" subtitle="Pick what applies - or skip this.">
             <div className="space-y-4">
               <div className="flex flex-wrap gap-2 justify-center">
                 {ASPECTS.map((a) => (
@@ -345,7 +345,7 @@ export default function ReviewPage({ params }: { params: Promise<{ code: string 
           </ScreenShell>
         )}
 
-        {/* Screen 4 — Your review. Same button at every rating, no branching. */}
+        {/* Screen 4 - Your review. Same button at every rating, no branching. */}
         {step === "review" && (
           <ScreenShell title="Your review">
             <div className="space-y-3">
@@ -361,7 +361,7 @@ export default function ReviewPage({ params }: { params: Promise<{ code: string 
                 onClick={handleCopyAndGo}
                 className="w-full rounded-full bg-brand hover:bg-brand-hover py-3.5 text-sm font-semibold text-white transition-colors duration-150 cursor-pointer active:scale-[0.98]"
               >
-                {copied ? "Copied — opening Google…" : "Copy and open Google"}
+                {copied ? "Copied - opening Google…" : "Copy and open Google"}
               </button>
               {googleError && (
                 <div className="rounded-xl border border-danger/20 bg-danger/10 px-4 py-3 text-sm text-danger flex items-start gap-2">

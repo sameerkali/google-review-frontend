@@ -18,7 +18,7 @@ const NAV: { href: string; key: keyof typeof TAB_ICONS; label: string; hidden?: 
   { href: "/admin/overview", key: "overview", label: "Overview" },
   { href: "/admin/businesses", key: "businesses", label: "Businesses" },
   { href: "/admin/plans", key: "plans", label: "Plans" },
-  // Not a primary tab — hardware is a support detail of a business, not a
+  // Not a primary tab - hardware is a support detail of a business, not a
   // peer concern. Reachable via the "Hardware Stock" link on the Businesses
   // tab; kept here (hidden) so the page still gets the right header title
   // and sidebar highlight when visited directly.
@@ -56,7 +56,7 @@ function AdminShell({ children }: { children: React.ReactNode }) {
     enabled,
   });
 
-  // Any in-flight admin query — drives the header spinner.
+  // Any in-flight admin query - drives the header spinner.
   const dataLoading = useIsFetching({ queryKey: ["admin"] }) > 0;
 
   const isLoginRoute = pathname === "/admin/login";
@@ -65,7 +65,7 @@ function AdminShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!authChecked) return;
     // Redirects use replace() (not push()) so the page being left behind
-    // never lingers in history — this is what stops the browser Back button
+    // never lingers in history - this is what stops the browser Back button
     // from ever landing an authenticated admin back on the login screen.
     if (!token && !isLoginRoute) { router.replace("/admin/login"); return; }
     if (token && (isLoginRoute || isIndexRoute)) { router.replace("/admin/overview"); return; }

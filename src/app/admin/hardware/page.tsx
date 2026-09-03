@@ -110,7 +110,7 @@ export default function HardwarePage() {
         title="Delete this hardware?"
         message={
           deleteHardware?.status === "assigned"
-            ? `"${deleteHardware?.serial}" is currently assigned to ${deleteHardware?.business} — deleting it will break that business's QR code immediately.`
+            ? `"${deleteHardware?.serial}" is currently assigned to ${deleteHardware?.business} - deleting it will break that business's QR code immediately.`
             : `"${deleteHardware?.serial}" will be permanently removed.`
         }
         confirmLabel="Delete"

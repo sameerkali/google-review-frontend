@@ -7,8 +7,8 @@ import { POSTER_DESIGNS, getPosterSize, qrPosterDefaults, type PosterDesignKey, 
 import { PosterPreviewCanvas } from "@/components/PosterPreviewCanvas";
 import { ArrowLeftIcon } from "@/components/icons";
 
-/* Step 2 of 3 — pick a design. Unlike the admin flow, this shows the full
-   design library rather than a category-filtered subset — there's no
+/* Step 2 of 3 - pick a design. Unlike the admin flow, this shows the full
+   design library rather than a category-filtered subset - there's no
    business-category step here (see size/page.tsx), so this is the one
    place a business picks a look at all. Each option renders a real,
    full-resolution preview at the size chosen in step 1 (same draw code the
@@ -41,7 +41,7 @@ function DesignStep() {
         <p className="text-xs font-medium text-brand uppercase tracking-wider mb-1">Step 2 of 3</p>
         <h2 className="text-lg font-semibold text-fg">Choose a design</h2>
         <p className="text-sm text-fg-tertiary mt-0.5">
-          For <span className="text-fg font-medium">{name}</span> — {size.label} ({size.sublabel})
+          For <span className="text-fg font-medium">{name}</span> - {size.label} ({size.sublabel})
         </p>
       </div>
 
@@ -105,7 +105,7 @@ function MissingSerial() {
   return (
     <div className="max-w-lg">
       <p className="text-sm text-fg-tertiary">
-        No QR code is linked to your account yet — contact your platform admin to get one set up.
+        No QR code is linked to your account yet - contact your platform admin to get one set up.
       </p>
       <Link href="/business/dashboard" className="inline-flex items-center gap-1.5 mt-4 text-sm text-brand hover:text-brand-hover">
         <ArrowLeftIcon className="w-4 h-4" /> Back to Dashboard

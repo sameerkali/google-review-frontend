@@ -4,7 +4,7 @@ import { ResponsiveBar } from "@nivo/bar";
 import { useTheme } from "@/components/ThemeProvider";
 import { getNivoTheme } from "@/lib/nivoTheme";
 
-/* A single-hue horizontal bar chart — magnitude comparison across browsers,
+/* A single-hue horizontal bar chart - magnitude comparison across browsers,
    not identity, so one hue is correct (per the dataviz skill's form
    heuristic); the label on each row already names it directly. */
 export function BrowserBar({ data }: { data: { _id: string; count: number }[] }) {

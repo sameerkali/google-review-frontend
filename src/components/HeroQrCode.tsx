@@ -5,7 +5,7 @@ import QRCode from "qrcode";
 
 /* A real, scannable QR code (same qrcode.toCanvas call the rest of the app
    uses for actual business review codes) encoding this page's own URL. Not
-   a placeholder graphic — scan it and it opens this site. */
+   a placeholder graphic - scan it and it opens this site. */
 export function HeroQrCode({ size = 176 }: { size?: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [ready, setReady] = useState(false);

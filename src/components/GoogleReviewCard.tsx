@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { StarFillIcon } from "@/components/icons";
 
-/* The real, multi-color Google "G" mark — used for its literal purpose
+/* The real, multi-color Google "G" mark - used for its literal purpose
    (this card illustrates what a review posted through the product looks
    like on Google), not as decoration. */
 export function GoogleG({ className = "w-5 h-5" }: { className?: string }) {
@@ -15,7 +15,7 @@ export function GoogleG({ className = "w-5 h-5" }: { className?: string }) {
   );
 }
 
-/* A big, realistic Google review card — illustrating what a review posted
+/* A big, realistic Google review card - illustrating what a review posted
    through the product looks like on the business's real Google listing.
    Always a plain white surface regardless of page theme, same as an actual
    Google review would render (not tinted to match our own light/dark

@@ -6,9 +6,9 @@ import Link from "next/link";
 import { POSTER_SIZES } from "@/lib/qrPoster";
 import { ArrowLeftIcon, QrIcon } from "@/components/icons";
 
-/* Step 1 of 3 — pick a print size (aspect ratio + target resolution). No
+/* Step 1 of 3 - pick a print size (aspect ratio + target resolution). No
    category step here (unlike the admin flow at /admin/businesses/poster,
-   which asks cafe/salon/doctor to narrow the design list) — a business
+   which asks cafe/salon/doctor to narrow the design list) - a business
    already knows what it is, and the design step shows the full library
    regardless, so asking again added a step without adding a choice. */
 function SizeStep() {
@@ -31,7 +31,7 @@ function SizeStep() {
         <p className="text-xs font-medium text-brand uppercase tracking-wider mb-1">Step 1 of 3</p>
         <h2 className="text-lg font-semibold text-fg">Choose a size</h2>
         <p className="text-sm text-fg-tertiary mt-0.5">
-          For <span className="text-fg font-medium">{name}</span> — pick the print size, then a design.
+          For <span className="text-fg font-medium">{name}</span> - pick the print size, then a design.
         </p>
       </div>
 
@@ -65,7 +65,7 @@ function MissingSerial() {
   return (
     <div className="max-w-lg">
       <p className="text-sm text-fg-tertiary">
-        No QR code is linked to your account yet — contact your platform admin to get one set up.
+        No QR code is linked to your account yet - contact your platform admin to get one set up.
       </p>
       <Link href="/business/dashboard" className="inline-flex items-center gap-1.5 mt-4 text-sm text-brand hover:text-brand-hover">
         <ArrowLeftIcon className="w-4 h-4" /> Back to Dashboard

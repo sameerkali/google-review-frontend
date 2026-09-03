@@ -10,12 +10,12 @@ function isStandalone(): boolean {
 }
 
 /* Skips the landing page for an already-authenticated admin/business user
-   opening the installed PWA — its start_url is "/", so without this every
+   opening the installed PWA - its start_url is "/", so without this every
    launch shows the marketing page even though they're already signed in.
    Scoped to standalone/installed mode only (never a regular browser tab),
    so the public marketing site is completely unaffected for everyone else.
    Token presence only (same trust level AdminShell/BusinessProvider already
-   use) — a stale/invalid token still gets caught by the normal 401 →
+   use) - a stale/invalid token still gets caught by the normal 401 →
    sign-out flow once inside the dashboard. */
 export function AuthLandingRedirect() {
   const router = useRouter();
@@ -29,7 +29,7 @@ export function AuthLandingRedirect() {
         router.replace("/business/dashboard");
       }
     } catch {
-      // localStorage unavailable (private mode etc.) — just show the landing page.
+      // localStorage unavailable (private mode etc.) - just show the landing page.
     }
   }, [router]);
 

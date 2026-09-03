@@ -13,7 +13,7 @@ export interface FunnelStage {
 export function ConversionFunnelChart({ stages }: { stages: FunnelStage[] }) {
   const { theme } = useTheme();
   // Nivo's funnel shape always renders the formatted value, never the part
-  // id — a legend row is how identity stays labeled, not color-alone.
+  // id - a legend row is how identity stays labeled, not color-alone.
   const withLabels = stages.map((s) => ({ ...s, label: s.id }));
 
   return (

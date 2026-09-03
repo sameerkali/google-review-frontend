@@ -40,7 +40,7 @@ function toForm(plan: Row | null): PlanForm {
   };
 }
 
-/* Add/edit a plan tier — Basic/Starter/Pro, or any custom tier — with its three
+/* Add/edit a plan tier - Basic/Starter/Pro, or any custom tier - with its three
    named feature flags. Structure only for now: nothing yet reads these flags
    to gate what a business owner actually sees. */
 export function PlanEditModal({

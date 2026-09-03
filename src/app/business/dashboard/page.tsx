@@ -40,8 +40,8 @@ const FUNNEL_HINT: Record<string, string> = {
   scans: "Where every visit starts.",
   rated: "Drop here means placement, or the page loading slowly.",
   drafted: "Drop here means friction on the item/aspect screens.",
-  copied: "Drop here means the draft isn't landing — check the wording.",
-  clicked: "Drop here is a hesitation at Google — not much you can fix.",
+  copied: "Drop here means the draft isn't landing - check the wording.",
+  clicked: "Drop here is a hesitation at Google - not much you can fix.",
 };
 
 function errorTotalScans(err: unknown): number | null {
@@ -155,7 +155,7 @@ function EmptyChart({ message }: { message: string }) {
 
 function RecentActivityFeed({ rows, featured }: { rows: ActivityRow[]; featured: boolean }) {
   if (!rows.length) {
-    return <p className="text-sm text-fg-tertiary">No ratings yet — the first one will show up here within minutes of a scan.</p>;
+    return <p className="text-sm text-fg-tertiary">No ratings yet - the first one will show up here within minutes of a scan.</p>;
   }
   return (
     <ul className={featured ? "space-y-3" : "divide-y divide-border"}>
@@ -197,7 +197,7 @@ function FreeTierView({ business, reviewUrl, posterHref, totalScans, toast }: { 
         <div className="rounded-xl border border-warning/20 bg-warning/5 p-4 flex items-start gap-3">
           <InfoIcon className="w-4 h-4 text-warning shrink-0 mt-0.5" />
           <div>
-            <p className="text-sm text-fg-secondary">Your reports are paused. Data is still being collected — you&apos;re just not seeing it.</p>
+            <p className="text-sm text-fg-secondary">Your reports are paused. Data is still being collected - you&apos;re just not seeing it.</p>
             <p className="text-xs text-fg-tertiary mt-1">Restart for ₹299/month to see ratings, trends and your funnel again.</p>
           </div>
         </div>
@@ -238,7 +238,7 @@ function MenuBreakdownSection({ token, range }: { token: string; range: Range })
         <EmptyChart message="Menu breakdown appears once customers start mentioning items in their ratings." />
       ) : (
         <>
-          {/* Card layout — small screens, where the 6-column table would force
+          {/* Card layout - small screens, where the 6-column table would force
               horizontal scrolling on every single row. */}
           <div className="space-y-2.5 sm:hidden">
             {data.items.map((row) => (
@@ -261,7 +261,7 @@ function MenuBreakdownSection({ token, range }: { token: string; range: Range })
             ))}
           </div>
 
-          {/* Table layout — sm and up */}
+          {/* Table layout - sm and up */}
           <div className="hidden sm:block overflow-x-auto -mx-1">
             <table className="w-full text-left text-sm min-w-120">
               <thead>
@@ -330,7 +330,7 @@ function ShiftsSection({ token, range }: { token: string; range: Range }) {
       {isPending ? (
         <Skeleton className="h-40 rounded-xl" />
       ) : usableBands.length < 2 ? (
-        <EmptyChart message="Shift comparison needs at least 10 rated sessions per band — check back once volume builds up." />
+        <EmptyChart message="Shift comparison needs at least 10 rated sessions per band - check back once volume builds up." />
       ) : (
         <ShiftBar bands={data!.bands} />
       )}
@@ -369,7 +369,7 @@ function CompareSection({ token, days }: { token: string; days: number }) {
           ))}
         </div>
       )}
-      <p className="text-xs text-fg-quaternary">This gets more useful every period you stay — it&apos;s your own history.</p>
+      <p className="text-xs text-fg-quaternary">This gets more useful every period you stay - it&apos;s your own history.</p>
     </div>
   );
 }
@@ -494,7 +494,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Stat cards — 2 up on phones, 3 on tablets, all 5 in one row from
+      {/* Stat cards - 2 up on phones, 3 on tablets, all 5 in one row from
           lg up. Never fewer than 2 columns so a value never renders full-width
           (that reads as a headline number, not a stat among peers). */}
       {summaryQ.isPending ? (
@@ -518,12 +518,12 @@ export default function DashboardPage() {
             label="Draft edit rate"
             value={summary.draftEditRate.value === null ? "No copies yet" : `${summary.draftEditRate.value}%`}
             delta={summary.draftEditRate.value !== null ? deltaLabel(summary.draftEditRate.value, summary.draftEditRate.prev, "pt") : undefined}
-            note={summary.draftEditRate.copiedCount >= 5 && summary.draftEditRate.value !== null && summary.draftEditRate.value < 20 ? "Most customers copy the draft as-is — a good sign it reads naturally." : undefined}
+            note={summary.draftEditRate.copiedCount >= 5 && summary.draftEditRate.value !== null && summary.draftEditRate.value < 20 ? "Most customers copy the draft as-is - a good sign it reads naturally." : undefined}
           />
         </div>
       ) : null}
 
-      {/* Recent activity — featured when there's not much else to show yet */}
+      {/* Recent activity - featured when there's not much else to show yet */}
       {summary && (isNew ? (
         <div className="rounded-2xl border border-border bg-surface p-5 space-y-3">
           <h3 className="text-sm font-semibold text-fg">Recent activity</h3>
@@ -626,7 +626,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Recent activity — secondary panel once there's other content to look at */}
+      {/* Recent activity - secondary panel once there's other content to look at */}
       {summary && !isNew && (
         <div className="rounded-2xl border border-border bg-surface p-5 space-y-3">
           <h3 className="text-sm font-semibold text-fg">Recent activity</h3>
@@ -634,7 +634,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Full tier — menu breakdown last: it's the biggest widget on the page,
+      {/* Full tier - menu breakdown last: it's the biggest widget on the page,
           and the quicker/smaller ones (aspects, shifts, compare, suggestions)
           are worth seeing before scrolling past it. */}
       {tier === "full" ? (
@@ -650,9 +650,9 @@ export default function DashboardPage() {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <LockedCard title="Complaint & praise themes" description="What comes up in low ratings vs high ratings, side by side." />
-          <LockedCard title="Shift view" description="Average rating by time of day — spot a staffing issue your other data can't show." />
+          <LockedCard title="Shift view" description="Average rating by time of day - spot a staffing issue your other data can't show." />
           <LockedCard title="Growth suggestions" description="Rules-based tips generated from your own numbers, not generic advice." />
-          <LockedCard title="Menu breakdown" description="Per-dish ratings, mentions and trend — see which dish is actually the problem." />
+          <LockedCard title="Menu breakdown" description="Per-dish ratings, mentions and trend - see which dish is actually the problem." />
         </div>
       )}
     </div>

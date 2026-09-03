@@ -22,9 +22,9 @@ const EXAMPLE = JSON.stringify(
   2
 );
 
-/* Accepts the documented {id, name, price} shape — `id` is read and ignored
+/* Accepts the documented {id, name, price} shape - `id` is read and ignored
    (Mongo assigns its own on insert; it's only there so a menu exported
-   elsewhere with its own ids can be pasted in unmodified) — but also
+   elsewhere with its own ids can be pasted in unmodified) - but also
    tolerates {items:[...]} and a plain array of name strings with no price,
    so JSON from an earlier version of this uploader still works. The business
    itself always comes from the dropdown, never from the JSON, so admins
@@ -75,7 +75,7 @@ export function BulkMenuUploadModal({
       queryClient.invalidateQueries({ queryKey: ["admin", "menu-items", "businesses"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "menu-items", "list"] });
       if (res.skipped) {
-        toast("info", `Uploaded ${res.created} item${res.created !== 1 ? "s" : ""} — ${res.skipped} row${res.skipped !== 1 ? "s" : ""} skipped`);
+        toast("info", `Uploaded ${res.created} item${res.created !== 1 ? "s" : ""} - ${res.skipped} row${res.skipped !== 1 ? "s" : ""} skipped`);
       } else {
         toast("success", `Uploaded ${res.created} item${res.created !== 1 ? "s" : ""}`);
       }
@@ -111,7 +111,7 @@ export function BulkMenuUploadModal({
     try {
       parsed = JSON.parse(text);
     } catch {
-      setError("That's not valid JSON — check for missing commas or quotes");
+      setError("That's not valid JSON - check for missing commas or quotes");
       return;
     }
     const items = extractItems(parsed);
@@ -139,7 +139,7 @@ export function BulkMenuUploadModal({
         <div className="overflow-y-auto">
           <ModalBody>
             <p className="text-xs text-fg-tertiary leading-relaxed">
-              Pick the business below, then upload or paste each item&apos;s name and price — no
+              Pick the business below, then upload or paste each item&apos;s name and price - no
               business ID needed, it&apos;s attached automatically, and any <code>id</code> field is
               ignored. Price is optional; plain name strings still work too. You can still add items
               one at a time from the form on this page, and you can run this upload as many times as
@@ -157,7 +157,7 @@ export function BulkMenuUploadModal({
                 {businesses.map((b) => <option key={b._id} value={b._id}>{b.name}</option>)}
               </Select>
               {!businesses.length && (
-                <p className="mt-1.5 text-xs text-fg-tertiary">No businesses yet — onboard one first from the Overview tab.</p>
+                <p className="mt-1.5 text-xs text-fg-tertiary">No businesses yet - onboard one first from the Overview tab.</p>
               )}
             </Field>
 

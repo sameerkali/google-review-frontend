@@ -6,7 +6,7 @@ import Link from "next/link";
 import { POSTER_CATEGORIES } from "@/lib/qrPoster";
 import { ArrowLeftIcon, StorefrontIcon } from "@/components/icons";
 
-/* Step 1 of 4 — pick a business category, which narrows the design list in
+/* Step 1 of 4 - pick a business category, which narrows the design list in
    step 3 to what's actually relevant. Reached only from Businesses list →
    eye icon → QR modal → "Customize Poster", which passes the hardware
    serial and business name as query params carried through the whole
@@ -31,7 +31,7 @@ function CategoryStep() {
         <p className="text-xs font-medium text-brand uppercase tracking-wider mb-1">Step 1 of 4</p>
         <h2 className="text-lg font-semibold text-fg">Choose a category</h2>
         <p className="text-sm text-fg-tertiary mt-0.5">
-          For <span className="text-fg font-medium">{name}</span> — this narrows down the designs you&apos;ll see next.
+          For <span className="text-fg font-medium">{name}</span> - this narrows down the designs you&apos;ll see next.
         </p>
       </div>
 

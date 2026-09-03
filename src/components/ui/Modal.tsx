@@ -1,6 +1,6 @@
 "use client";
 
-/* Shared modal shell — backdrop, panel, click-outside-to-close. Each modal
+/* Shared modal shell - backdrop, panel, click-outside-to-close. Each modal
    composes its own header/body/footer inside `children` since content shape
    varies (a confirm dialog vs. a multi-step wizard vs. an edit form). */
 const MAX_WIDTH = {
@@ -72,7 +72,7 @@ export function ModalFooter({ children }: { children: React.ReactNode }) {
   return <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border">{children}</div>;
 }
 
-/* Local, not exported — avoids importing the icon barrel into the primitive layer. */
+/* Local, not exported - avoids importing the icon barrel into the primitive layer. */
 function CloseGlyph() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>

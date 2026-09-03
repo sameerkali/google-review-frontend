@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type HTMLAttributes, type ReactNode } from
 import { createNoise3D } from "simplex-noise";
 
 /* Vendored from Aceternity UI (`npx shadcn add @aceternity/wavy-background`),
-   re-typed to this project's strict-any lint rule — the animation logic
+   re-typed to this project's strict-any lint rule - the animation logic
    itself is unchanged from upstream. */
 export const WavyBackground = ({
   children,
@@ -92,7 +92,7 @@ export const WavyBackground = ({
   let animationId: number;
   const render = () => {
     if (!ctx) return;
-    // The solid backdrop must be fully opaque — it's what hides the page's
+    // The solid backdrop must be fully opaque - it's what hides the page's
     // own (theme-dependent) background behind the canvas. Only the wave
     // strokes drawn on top of it use waveOpacity for their translucent blend.
     ctx.globalAlpha = 1;

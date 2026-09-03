@@ -1,4 +1,4 @@
-/* Minimal, hand-rolled service worker (no Workbox/next-pwa — this repo's
+/* Minimal, hand-rolled service worker (no Workbox/next-pwa - this repo's
    dev script runs Turbopack, which those tools don't reliably support, and
    Turbopack's per-build content hashes make a hardcoded precache list a
    maintenance trap anyway). Runtime-caches same-origin GETs only; every

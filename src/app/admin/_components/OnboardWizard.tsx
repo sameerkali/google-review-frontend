@@ -59,7 +59,7 @@ export function OnboardWizard({
   const [planId, setPlanId] = useState("");
   const [portalPassword, setPortalPassword] = useState("");
   const [passwordErr, setPasswordErr] = useState("");
-  // The code field is either what the admin typed, or — until they touch it —
+  // The code field is either what the admin typed, or - until they touch it -
   // a suggestion derived from the business name. Derived at render time
   // (not synced via an effect) so there's nothing to keep in sync.
   const [codeInput, setCodeInput] = useState("");
@@ -147,10 +147,10 @@ export function OnboardWizard({
       queryClient.invalidateQueries({ queryKey: ["admin", "menu-items", "businesses"] });
 
       if (failedItemCount > 0) {
-        toast("error", `Business created, but ${failedItemCount} menu item${failedItemCount > 1 ? "s" : ""} failed to save — add ${failedItemCount > 1 ? "them" : "it"} again from the Menu tab`);
+        toast("error", `Business created, but ${failedItemCount} menu item${failedItemCount > 1 ? "s" : ""} failed to save - add ${failedItemCount > 1 ? "them" : "it"} again from the Menu tab`);
       }
 
-      // Don't celebrate a QR that isn't actually live — only show it once the
+      // Don't celebrate a QR that isn't actually live - only show it once the
       // server confirms the code was assigned or created, not just because a
       // code was typed (e.g. an out-of-date backend can silently no-op this).
       const trimmedCode = code.trim();
@@ -196,7 +196,7 @@ export function OnboardWizard({
   };
 
   // Typing a comma commits everything before it as its own chip and keeps
-  // typing the next item in the same field — "chips, coke, chicken fry"
+  // typing the next item in the same field - "chips, coke, chicken fry"
   // becomes three separate items without a row-per-item form.
   const onMenuDraftChange = (raw: string) => {
     const parts = raw.split(",");
@@ -229,7 +229,7 @@ export function OnboardWizard({
           </h2>
           {step !== "success" && (
             <p className="text-xs text-fg-tertiary mt-0.5">
-              Step {stepIndex + 1} of {WIZARD_STEPS.length} — {WIZARD_STEPS[stepIndex].label}
+              Step {stepIndex + 1} of {WIZARD_STEPS.length} - {WIZARD_STEPS[stepIndex].label}
             </p>
           )}
         </ModalHeader>
@@ -286,7 +286,7 @@ export function OnboardWizard({
                   {plans.map((p) => <option key={p._id} value={p._id}>{p.name} · ₹{p.price}{p.billingType === "monthly" ? "/mo" : p.billingType === "annually" ? "/yr" : ""}</option>)}
                 </Select>
                 {!plans.length && (
-                  <p className="mt-1.5 text-xs text-fg-quaternary">No plans set up yet — add one from the Plans tab, or leave this business unassigned for now.</p>
+                  <p className="mt-1.5 text-xs text-fg-quaternary">No plans set up yet - add one from the Plans tab, or leave this business unassigned for now.</p>
                 )}
               </div>
               <div>
@@ -314,7 +314,7 @@ export function OnboardWizard({
                   </p>
                 )}
                 <p className="mt-1.5 text-xs text-fg-quaternary">
-                  4–14 characters if set. Lets the business owner log into their own dashboard at /business/login to see their stats. You&apos;ll see this password once more on the next screen — share it with them.
+                  4–14 characters if set. Lets the business owner log into their own dashboard at /business/login to see their stats. You&apos;ll see this password once more on the next screen - share it with them.
                 </p>
               </div>
             </div>
@@ -339,8 +339,8 @@ export function OnboardWizard({
                 />
                 <p className="mt-1.5 text-xs text-fg-quaternary">
                   {codeTouched
-                    ? "Doesn't need to exist yet — it's set up automatically when you finish."
-                    : "Suggested from the business name — edit it if you already have a physical code."}
+                    ? "Doesn't need to exist yet - it's set up automatically when you finish."
+                    : "Suggested from the business name - edit it if you already have a physical code."}
                 </p>
               </div>
               {availableHardware.length > 0 && (
@@ -370,7 +370,7 @@ export function OnboardWizard({
           {step === "menu" && (
             <div className="space-y-3">
               <p className="text-sm text-fg-tertiary">
-                Menu items shown as chips on screen one of the review flow — optional, but the customer needs
+                Menu items shown as chips on screen one of the review flow - optional, but the customer needs
                 at least a few to pick from. Type a name and a comma to add it, then keep typing the next one.
                 You can add more later too.
               </p>
@@ -414,8 +414,8 @@ export function OnboardWizard({
               </div>
               {portalPassword.trim() && (
                 <div className="rounded-xl border border-info/20 bg-info/5 p-4 space-y-2">
-                  <p className="text-xs font-medium text-info uppercase tracking-wider">Business Portal Login — share this now</p>
-                  <p className="text-xs text-fg-tertiary">Shown once — it won&apos;t be displayed again after you close this.</p>
+                  <p className="text-xs font-medium text-info uppercase tracking-wider">Business Portal Login - share this now</p>
+                  <p className="text-xs text-fg-tertiary">Shown once - it won&apos;t be displayed again after you close this.</p>
                   <div className="flex items-center justify-between gap-3 rounded-lg bg-background border border-border px-3 py-2 font-mono text-xs text-fg-secondary">
                     <span className="truncate">{details.email.trim()} · {portalPassword.trim()}</span>
                     <button
@@ -439,13 +439,13 @@ export function OnboardWizard({
                 <div role="alert" className="rounded-xl border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning flex items-start gap-2">
                   <AlertIcon className="w-4 h-4 shrink-0 mt-0.5" />
                   <span>
-                    The business was created, but the server didn&apos;t confirm the QR code was linked — it may be
+                    The business was created, but the server didn&apos;t confirm the QR code was linked - it may be
                     running an older version. Open <strong>View QR</strong> on the Businesses tab to link it manually.
                   </span>
                 </div>
               ) : (
                 <p className="text-sm text-fg-tertiary">
-                  No QR code was linked yet — assign hardware to this business anytime from the Businesses tab.
+                  No QR code was linked yet - assign hardware to this business anytime from the Businesses tab.
                 </p>
               )}
             </div>

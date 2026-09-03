@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 
-/* Registered in production only — a service worker intercepting fetches
+/* Registered in production only - a service worker intercepting fetches
    during `next dev` fights Turbopack's own HMR/fast-refresh requests. */
 export function ServiceWorkerRegister() {
   useEffect(() => {

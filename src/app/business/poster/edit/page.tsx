@@ -14,11 +14,11 @@ import { Button } from "@/components/ui/Button";
 import { Field, Input } from "@/components/ui/Input";
 import { ArrowLeftIcon, DownloadIcon } from "@/components/icons";
 
-/* Step 3 of 3 — edit the text sections on the left, watch the canvas
+/* Step 3 of 3 - edit the text sections on the left, watch the canvas
    redraw live on the right (same draw code as the download itself), then
    export. The QR code always encodes the business's real review URL and is
    never editable. Mirrors /admin/businesses/poster/edit minus the category
-   step — auth context is useBusiness instead of useAdmin, and there's no
+   step - auth context is useBusiness instead of useAdmin, and there's no
    category in the URL to read back. */
 function PosterEditor() {
   const { toast } = useBusiness();
@@ -55,7 +55,7 @@ function PosterEditor() {
     return (
       <div className="max-w-lg">
         <p className="text-sm text-fg-tertiary">
-          No QR code is linked to your account yet — contact your platform admin to get one set up.
+          No QR code is linked to your account yet - contact your platform admin to get one set up.
         </p>
         <Link href="/business/dashboard" className="inline-flex items-center gap-1.5 mt-4 text-sm text-brand hover:text-brand-hover">
           <ArrowLeftIcon className="w-4 h-4" /> Back to Dashboard
@@ -116,7 +116,7 @@ function PosterEditor() {
           </button>
         </div>
 
-        {/* Live preview — the wrapper is pinned to the poster's real aspect
+        {/* Live preview - the wrapper is pinned to the poster's real aspect
             ratio from first paint (the canvas itself only gets its true
             width/height once drawQrPoster runs in an effect), so the
             skeleton fills exactly where the artwork lands, no layout jump. */}

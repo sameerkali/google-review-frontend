@@ -24,7 +24,7 @@ function hardwareForBusiness(business: Row, hardwareList: Row[]): Row | undefine
   });
 }
 
-/* View (and manage) the QR code linked to a business at any time — not just
+/* View (and manage) the QR code linked to a business at any time - not just
    at creation. Links a new one on the spot if none exists yet, and lets the
    admin unlink the current one to hand the hardware back to stock. */
 export function QrViewModal({
@@ -93,7 +93,7 @@ export function QrViewModal({
   const unlink = async () => {
     if (!linked) return;
     await unlinkMutation.mutateAsync(String(linked._id)).then(
-      () => toast("info", `QR code "${linked.serial}" unlinked — the hardware is back in stock`),
+      () => toast("info", `QR code "${linked.serial}" unlinked - the hardware is back in stock`),
       () => {}
     );
   };
@@ -146,7 +146,7 @@ export function QrViewModal({
                     className="font-mono"
                   />
                   <p className="mt-1.5 text-xs text-fg-quaternary">
-                    {codeTouched ? "Doesn't need to exist yet — it's created automatically." : "Suggested from the business name — edit if you already have a physical code."}
+                    {codeTouched ? "Doesn't need to exist yet - it's created automatically." : "Suggested from the business name - edit if you already have a physical code."}
                   </p>
                 </div>
                 <Button onClick={link} loading={linkMutation.isPending} loadingText="Linking…" variant="primary">

@@ -4,7 +4,7 @@ import { ResponsiveBar } from "@nivo/bar";
 import { useTheme } from "@/components/ThemeProvider";
 import { getCategoricalColors, getNivoTheme } from "@/lib/nivoTheme";
 
-/* Average rating per shift band — the staffing conversation an owner can't
+/* Average rating per shift band - the staffing conversation an owner can't
    have from any other data he owns. Bands with too little volume are
    filtered out before this ever renders (see the lowData flag on each band). */
 export function ShiftBar({ bands }: { bands: { label: string; avgRating: number | null }[] }) {

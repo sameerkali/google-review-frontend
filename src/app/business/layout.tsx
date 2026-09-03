@@ -42,7 +42,7 @@ function BusinessShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!authChecked) return;
-    // Same replace()-not-push() pattern as the admin panel — keeps the login
+    // Same replace()-not-push() pattern as the admin panel - keeps the login
     // page out of history so Back can't land a signed-in owner back on it.
     if (!token && !isLoginRoute) { router.replace("/business/login"); return; }
     if (token && (isLoginRoute || isIndexRoute)) { router.replace("/business/dashboard"); return; }
