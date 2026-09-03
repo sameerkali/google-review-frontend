@@ -13,14 +13,14 @@ export function AspectsComparisonBar({ aspects }: { aspects: { aspect: string; l
   const data = aspects.map((a) => ({ aspect: a.aspect, "Low-rated (≤3★)": a.lowRated, "High-rated (4-5★)": a.highRated }));
 
   return (
-    <div style={{ height: Math.max(180, aspects.length * 36 + 60) }}>
+    <div style={{ height: Math.max(200, aspects.length * 36 + 80) }}>
       <ResponsiveBar
         data={data}
         keys={["Low-rated (≤3★)", "High-rated (4-5★)"]}
         indexBy="aspect"
         layout="horizontal"
         groupMode="grouped"
-        margin={{ top: 12, right: 20, bottom: 32, left: 90 }}
+        margin={{ top: 12, right: 20, bottom: 56, left: 90 }}
         padding={0.3}
         borderRadius={3}
         colors={[colors[1], colors[2]]}
@@ -36,7 +36,7 @@ export function AspectsComparisonBar({ aspects }: { aspects: { aspect: string; l
             dataFrom: "keys",
             anchor: "bottom",
             direction: "row",
-            translateY: 30,
+            translateY: 46,
             itemWidth: 150,
             itemHeight: 16,
             symbolSize: 8,

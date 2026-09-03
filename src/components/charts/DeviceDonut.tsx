@@ -10,10 +10,10 @@ export function DeviceDonut({ data }: { data: { _id: string; count: number }[] }
   const items = data.map((row) => ({ id: row._id || "unknown", label: row._id || "unknown", value: row.count }));
 
   return (
-    <div style={{ height: 220 }}>
+    <div style={{ height: 240 }}>
       <ResponsivePie
         data={items}
-        margin={{ top: 12, right: 12, bottom: 12, left: 12 }}
+        margin={{ top: 12, right: 12, bottom: 40, left: 12 }}
         innerRadius={0.6}
         padAngle={2}
         cornerRadius={4}
@@ -30,7 +30,7 @@ export function DeviceDonut({ data }: { data: { _id: string; count: number }[] }
           {
             anchor: "bottom",
             direction: "row",
-            translateY: 8,
+            translateY: 34,
             itemWidth: 70,
             itemHeight: 16,
             symbolSize: 8,

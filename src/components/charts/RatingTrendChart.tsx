@@ -20,8 +20,16 @@ export function RatingTrendChart({ points }: { points: RatingPoint[] }) {
 
   const series = [
     { id: "Daily average", data: points.map((p) => ({ x: p.date, y: p.avg })) },
-    { id: "7-day average", data: points.map((p) => ({ x: p.date, y: p.rolling7d })) },
+    { id: "7-day rolling average", data: points.map((p) => ({ x: p.date, y: p.rolling7d })) },
   ];
+
+  // nivo's "point" x-scale ignores a numeric tickValues (that only works on
+  // linear/time scales) and falls back to rendering every point — with 30-90
+  // days of data that's every date crammed onto the axis. Pick an explicit,
+  // evenly-spaced subset of actual date values instead.
+  const maxTicks = 8;
+  const tickStep = Math.max(1, Math.ceil(points.length / maxTicks));
+  const tickValues = points.filter((_, i) => i % tickStep === 0 || i === points.length - 1).map((p) => p.date);
 
   return (
     <div style={{ height: 260 }}>
@@ -39,7 +47,7 @@ export function RatingTrendChart({ points }: { points: RatingPoint[] }) {
         enableArea={false}
         useMesh
         curve="monotoneX"
-        axisBottom={{ tickSize: 0, tickPadding: 8, tickValues: Math.min(6, points.length), format: (v) => String(v).slice(5) }}
+        axisBottom={{ tickSize: 0, tickPadding: 8, tickValues, format: (v) => String(v).slice(5) }}
         axisLeft={{ tickSize: 0, tickPadding: 8, tickValues: 4 }}
         enableGridX={false}
         gridYValues={4}
@@ -50,7 +58,7 @@ export function RatingTrendChart({ points }: { points: RatingPoint[] }) {
             anchor: "top-left",
             direction: "row",
             translateY: -18,
-            itemWidth: 110,
+            itemWidth: 150,
             itemHeight: 16,
             symbolSize: 8,
             symbolShape: "circle",
