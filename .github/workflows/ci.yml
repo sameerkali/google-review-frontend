@@ -18,12 +18,20 @@ jobs:
 
       - uses: actions/setup-node@v5
         with:
-          # Must match the Node/npm version package-lock.json was generated
-          # with (npm ci fails "out of sync" otherwise - some optional
-          # platform-specific sub-deps resolve differently across npm
-          # major versions, even with the same package.json).
           node-version: 24
           cache: npm
+
+      # npm 10.x (whatever setup-node's Node 24 currently bundles) fails
+      # `npm ci` on this lockfile - "Missing @emnapi/... from lock file" -
+      # over an optional-dependency subtree (sharp's wasm32 fallback build
+      # pulling in the same @emnapi packages other optional native modules
+      # need at different versions). Confirmed by direct comparison: the
+      # exact same lockfile installs and `ci`s cleanly under npm 11, fails
+      # under npm 10, regardless of Node version either was run under - an
+      # npm-version bug/incompatibility, not a lockfile or Node problem.
+      # Pinning npm explicitly here is more reliable than hoping whatever
+      # Node 24 patch the runner has today still bundles a working npm.
+      - run: npm install -g npm@11
 
       - run: npm ci
 
