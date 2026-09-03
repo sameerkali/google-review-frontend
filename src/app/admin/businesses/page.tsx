@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAdmin } from "../_lib/context";
-import type { Row } from "@/lib/types";
+import type { Row, HardwareItem, Plan } from "@/lib/types";
 import { usePaginatedList } from "../_lib/usePaginatedList";
 import { ListTab } from "@/components/ListTab";
 import { QrViewModal } from "../_components/QrViewModal";
@@ -13,14 +13,7 @@ import { BusinessEditModal } from "../_components/BusinessEditModal";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { EyeIcon, HardwareIcon, PencilIcon, TrashIcon } from "@/components/icons";
 import { IconButton } from "@/components/ui/Button";
-
-function hasLinkedHardware(business: Row, hardwareList: Row[]): boolean {
-  return hardwareList.some((h) => {
-    const assigned = h.assignedBusinessId;
-    const id = assigned && typeof assigned === "object" ? assigned._id : assigned;
-    return id === business._id;
-  });
-}
+import { hasLinkedHardware, populatedName } from "@/lib/utils";
 
 export default function BusinessesPage() {
   const router = useRouter();
@@ -29,12 +22,12 @@ export default function BusinessesPage() {
   const enabled = authChecked && !!token;
   const { data: hardware = [] } = useQuery({
     queryKey: ["admin", "hardware", "all"],
-    queryFn: () => api<Row[]>("/admin/hardware", { token }),
+    queryFn: () => api<HardwareItem[]>("/admin/hardware", { token }),
     enabled,
   });
   const { data: plans = [] } = useQuery({
     queryKey: ["admin", "plans"],
-    queryFn: () => api<Row[]>("/admin/plans", { token }),
+    queryFn: () => api<Plan[]>("/admin/plans", { token }),
     enabled,
   });
   const list = usePaginatedList(["admin", "businesses", "list"], "/admin/business", token, toast);
@@ -43,7 +36,7 @@ export default function BusinessesPage() {
   // DataTable can render, instead of showing raw ids or [object Object].
   const rows = list.rows.map((b) => ({
     ...b,
-    plan: b.planId && typeof b.planId === "object" ? b.planId.name : "—",
+    plan: populatedName(b.planId),
   }));
 
   const [qrBusiness, setQrBusiness] = useState<Row | null>(null);

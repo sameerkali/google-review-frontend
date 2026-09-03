@@ -4,20 +4,22 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAdmin } from "../_lib/context";
-import type { Row } from "@/lib/types";
+import type { Row, Business } from "@/lib/types";
 import { usePaginatedList } from "../_lib/usePaginatedList";
 import { ListTab } from "@/components/ListTab";
 import { HardwareEditModal } from "../_components/HardwareEditModal";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { PencilIcon, TrashIcon } from "@/components/icons";
 import { IconButton } from "@/components/ui/Button";
+import { populatedName } from "@/lib/utils";
+import { invalidateHardwareQueries } from "../_lib/queryKeys";
 
 export default function HardwarePage() {
   const { token, authChecked, toast } = useAdmin();
   const queryClient = useQueryClient();
   const { data: businesses = [] } = useQuery({
     queryKey: ["admin", "businesses", "all"],
-    queryFn: () => api<Row[]>("/admin/business", { token }),
+    queryFn: () => api<Business[]>("/admin/business", { token }),
     enabled: authChecked && !!token,
   });
   const list = usePaginatedList(["admin", "hardware", "list"], "/admin/hardware", token, toast);
@@ -26,17 +28,13 @@ export default function HardwarePage() {
   // the shared DataTable can render, instead of showing raw ids or [object Object].
   const rows = list.rows.map((h) => ({
     ...h,
-    business: h.assignedBusinessId && typeof h.assignedBusinessId === "object" ? h.assignedBusinessId.name : "—",
+    business: populatedName(h.assignedBusinessId),
   }));
 
   const [editHardware, setEditHardware] = useState<Row | null>(null);
   const [deleteHardware, setDeleteHardware] = useState<Row | null>(null);
 
-  const invalidateHardware = () => {
-    queryClient.invalidateQueries({ queryKey: ["admin", "hardware", "list"] });
-    queryClient.invalidateQueries({ queryKey: ["admin", "hardware", "all"] });
-    queryClient.invalidateQueries({ queryKey: ["admin", "overview"] });
-  };
+  const invalidateHardware = () => invalidateHardwareQueries(queryClient);
 
   const addMutation = useMutation({
     mutationKey: ["admin", "hardware", "add"],

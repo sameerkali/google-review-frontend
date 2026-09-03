@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useIsFetching, useQuery } from "@tanstack/react-query";
 import { AdminProvider, useAdmin } from "./_lib/context";
 import { api } from "@/lib/api";
-import type { Row } from "@/lib/types";
+import type { HardwareItem, Plan } from "@/lib/types";
 import { ToastContainer } from "@/components/Toast";
 import { OnboardWizard } from "./_components/OnboardWizard";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -47,12 +47,12 @@ function AdminShell({ children }: { children: React.ReactNode }) {
   // admin page is currently active.
   const { data: hardwareAll } = useQuery({
     queryKey: ["admin", "hardware", "all"],
-    queryFn: () => api<Row[]>("/admin/hardware", { token }),
+    queryFn: () => api<HardwareItem[]>("/admin/hardware", { token }),
     enabled,
   });
   const { data: plans } = useQuery({
     queryKey: ["admin", "plans"],
-    queryFn: () => api<Row[]>("/admin/plans", { token }),
+    queryFn: () => api<Plan[]>("/admin/plans", { token }),
     enabled,
   });
 
@@ -71,16 +71,22 @@ function AdminShell({ children }: { children: React.ReactNode }) {
     if (token && (isLoginRoute || isIndexRoute)) { router.replace("/admin/overview"); return; }
   }, [authChecked, token, isLoginRoute, isIndexRoute, router]);
 
+  // Rendered unconditionally below, not just in the signed-in shell - a
+  // toast fired right as a session gets force-signed-out would otherwise be
+  // added to state during the redirect and never actually painted, since
+  // that transition briefly passes through the spinner/login branches.
+  const toastLayer = <ToastContainer toasts={toasts} dismiss={dismissToast} />;
+
   const redirecting = !authChecked || (!token && !isLoginRoute) || (token && (isLoginRoute || isIndexRoute));
-  if (redirecting) return <FullPageSpinner />;
-  if (isLoginRoute) return <>{children}</>;
+  if (redirecting) return <>{toastLayer}<FullPageSpinner /></>;
+  if (isLoginRoute) return <>{toastLayer}{children}</>;
 
   const activeKey = NAV.find((n) => pathname.startsWith(n.href))?.key || "overview";
   const activeLabel = NAV.find((n) => n.key === activeKey)?.label || "Admin";
 
   return (
     <div className="min-h-screen bg-background flex">
-      <ToastContainer toasts={toasts} dismiss={dismissToast} />
+      {toastLayer}
       <OnboardWizard
         key={wizardKey}
         open={wizardOpen}

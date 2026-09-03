@@ -1,15 +1,13 @@
 "use client";
 
 import { ResponsiveBar } from "@nivo/bar";
-import { useTheme } from "@/components/ThemeProvider";
-import { getCategoricalColors, getNivoTheme } from "@/lib/nivoTheme";
+import { useChartTheme } from "@/hooks/useChartTheme";
 
 /* Low-rated vs high-rated mention counts, side by side per aspect - reads as
    "what's working / what isn't" rather than a complaints list, which lands
    as an attack. */
 export function AspectsComparisonBar({ aspects }: { aspects: { aspect: string; lowRated: number; highRated: number }[] }) {
-  const { theme } = useTheme();
-  const colors = getCategoricalColors(theme);
+  const { colors, nivoTheme } = useChartTheme();
   const data = aspects.map((a) => ({ aspect: a.aspect, "Low-rated (≤3★)": a.lowRated, "High-rated (4-5★)": a.highRated }));
 
   return (
@@ -24,7 +22,7 @@ export function AspectsComparisonBar({ aspects }: { aspects: { aspect: string; l
         padding={0.3}
         borderRadius={3}
         colors={[colors[1], colors[2]]}
-        theme={getNivoTheme(theme)}
+        theme={nivoTheme}
         axisBottom={{ tickSize: 0, tickPadding: 8 }}
         axisLeft={{ tickSize: 0, tickPadding: 8 }}
         enableGridY={false}

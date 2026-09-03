@@ -1,8 +1,8 @@
 "use client";
 
 import { ResponsiveFunnel } from "@nivo/funnel";
-import { useTheme } from "@/components/ThemeProvider";
-import { getNivoTheme, SEQUENTIAL_ORDINAL } from "@/lib/nivoTheme";
+import { useChartTheme } from "@/hooks/useChartTheme";
+import { SEQUENTIAL_ORDINAL } from "@/lib/nivoTheme";
 
 export interface FunnelStage {
   id: string;
@@ -11,7 +11,7 @@ export interface FunnelStage {
 }
 
 export function ConversionFunnelChart({ stages }: { stages: FunnelStage[] }) {
-  const { theme } = useTheme();
+  const { theme, nivoTheme } = useChartTheme();
   // Nivo's funnel shape always renders the formatted value, never the part
   // id - a legend row is how identity stays labeled, not color-alone.
   const withLabels = stages.map((s) => ({ ...s, label: s.id }));
@@ -33,7 +33,7 @@ export function ConversionFunnelChart({ stages }: { stages: FunnelStage[] }) {
           direction="horizontal"
           shapeBlending={0.6}
           colors={SEQUENTIAL_ORDINAL}
-          theme={getNivoTheme(theme)}
+          theme={nivoTheme}
           borderWidth={0}
           labelColor={theme === "light" ? "#ffffff" : "#0b0b0b"}
           beforeSeparatorLength={0}

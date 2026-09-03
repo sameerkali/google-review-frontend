@@ -1,12 +1,10 @@
 "use client";
 
 import { ResponsivePie } from "@nivo/pie";
-import { useTheme } from "@/components/ThemeProvider";
-import { getCategoricalColors, getNivoTheme } from "@/lib/nivoTheme";
+import { useChartTheme } from "@/hooks/useChartTheme";
 
 export function DeviceDonut({ data }: { data: { _id: string; count: number }[] }) {
-  const { theme } = useTheme();
-  const colors = getCategoricalColors(theme);
+  const { colors, nivoTheme } = useChartTheme();
   const items = data.map((row) => ({ id: row._id || "unknown", label: row._id || "unknown", value: row.count }));
 
   return (
@@ -19,7 +17,7 @@ export function DeviceDonut({ data }: { data: { _id: string; count: number }[] }
         cornerRadius={4}
         activeOuterRadiusOffset={6}
         colors={colors}
-        theme={getNivoTheme(theme)}
+        theme={nivoTheme}
         borderWidth={0}
         enableArcLinkLabels={false}
         arcLabelsSkipAngle={20}

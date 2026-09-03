@@ -1,5 +1,6 @@
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
+import { slugifyForFilename } from "./utils";
 
 /* Client-side PDF generation - no headless-browser/Puppeteer backend needed.
    Everything drawn here comes from the same JSON the dashboard already
@@ -213,6 +214,6 @@ export function generateReportPdf(reports: ReportPayload[], businessName: string
     doc.text(lines, marginX, y);
   });
 
-  const filename = `${businessName.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-report-${new Date().toISOString().slice(0, 10)}.pdf`;
+  const filename = `${slugifyForFilename(businessName)}-report-${new Date().toISOString().slice(0, 10)}.pdf`;
   doc.save(filename);
 }

@@ -1,5 +1,10 @@
 "use client";
 
+import { useEffect, useRef } from "react";
+
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 /* Shared modal shell - backdrop, panel, click-outside-to-close. Each modal
    composes its own header/body/footer inside `children` since content shape
    varies (a confirm dialog vs. a multi-step wizard vs. an edit form). */
@@ -27,6 +32,35 @@ export function Modal({
   role?: "dialog" | "alertdialog";
   children: React.ReactNode;
 }) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const previouslyFocused = useRef<HTMLElement | null>(null);
+
+  // Move focus into the dialog on open, and back to whatever triggered it
+  // on close - without this, a keyboard/screen-reader user tabbing through
+  // the page never lands inside the dialog at all, and Tab can walk focus
+  // out to elements hidden behind the backdrop.
+  useEffect(() => {
+    if (!open) return;
+    previouslyFocused.current = document.activeElement as HTMLElement | null;
+    panelRef.current?.focus();
+    return () => previouslyFocused.current?.focus?.();
+  }, [open]);
+
+  const trapFocus = (e: React.KeyboardEvent) => {
+    if (e.key !== "Tab" || !panelRef.current) return;
+    const focusable = panelRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  };
+
   if (!open) return null;
 
   return (
@@ -35,10 +69,13 @@ export function Modal({
       onClick={(e) => { if (e.target === e.currentTarget) onClose?.(); }}
     >
       <div
+        ref={panelRef}
         role={role}
         aria-modal="true"
         aria-labelledby={labelledBy}
-        className={`w-full ${MAX_WIDTH[maxWidth]} rounded-2xl border border-border bg-surface shadow-2xl animate-scale-in max-h-[calc(100dvh-2rem)] overflow-y-auto`}
+        tabIndex={-1}
+        onKeyDown={trapFocus}
+        className={`w-full ${MAX_WIDTH[maxWidth]} rounded-2xl border border-border bg-surface shadow-2xl animate-scale-in max-h-[calc(100dvh-2rem)] overflow-y-auto outline-none`}
       >
         {children}
       </div>

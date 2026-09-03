@@ -1,12 +1,10 @@
 "use client";
 
 import { ResponsiveRadialBar } from "@nivo/radial-bar";
-import { useTheme } from "@/components/ThemeProvider";
-import { getCategoricalColors, getNivoTheme } from "@/lib/nivoTheme";
+import { useChartTheme } from "@/hooks/useChartTheme";
 
 export function OsRadialBar({ data }: { data: { _id: string; count: number }[] }) {
-  const { theme } = useTheme();
-  const colors = getCategoricalColors(theme);
+  const { theme, colors, nivoTheme } = useChartTheme();
   const series = data.map((row) => ({
     id: row._id || "unknown",
     data: [{ x: row._id || "unknown", y: row.count }],
@@ -20,7 +18,7 @@ export function OsRadialBar({ data }: { data: { _id: string; count: number }[] }
         padding={0.35}
         cornerRadius={4}
         colors={colors}
-        theme={getNivoTheme(theme)}
+        theme={nivoTheme}
         enableTracks
         tracksColor={theme === "light" ? "#f4f4f5" : "#27272a"}
         radialAxisStart={null}

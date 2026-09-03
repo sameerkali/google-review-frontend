@@ -49,13 +49,20 @@ function BusinessShell({ children }: { children: React.ReactNode }) {
     if (token && (isLoginRoute || isIndexRoute)) { router.replace("/business/dashboard"); return; }
   }, [authChecked, token, isLoginRoute, isIndexRoute, router]);
 
+  // Rendered unconditionally below (not just in the signed-in shell) so a
+  // toast fired right as a session gets force-signed-out (e.g. a business
+  // account suspended mid-session) still has somewhere to show - otherwise
+  // it's added to state during the redirect and never actually painted,
+  // since that transition briefly passes through the spinner/login branches.
+  const toastLayer = <ToastContainer toasts={toasts} dismiss={dismissToast} />;
+
   const redirecting = !authChecked || (!token && !isLoginRoute) || (token && (isLoginRoute || isIndexRoute));
-  if (redirecting) return <FullPageSpinner />;
-  if (isLoginRoute) return <>{children}</>;
+  if (redirecting) return <>{toastLayer}<FullPageSpinner /></>;
+  if (isLoginRoute) return <>{toastLayer}{children}</>;
 
   return (
     <div className="min-h-screen bg-background">
-      <ToastContainer toasts={toasts} dismiss={dismissToast} />
+      {toastLayer}
       <ConfirmDialog
         open={confirmSignOut}
         title="Sign out?"

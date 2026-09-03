@@ -4,9 +4,11 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAdmin } from "../_lib/context";
-import type { Row } from "@/lib/types";
+import type { Row, Business, HardwareItem } from "@/lib/types";
 import { AlertIcon, HardwareIcon, PlusIcon, QrIcon } from "@/components/icons";
 import { Skeleton } from "@/components/Loaders";
+import { HARDWARE_STATUS_OPTIONS, type EventType } from "../_lib/validators";
+import { hasLinkedHardware } from "@/lib/utils";
 
 function timeAgo(iso?: string): string {
   if (!iso) return "";
@@ -17,15 +19,7 @@ function timeAgo(iso?: string): string {
   return `${Math.floor(s / 86400)}d ago`;
 }
 
-const EVENT_LABEL: Record<string, string> = { scan: "scanned the QR", google_click: "opened Google Reviews", review_copy: "copied a review" };
-
-function hasLinkedHardware(business: Row, hardwareList: Row[]): boolean {
-  return hardwareList.some((h) => {
-    const assigned = h.assignedBusinessId;
-    const id = assigned && typeof assigned === "object" ? assigned._id : assigned;
-    return id === business._id;
-  });
-}
+const EVENT_LABEL: Record<EventType, string> = { scan: "scanned the QR", google_click: "opened Google Reviews", review_copy: "copied a review" };
 
 export default function OverviewPage() {
   const { token, authChecked, openWizard } = useAdmin();
@@ -38,12 +32,12 @@ export default function OverviewPage() {
   });
   const { data: businesses = [], isPending: bLoading } = useQuery({
     queryKey: ["admin", "businesses", "all"],
-    queryFn: () => api<Row[]>("/admin/business", { token }),
+    queryFn: () => api<Business[]>("/admin/business", { token }),
     enabled,
   });
   const { data: hardware = [], isPending: hLoading } = useQuery({
     queryKey: ["admin", "hardware", "all"],
-    queryFn: () => api<Row[]>("/admin/hardware", { token }),
+    queryFn: () => api<HardwareItem[]>("/admin/hardware", { token }),
     enabled,
   });
   const { data: analytics, isPending: aLoading } = useQuery({
@@ -61,13 +55,12 @@ export default function OverviewPage() {
     ...businesses.filter((b) => b.status === "active" && !hasLinkedHardware(b, hardware)).map((b) => ({ b, reason: "no QR linked yet" })),
   ].slice(0, 5);
 
-  const hardwareByStatus = {
-    available: hardware.filter((h) => h.status === "available").length,
-    assigned: hardware.filter((h) => h.status === "assigned").length,
-    lost: hardware.filter((h) => h.status === "lost").length,
-    damaged: hardware.filter((h) => h.status === "damaged").length,
-  };
-  const lowStock = hardwareByStatus.available < 3;
+  // Built from the shared status list (not hand-listed here) so a status
+  // added there shows up in this breakdown automatically.
+  const hardwareByStatus: Record<string, number> = Object.fromEntries(
+    HARDWARE_STATUS_OPTIONS.map((s) => [s, hardware.filter((h) => h.status === s).length])
+  );
+  const lowStock = (hardwareByStatus.available ?? 0) < 3;
 
   const recentEvents = [...events]
     .sort((a, b) => new Date(String(b.createdAt)).getTime() - new Date(String(a.createdAt)).getTime())
@@ -157,22 +150,12 @@ export default function OverviewPage() {
               <Link href="/admin/hardware" className="text-xs text-brand hover:text-brand-hover transition-colors">View all →</Link>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <p className="text-2xl font-bold text-fg font-mono tabular-nums">{hardwareByStatus.available}</p>
-                <p className="text-xs text-fg-tertiary">Available</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-fg font-mono tabular-nums">{hardwareByStatus.assigned}</p>
-                <p className="text-xs text-fg-tertiary">Assigned</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-fg font-mono tabular-nums">{hardwareByStatus.lost}</p>
-                <p className="text-xs text-fg-tertiary">Lost</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-fg font-mono tabular-nums">{hardwareByStatus.damaged}</p>
-                <p className="text-xs text-fg-tertiary">Damaged</p>
-              </div>
+              {HARDWARE_STATUS_OPTIONS.map((s) => (
+                <div key={s}>
+                  <p className="text-2xl font-bold text-fg font-mono tabular-nums">{hardwareByStatus[s]}</p>
+                  <p className="text-xs text-fg-tertiary capitalize">{s}</p>
+                </div>
+              ))}
             </div>
             {lowStock && (
               <p className="flex items-center gap-1.5 text-xs text-warning">
@@ -193,7 +176,7 @@ export default function OverviewPage() {
                 {recentEvents.map((e) => (
                   <li key={String(e._id)} className="flex items-center justify-between gap-3 py-2.5 text-sm">
                     <span className="text-fg-secondary truncate">
-                      <span className="text-fg font-medium">{businessName(e.businessId)}</span> {EVENT_LABEL[String(e.eventType)] || e.eventType}
+                      <span className="text-fg font-medium">{businessName(e.businessId)}</span> {EVENT_LABEL[e.eventType as EventType] || e.eventType}
                     </span>
                     <span className="text-xs text-fg-quaternary shrink-0">{timeAgo(String(e.createdAt))}</span>
                   </li>

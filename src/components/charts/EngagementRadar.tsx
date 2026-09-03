@@ -1,8 +1,7 @@
 "use client";
 
 import { ResponsiveRadar } from "@nivo/radar";
-import { useTheme } from "@/components/ThemeProvider";
-import { getNivoTheme } from "@/lib/nivoTheme";
+import { useChartTheme } from "@/hooks/useChartTheme";
 
 /* Normalizes scan/copy/click counts to a 0–100 index relative to scans (the
    top of the funnel), plus conversion rate on its own already-percentage
@@ -16,7 +15,7 @@ export function EngagementRadar({
   googleClicks: number;
   conversionRate: number;
 }) {
-  const { theme } = useTheme();
+  const { theme, nivoTheme } = useChartTheme();
   const base = scans || 1;
   const data = [
     { metric: "Scans", index: 100 },
@@ -37,7 +36,7 @@ export function EngagementRadar({
         gridLevels={4}
         gridShape="circular"
         colors={[hue]}
-        theme={getNivoTheme(theme)}
+        theme={nivoTheme}
         fillOpacity={0.25}
         borderWidth={2}
         dotSize={6}

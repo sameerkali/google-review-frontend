@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAdmin } from "../_lib/context";
-import type { Row, ToastFn } from "@/lib/types";
+import type { Row, ToastFn, Business } from "@/lib/types";
 import { MenuItemManager, type MenuManagerRow } from "@/components/MenuItemManager";
 import { BulkMenuUploadModal } from "../_components/BulkMenuUploadModal";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -305,7 +305,7 @@ export default function MenuPage() {
   const { token, authChecked, toast } = useAdmin();
   const { data: businesses = [] } = useQuery({
     queryKey: ["admin", "businesses", "all"],
-    queryFn: () => api<Row[]>("/admin/business", { token }),
+    queryFn: () => api<Business[]>("/admin/business", { token }),
     enabled: authChecked && !!token,
   });
   const [selected, setSelected] = useState<BizSummary | null>(null);

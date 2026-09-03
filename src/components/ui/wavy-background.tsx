@@ -48,6 +48,16 @@ export const WavyBackground = ({
     }
   };
 
+  // A named handler (not `window.onresize = ...`) so it can be removed on
+  // unmount instead of clobbering/being clobbered by any other resize
+  // listener elsewhere on the page.
+  const handleResize = () => {
+    if (!ctx) return;
+    w = ctx.canvas.width = window.innerWidth;
+    h = ctx.canvas.height = window.innerHeight;
+    ctx.filter = `blur(${blur}px)`;
+  };
+
   const init = () => {
     canvas = canvasRef.current;
     if (!canvas) return;
@@ -57,12 +67,7 @@ export const WavyBackground = ({
     h = ctx.canvas.height = window.innerHeight;
     ctx.filter = `blur(${blur}px)`;
     nt = 0;
-    window.onresize = function () {
-      if (!ctx) return;
-      w = ctx.canvas.width = window.innerWidth;
-      h = ctx.canvas.height = window.innerHeight;
-      ctx.filter = `blur(${blur}px)`;
-    };
+    window.addEventListener("resize", handleResize);
     render();
   };
 
@@ -107,6 +112,7 @@ export const WavyBackground = ({
     init();
     return () => {
       cancelAnimationFrame(animationId);
+      window.removeEventListener("resize", handleResize);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- init/animationId are re-created every render by design (imperative canvas setup); this effect intentionally runs once on mount only
   }, []);

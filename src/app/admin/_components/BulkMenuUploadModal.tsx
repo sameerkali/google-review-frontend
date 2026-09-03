@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/Button";
 import { Field, Select } from "@/components/ui/Input";
 import { MenuJsonInput } from "@/components/MenuJsonInput";
 import { parseMenuJson, type ParsedMenuItem } from "@/lib/parseMenuJson";
+import { guardedClose } from "@/lib/utils";
 
 /* Bulk-imports menu items from a JSON file or pasted JSON, instead of adding
    one at a time through the inline form. */
@@ -65,9 +66,9 @@ export function BulkMenuUploadModal({
   };
 
   return (
-    <Modal open={open} onClose={uploadMutation.isPending ? undefined : onClose} maxWidth="2xl" labelledBy="bulk-menu-title">
+    <Modal open={open} onClose={guardedClose(onClose, uploadMutation.isPending)} maxWidth="2xl" labelledBy="bulk-menu-title">
       <div className="max-h-[85vh] flex flex-col">
-        <ModalHeader onClose={uploadMutation.isPending ? undefined : onClose}>
+        <ModalHeader onClose={guardedClose(onClose, uploadMutation.isPending)}>
           <h2 id="bulk-menu-title" className="text-sm font-semibold text-fg">Bulk Upload Menu Items</h2>
         </ModalHeader>
 

@@ -1,15 +1,13 @@
 "use client";
 
 import { ResponsiveBar } from "@nivo/bar";
-import { useTheme } from "@/components/ThemeProvider";
-import { getCategoricalColors, getNivoTheme } from "@/lib/nivoTheme";
+import { useChartTheme } from "@/hooks/useChartTheme";
 
 /* Count per star, 1 to 5. The single most useful Basic widget - a 4.6
    average with a bimodal distribution is a different business than a 4.6
    with everything clustered at 4-5, and the average alone can't show that. */
 export function RatingDistributionBar({ distribution }: { distribution: Record<string, number> }) {
-  const { theme } = useTheme();
-  const colors = getCategoricalColors(theme);
+  const { colors, nivoTheme } = useChartTheme();
   const data = [1, 2, 3, 4, 5].map((star) => ({ star: `${star}★`, value: distribution[star] || 0 }));
 
   return (
@@ -22,7 +20,7 @@ export function RatingDistributionBar({ distribution }: { distribution: Record<s
         padding={0.4}
         borderRadius={4}
         colors={colors[0]}
-        theme={getNivoTheme(theme)}
+        theme={nivoTheme}
         axisBottom={{ tickSize: 0, tickPadding: 8 }}
         axisLeft={{ tickSize: 0, tickPadding: 8, tickValues: 4 }}
         enableGridX={false}

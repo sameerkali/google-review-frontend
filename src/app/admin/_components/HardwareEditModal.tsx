@@ -5,10 +5,12 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { Row, ToastFn } from "@/lib/types";
 import { HARDWARE_STATUS_OPTIONS } from "../_lib/validators";
+import { invalidateHardwareQueries } from "../_lib/queryKeys";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
 import { Modal, ModalHeader, ModalBody, ModalFooter } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Field, Input, Select, Label } from "@/components/ui/Input";
+import { populatedId, guardedClose } from "@/lib/utils";
 
 /* Full edit for a hardware/QR record: rename its serial, change type/status,
    or reassign it to a different business - the "U" in CRUD for hardware. */
@@ -22,9 +24,7 @@ export function HardwareEditModal({
   toast: ToastFn;
 }) {
   const queryClient = useQueryClient();
-  const linkedId = hardware?.assignedBusinessId
-    ? (typeof hardware.assignedBusinessId === "object" ? hardware.assignedBusinessId._id : hardware.assignedBusinessId)
-    : "";
+  const linkedId = populatedId(hardware?.assignedBusinessId) as string | undefined;
 
   const [type, setType] = useState(hardware?.type || "QR");
   const [serial, setSerial] = useState(hardware?.serial || "");
@@ -36,9 +36,7 @@ export function HardwareEditModal({
     mutationKey: ["admin", "hardware", "update"],
     mutationFn: (body: Record<string, unknown>) => api(`/admin/hardware/${hardware?._id}`, { method: "PUT", token, body }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin", "hardware", "list"] });
-      queryClient.invalidateQueries({ queryKey: ["admin", "hardware", "all"] });
-      queryClient.invalidateQueries({ queryKey: ["admin", "overview"] });
+      invalidateHardwareQueries(queryClient);
       toast("success", "Hardware updated");
       onClose();
     },
@@ -59,8 +57,8 @@ export function HardwareEditModal({
   };
 
   return (
-    <Modal open={!!hardware} onClose={saveMutation.isPending ? undefined : onClose} maxWidth="md" labelledBy="hw-edit-title">
-      <ModalHeader onClose={saveMutation.isPending ? undefined : onClose}>
+    <Modal open={!!hardware} onClose={guardedClose(onClose, saveMutation.isPending)} maxWidth="md" labelledBy="hw-edit-title">
+      <ModalHeader onClose={guardedClose(onClose, saveMutation.isPending)}>
         <h2 id="hw-edit-title" className="text-sm font-semibold text-fg">Edit Hardware</h2>
       </ModalHeader>
 

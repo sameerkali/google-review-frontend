@@ -1,12 +1,10 @@
 "use client";
 
 import { ResponsiveBar } from "@nivo/bar";
-import { useTheme } from "@/components/ThemeProvider";
-import { getCategoricalColors, getNivoTheme } from "@/lib/nivoTheme";
+import { useChartTheme } from "@/hooks/useChartTheme";
 
 export function ActivityByTypeBar({ scans, reviewCopies, googleClicks }: { scans: number; reviewCopies: number; googleClicks: number }) {
-  const { theme } = useTheme();
-  const colors = getCategoricalColors(theme);
+  const { colors, nivoTheme } = useChartTheme();
   const data = [
     { type: "Scans", fullLabel: "Scans", value: scans, color: colors[0] },
     { type: "Copies", fullLabel: "Review Copies", value: reviewCopies, color: colors[1] },
@@ -23,7 +21,7 @@ export function ActivityByTypeBar({ scans, reviewCopies, googleClicks }: { scans
         padding={0.45}
         borderRadius={4}
         colors={(d) => (d.data as { color: string }).color}
-        theme={getNivoTheme(theme)}
+        theme={nivoTheme}
         axisBottom={{ tickSize: 0, tickPadding: 8 }}
         axisLeft={{ tickSize: 0, tickPadding: 8, tickValues: 4 }}
         enableGridX={false}

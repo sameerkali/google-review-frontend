@@ -9,7 +9,7 @@ import { Pagination } from "@/components/Pagination";
 import { Button } from "@/components/ui/Button";
 import { Input, Select } from "@/components/ui/Input";
 
-const PAGE_SIZES = [10, 25, 50, 100];
+export const PAGE_SIZES = [10, 25, 50, 100];
 
 export interface PaginationControls {
   search: string;
@@ -87,6 +87,7 @@ export function ListTab({
                 value={pagination.search}
                 onChange={(e) => pagination.onSearchChange(e.target.value)}
                 placeholder="Search…"
+                aria-label={`Search ${title.toLowerCase()}`}
                 className="w-40 sm:w-56 pl-9"
               />
             </div>

@@ -25,7 +25,7 @@ export function HeroQrCode({ size = 176 }: { size?: number }) {
   return (
     <div className="relative inline-block">
       <div className={`relative rounded-2xl bg-white p-3 shadow-xl transition-opacity duration-300 ${ready ? "opacity-100" : "opacity-0"}`}>
-        <canvas ref={canvasRef} width={size} height={size} className="block rounded" />
+        <canvas ref={canvasRef} width={size} height={size} className="block rounded" role="img" aria-label="QR code linking to this page" />
       </div>
     </div>
   );

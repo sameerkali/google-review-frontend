@@ -14,6 +14,7 @@ import { parseMenuJson, type ParsedMenuItem } from "@/lib/parseMenuJson";
 import { Modal, ModalHeader } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Field, Input, Select, Label } from "@/components/ui/Input";
+import { guardedClose } from "@/lib/utils";
 
 type MenuMode = "type" | "json";
 
@@ -245,10 +246,10 @@ export function OnboardWizard({
   const stepIndex = WIZARD_STEPS.findIndex((s) => s.key === step);
 
   return (
-    <Modal open={open} onClose={onboardMutation.isPending ? undefined : onClose} maxWidth="lg" labelledBy="wizard-title">
+    <Modal open={open} onClose={guardedClose(onClose, onboardMutation.isPending)} maxWidth="lg" labelledBy="wizard-title">
       <div className="max-h-[85vh] flex flex-col">
         {/* Header */}
-        <ModalHeader onClose={onboardMutation.isPending ? undefined : onClose}>
+        <ModalHeader onClose={guardedClose(onClose, onboardMutation.isPending)}>
           <h2 id="wizard-title" className="text-sm font-semibold text-fg">
             {step === "success" ? "Business Onboarded" : "Onboard New Business"}
           </h2>

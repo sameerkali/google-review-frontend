@@ -8,6 +8,7 @@ import { useEscapeKey } from "@/hooks/useEscapeKey";
 import { Modal, ModalHeader, ModalBody, ModalFooter } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Field, Input, Select, Label } from "@/components/ui/Input";
+import { guardedClose } from "@/lib/utils";
 
 const BILLING_OPTIONS = ["monthly", "annually", "one_time"] as const;
 const ANALYTICS_OPTIONS = [
@@ -93,9 +94,9 @@ export function PlanEditModal({
   };
 
   return (
-    <Modal open={open} onClose={saveMutation.isPending ? undefined : onClose} maxWidth="md" labelledBy="plan-edit-title">
+    <Modal open={open} onClose={guardedClose(onClose, saveMutation.isPending)} maxWidth="md" labelledBy="plan-edit-title">
       <div className="max-h-[85vh] flex flex-col">
-        <ModalHeader onClose={saveMutation.isPending ? undefined : onClose}>
+        <ModalHeader onClose={guardedClose(onClose, saveMutation.isPending)}>
           <h2 id="plan-edit-title" className="text-sm font-semibold text-fg">{plan ? "Edit Plan" : "New Plan"}</h2>
         </ModalHeader>
 

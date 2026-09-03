@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAdmin } from "../_lib/context";
-import type { Row } from "@/lib/types";
+import type { Row, Plan } from "@/lib/types";
 import { PlanEditModal } from "../_components/PlanEditModal";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Skeleton } from "@/components/Loaders";
@@ -27,7 +27,7 @@ export default function PlansPage() {
   const queryClient = useQueryClient();
   const { data: plans = [], isPending: dataLoading } = useQuery({
     queryKey: ["admin", "plans"],
-    queryFn: () => api<Row[]>("/admin/plans", { token }),
+    queryFn: () => api<Plan[]>("/admin/plans", { token }),
     enabled: authChecked && !!token,
   });
 

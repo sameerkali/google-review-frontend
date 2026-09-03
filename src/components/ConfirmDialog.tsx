@@ -5,6 +5,7 @@ import { AlertIcon } from "@/components/icons";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
+import { guardedClose } from "@/lib/utils";
 
 /* Shared confirmation modal for destructive actions (delete business, delete
    hardware, unlink a QR). Renders nothing when closed. */
@@ -32,7 +33,7 @@ export function ConfirmDialog({
   };
 
   return (
-    <Modal open={open} onClose={busy ? undefined : onCancel} maxWidth="sm" role="alertdialog" labelledBy="confirm-title">
+    <Modal open={open} onClose={guardedClose(onCancel, busy)} maxWidth="sm" role="alertdialog" labelledBy="confirm-title">
       <div className="p-6 space-y-4">
         <div className="flex items-start gap-3">
           <div className="w-9 h-9 rounded-full bg-danger/15 flex items-center justify-center shrink-0">

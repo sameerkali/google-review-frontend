@@ -70,7 +70,7 @@ export function QrCard({
       <div className={`flex flex-col gap-6 ${compact ? "items-center text-center" : "items-start sm:flex-row sm:text-left"}`}>
         {/* Canvas renders the QR code */}
         <div className="bg-white p-3 rounded-2xl shadow-lg shrink-0">
-          <canvas ref={canvasRef} className="block" />
+          <canvas ref={canvasRef} className="block" role="img" aria-label={`QR code linking to ${businessName}'s review page`} />
         </div>
         <div className="space-y-4 flex-1 min-w-0">
           <div className="space-y-1.5">

@@ -4,20 +4,23 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAdmin } from "../_lib/context";
-import type { Row } from "@/lib/types";
+import type { Business } from "@/lib/types";
 import { usePaginatedList } from "../_lib/usePaginatedList";
 import { Skeleton } from "@/components/Loaders";
 import { DataTable } from "@/components/DataTable";
 import { Pagination } from "@/components/Pagination";
+import { PAGE_SIZES } from "@/components/ListTab";
 import { Select } from "@/components/ui/Input";
+import { EVENT_TYPES, type EventType } from "../_lib/validators";
+import { populatedName } from "@/lib/utils";
 
-const PAGE_SIZES = [10, 25, 50, 100];
+const EVENT_STAT_LABEL: Record<EventType, string> = { scan: "Total Scans", google_click: "Google Clicks", review_copy: "Review Copies" };
 
 export default function AnalyticsPage() {
   const { token, authChecked, toast } = useAdmin();
   const { data: businesses = [] } = useQuery({
     queryKey: ["admin", "businesses", "all"],
-    queryFn: () => api<Row[]>("/admin/business", { token }),
+    queryFn: () => api<Business[]>("/admin/business", { token }),
     enabled: authChecked && !!token,
   });
 
@@ -35,9 +38,7 @@ export default function AnalyticsPage() {
   const summary = (list.meta.summary as { total: number; byType: Record<string, number> } | undefined);
   const statCards = summary
     ? [
-        { label: "Total Scans", value: summary.byType?.scan ?? 0 },
-        { label: "Google Clicks", value: summary.byType?.google_click ?? 0 },
-        { label: "Review Copies", value: summary.byType?.review_copy ?? 0 },
+        ...EVENT_TYPES.map((t) => ({ label: EVENT_STAT_LABEL[t], value: summary.byType?.[t] ?? 0 })),
         { label: "Total Events", value: summary.total ?? 0 },
       ]
     : [];
@@ -46,7 +47,7 @@ export default function AnalyticsPage() {
   // the shared DataTable can render, instead of showing raw ids or [object Object].
   const rows = list.rows.map((e) => ({
     ...e,
-    business: e.businessId && typeof e.businessId === "object" ? e.businessId.name : "—",
+    business: populatedName(e.businessId),
   }));
 
   return (

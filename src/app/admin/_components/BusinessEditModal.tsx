@@ -11,6 +11,7 @@ import { useEscapeKey } from "@/hooks/useEscapeKey";
 import { Modal, ModalHeader, ModalBody, ModalFooter } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Field, Input, Select, Label } from "@/components/ui/Input";
+import { guardedClose } from "@/lib/utils";
 
 const FIELDS: { f: string; label: string; required?: boolean }[] = [
   { f: "name", label: "Business Name", required: true },
@@ -97,9 +98,9 @@ export function BusinessEditModal({
   };
 
   return (
-    <Modal open={!!business} onClose={saveMutation.isPending ? undefined : onClose} maxWidth="md" labelledBy="biz-edit-title">
+    <Modal open={!!business} onClose={guardedClose(onClose, saveMutation.isPending)} maxWidth="md" labelledBy="biz-edit-title">
       <div className="max-h-[85vh] flex flex-col">
-        <ModalHeader onClose={saveMutation.isPending ? undefined : onClose}>
+        <ModalHeader onClose={guardedClose(onClose, saveMutation.isPending)}>
           <h2 id="biz-edit-title" className="text-sm font-semibold text-fg">Edit Business</h2>
         </ModalHeader>
 

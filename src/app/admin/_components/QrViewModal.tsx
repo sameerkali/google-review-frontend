@@ -10,18 +10,12 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Modal, ModalHeader } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Input, Label } from "@/components/ui/Input";
+import { hardwareForBusiness } from "@/lib/utils";
+import { invalidateHardwareQueries } from "../_lib/queryKeys";
 
 function slugifyCode(name: string): string {
   const base = name.toUpperCase().replace(/[^A-Z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 24);
   return base || "BUSINESS";
-}
-
-function hardwareForBusiness(business: Row, hardwareList: Row[]): Row | undefined {
-  return hardwareList.find((h) => {
-    const assigned = h.assignedBusinessId;
-    const id = assigned && typeof assigned === "object" ? assigned._id : assigned;
-    return id === business._id;
-  });
 }
 
 /* View (and manage) the QR code linked to a business at any time - not just
@@ -42,11 +36,7 @@ export function QrViewModal({
   const [confirmUnlink, setConfirmUnlink] = useState(false);
   useEscapeKey(onClose, !!business && !confirmUnlink);
 
-  const invalidateHardware = () => {
-    queryClient.invalidateQueries({ queryKey: ["admin", "hardware", "all"] });
-    queryClient.invalidateQueries({ queryKey: ["admin", "hardware", "list"] });
-    queryClient.invalidateQueries({ queryKey: ["admin", "overview"] });
-  };
+  const invalidateHardware = () => invalidateHardwareQueries(queryClient);
 
   const linkMutation = useMutation({
     mutationKey: ["admin", "hardware", "link"],

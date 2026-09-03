@@ -1,16 +1,14 @@
 "use client";
 
 import { ResponsiveBar } from "@nivo/bar";
-import { useTheme } from "@/components/ThemeProvider";
-import { getCategoricalColors, getNivoTheme } from "@/lib/nivoTheme";
+import { useChartTheme } from "@/hooks/useChartTheme";
 
 const WEEKDAY_LABEL = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 /* Scans by hour of day, or by day of week - same shape either way (an
    index + a count). Used for "when do people scan" placement questions. */
 export function TimingBar({ data, mode }: { data: { key: number; scans: number }[]; mode: "hour" | "weekday" }) {
-  const { theme } = useTheme();
-  const colors = getCategoricalColors(theme);
+  const { colors, nivoTheme } = useChartTheme();
   const rows = data.map((d) => ({ label: mode === "hour" ? `${d.key}h` : WEEKDAY_LABEL[d.key], value: d.scans }));
 
   return (
@@ -23,7 +21,7 @@ export function TimingBar({ data, mode }: { data: { key: number; scans: number }
         padding={mode === "hour" ? 0.25 : 0.4}
         borderRadius={3}
         colors={colors[1]}
-        theme={getNivoTheme(theme)}
+        theme={nivoTheme}
         axisBottom={{ tickSize: 0, tickPadding: 8, tickValues: mode === "hour" ? rows.filter((_, i) => i % 3 === 0).map((r) => r.label) : undefined }}
         axisLeft={{ tickSize: 0, tickPadding: 8, tickValues: 4 }}
         enableGridX={false}

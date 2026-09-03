@@ -1,4 +1,5 @@
 import QRCode from "qrcode";
+import { slugifyForFilename } from "./utils";
 
 const BRAND = "#3b6cf0";
 const BRAND_DARK = "#2f56c4";
@@ -523,10 +524,6 @@ const DESIGN_DRAW: Record<PosterDesignKey, (d: DrawCtx) => void> = {
 
 /* ─── Orchestration ─────────────────────────────────────────────────── */
 
-export function slugifyForFilename(name: string): string {
-  return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "business";
-}
-
 /* Draws the poster onto a given canvas at the chosen size/design - shapes,
    text, and the QR bitmap itself, entirely via the Canvas 2D API. Used both
    for the one-click default download and for the live preview in the
@@ -572,7 +569,10 @@ export async function downloadCanvasPng(canvas: HTMLCanvasElement, filename: str
   document.body.appendChild(a);
   a.click();
   a.remove();
-  URL.revokeObjectURL(url);
+  // Deferred, not immediate - a large PNG (A4 at 1240x1754) on a slow
+  // device could in theory still be starting its download stream when this
+  // runs; revoking a beat later removes even the theoretical race.
+  setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 /* One-click default poster (no customization) - draws to an offscreen

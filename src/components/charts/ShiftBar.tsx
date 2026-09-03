@@ -1,15 +1,13 @@
 "use client";
 
 import { ResponsiveBar } from "@nivo/bar";
-import { useTheme } from "@/components/ThemeProvider";
-import { getCategoricalColors, getNivoTheme } from "@/lib/nivoTheme";
+import { useChartTheme } from "@/hooks/useChartTheme";
 
 /* Average rating per shift band - the staffing conversation an owner can't
    have from any other data he owns. Bands with too little volume are
    filtered out before this ever renders (see the lowData flag on each band). */
 export function ShiftBar({ bands }: { bands: { label: string; avgRating: number | null }[] }) {
-  const { theme } = useTheme();
-  const colors = getCategoricalColors(theme);
+  const { colors, nivoTheme } = useChartTheme();
   const data = bands.map((b) => ({ label: b.label, value: b.avgRating ?? 0 }));
 
   return (
@@ -22,7 +20,7 @@ export function ShiftBar({ bands }: { bands: { label: string; avgRating: number 
         padding={0.4}
         borderRadius={4}
         colors={colors[3]}
-        theme={getNivoTheme(theme)}
+        theme={nivoTheme}
         axisBottom={{ tickSize: 0, tickPadding: 8, format: (v) => String(v).split(" (")[0] }}
         axisLeft={{ tickSize: 0, tickPadding: 8, tickValues: 5 }}
         enableGridX={false}

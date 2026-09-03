@@ -1,14 +1,13 @@
 "use client";
 
 import { ResponsiveBar } from "@nivo/bar";
-import { useTheme } from "@/components/ThemeProvider";
-import { getNivoTheme } from "@/lib/nivoTheme";
+import { useChartTheme } from "@/hooks/useChartTheme";
 
 /* A single-hue horizontal bar chart - magnitude comparison across browsers,
    not identity, so one hue is correct (per the dataviz skill's form
    heuristic); the label on each row already names it directly. */
 export function BrowserBar({ data }: { data: { _id: string; count: number }[] }) {
-  const { theme } = useTheme();
+  const { theme, nivoTheme } = useChartTheme();
   const hue = theme === "light" ? "#2a78d6" : "#3987e5";
   const items = data.map((row) => ({ browser: row._id || "unknown", value: row.count }));
 
@@ -23,7 +22,7 @@ export function BrowserBar({ data }: { data: { _id: string; count: number }[] })
         padding={0.4}
         borderRadius={4}
         colors={hue}
-        theme={getNivoTheme(theme)}
+        theme={nivoTheme}
         axisBottom={{ tickSize: 0, tickPadding: 8, tickValues: 4 }}
         axisLeft={{ tickSize: 0, tickPadding: 8 }}
         enableGridY={false}

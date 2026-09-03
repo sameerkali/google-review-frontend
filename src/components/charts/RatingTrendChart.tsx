@@ -1,8 +1,7 @@
 "use client";
 
 import { ResponsiveLine } from "@nivo/line";
-import { useTheme } from "@/components/ThemeProvider";
-import { getCategoricalColors, getNivoTheme } from "@/lib/nivoTheme";
+import { useChartTheme } from "@/hooks/useChartTheme";
 
 export interface RatingPoint {
   date: string; // YYYY-MM-DD
@@ -15,8 +14,7 @@ export interface RatingPoint {
    left as gaps (null), not zeroes - zero would misrepresent "no data" as
    "rated zero stars." */
 export function RatingTrendChart({ points }: { points: RatingPoint[] }) {
-  const { theme } = useTheme();
-  const colors = getCategoricalColors(theme);
+  const { theme, colors, nivoTheme } = useChartTheme();
 
   const series = [
     { id: "Daily avg", data: points.map((p) => ({ x: p.date, y: p.avg })) },
@@ -47,7 +45,7 @@ export function RatingTrendChart({ points }: { points: RatingPoint[] }) {
         xScale={{ type: "point" }}
         yScale={{ type: "linear", min: 1, max: 5 }}
         colors={colors}
-        theme={getNivoTheme(theme)}
+        theme={nivoTheme}
         pointSize={6}
         pointBorderWidth={2}
         pointBorderColor={{ from: "serieColor" }}

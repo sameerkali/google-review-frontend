@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { Row, ToastFn } from "@/lib/types";
@@ -20,16 +20,24 @@ export function usePaginatedList(
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(opts?.defaultLimit ?? 25);
   const [search, setSearch] = useState("");
+  // The input itself stays bound to `search` for instant feedback while
+  // typing; the query only re-fires against `debouncedSearch`, so a
+  // multi-character query doesn't send one request per keystroke.
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(t);
+  }, [search]);
   const extraParams = opts?.extraParams || {};
   const extraKey = JSON.stringify(extraParams);
 
   const { data, isPending } = useQuery({
-    queryKey: [...keyBase, { page, limit, search, ...extraParams }],
+    queryKey: [...keyBase, { page, limit, search: debouncedSearch, ...extraParams }],
     queryFn: async (): Promise<ListResponse> => {
       const qs = new URLSearchParams({
         page: String(page),
         limit: String(limit),
-        ...(search.trim() ? { search: search.trim() } : {}),
+        ...(debouncedSearch.trim() ? { search: debouncedSearch.trim() } : {}),
         ...JSON.parse(extraKey),
       });
       const res = await api<ListResponse | Row[]>(`${endpoint}?${qs}`, { token });
@@ -37,7 +45,7 @@ export function usePaginatedList(
       // A backend that predates server-side pagination ignores page/limit/search and
       // returns everything - apply both client-side against the full list it gave us,
       // rather than showing the whole thing regardless of what was picked.
-      const term = search.trim().toLowerCase();
+      const term = debouncedSearch.trim().toLowerCase();
       const filtered = term ? res.filter((r) => JSON.stringify(r).toLowerCase().includes(term)) : res;
       const start = (page - 1) * limit;
       return {
@@ -63,6 +71,5 @@ export function usePaginatedList(
     total: data?.total ?? 0,
     totalPages: data?.totalPages ?? 1,
     meta: (data ?? {}) as Record<string, unknown>,
-    reload: () => {}, // superseded by direct queryClient.invalidateQueries after mutations
   };
 }
