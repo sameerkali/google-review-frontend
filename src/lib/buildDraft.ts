@@ -77,6 +77,25 @@ const ASPECT_TEXT: Record<Band, Record<Aspect, string>> = {
 export const band = (r: number): Band => (r >= 4 ? "high" : r === 3 ? "mid" : "low");
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
+// A trailing clause naming whatever else was ordered, beyond the primary
+// item the main skeleton already covers - named up to 2 more (3 items total
+// read naturally; a fourth name onward starts reading like a receipt), with
+// a light "and a few other things" tail so a big selection still shows up
+// as *something* without turning into a list.
+const EXTRA_ITEMS_TEXT: Record<Band, (joined: string, tail: string) => string> = {
+  high: (joined, tail) => ` Also had the ${joined}${tail} - good too.`,
+  mid: (joined, tail) => ` Also tried the ${joined}${tail}.`,
+  low: (joined, tail) => ` Also had the ${joined}${tail}, no better.`,
+};
+
+function extraItemsClause(b: Band, extraItems: string[]): string {
+  if (!extraItems.length) return "";
+  const named = extraItems.slice(0, 2);
+  const joined = named.length === 1 ? named[0] : `${named[0]} and ${named[1]}`;
+  const tail = extraItems.length > named.length ? " and a few other things" : "";
+  return EXTRA_ITEMS_TEXT[b](joined, tail);
+}
+
 export function buildDraft(
   { rating, items = [], aspects = [] }: { rating: number; items?: string[]; aspects?: Aspect[] },
   seed: number = Math.random()
@@ -84,10 +103,15 @@ export function buildDraft(
   if (!rating) return "";
   const b = band(rating);
 
-  // One item only - listing three reads manufactured.
-  const item = items.length ? items[0].toLowerCase() : null;
-  // One aspect only - two sentences maximum.
-  const aspect = aspects.length ? ASPECT_TEXT[b][aspects[0]] || "" : "";
+  const lowerItems = items.map((i) => i.toLowerCase());
+  const item = lowerItems.length ? lowerItems[0] : null;
+  const extraItems = lowerItems.slice(1);
+
+  // Each aspect clause was written as a standalone trailing sentence, so
+  // chaining several reads as an ordinary multi-sentence review rather than
+  // a list - capped so picking every aspect doesn't run on forever.
+  const usedAspects = aspects.slice(0, 4);
+  const aspect = usedAspects.map((a) => ASPECT_TEXT[b][a] || "").join("");
 
   if (!item) {
     const fallback: Record<Band, string> = {
@@ -99,5 +123,6 @@ export function buildDraft(
   }
 
   const pool = SKELETONS[b];
-  return pool[Math.floor(seed * pool.length)](item, aspect);
+  const base = pool[Math.floor(seed * pool.length)](item, aspect);
+  return base + extraItemsClause(b, extraItems);
 }

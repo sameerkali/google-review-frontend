@@ -98,19 +98,29 @@ export default function ReviewPage({ params }: { params: Promise<{ code: string 
     meta: { silent: true },
   });
 
+  // A short debounce so the chip grid re-filters a beat after typing stops
+  // instead of on every keystroke - the actual cause of the list "shivering"
+  // wasn't missing animation, it was re-laying-out on every character.
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(itemSearch), 150);
+    return () => clearTimeout(t);
+  }, [itemSearch]);
+
   // Menu items already arrive sorted by sortOrder from the backend, so the
-  // top VISIBLE_ITEM_COUNT is whatever the business dragged to the front -
-  // its bestsellers, not an arbitrary DB-insertion order.
-  const selectedItems = useMemo(
-    () => selectedItemIds.map((id) => menuItems.find((m) => m.id === id)).filter((m): m is MenuItem => !!m),
-    [menuItems, selectedItemIds]
-  );
-  const suggestions = useMemo(() => {
-    const term = itemSearch.trim().toLowerCase();
-    const unselected = menuItems.filter((m) => !selectedItemIds.includes(m.id));
-    const list = term ? unselected.filter((m) => m.name.toLowerCase().includes(term)) : unselected;
+  // top VISIBLE_ITEM_COUNT (with no search typed) is whatever the business
+  // dragged to the front - its bestsellers, not an arbitrary DB-insertion
+  // order. Selected items stay in this same list and are just highlighted,
+  // never pulled out into a separate section.
+  const visibleItems = useMemo(() => {
+    const term = debouncedSearch.trim().toLowerCase();
+    const list = term ? menuItems.filter((m) => m.name.toLowerCase().includes(term)) : menuItems;
     return list.slice(0, term ? list.length : VISIBLE_ITEM_COUNT);
-  }, [menuItems, itemSearch, selectedItemIds]);
+  }, [menuItems, debouncedSearch]);
+  const hasExactMatch = useMemo(
+    () => menuItems.some((m) => m.name.toLowerCase() === debouncedSearch.trim().toLowerCase()),
+    [menuItems, debouncedSearch]
+  );
 
   const toggleItem = (id: string) =>
     setSelectedItemIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -231,7 +241,11 @@ export default function ReviewPage({ params }: { params: Promise<{ code: string 
   const stepIndex = STEPS.indexOf(step);
 
   return (
-    <div className="min-h-dvh flex flex-col items-center justify-center p-6 relative bg-background">
+    // items-center + justify-start (not justify-center) - a centered
+    // column re-centers itself, and jumps, every time the on-screen
+    // keyboard resizes the visual viewport. Anchoring from the top means
+    // opening the keyboard just crops the bottom instead of moving anything.
+    <div className="min-h-dvh flex flex-col items-center p-6 pt-10 sm:pt-16 relative bg-background">
       <ThemeToggle className="fixed top-4 right-4" />
 
       <div className="w-full max-w-sm space-y-6">
@@ -262,45 +276,49 @@ export default function ReviewPage({ params }: { params: Promise<{ code: string 
               <div className="flex justify-center py-8"><Spinner size="md" /></div>
             ) : (
               <div className="space-y-4">
-                {selectedItems.length > 0 && (
-                  <div className="flex flex-wrap gap-2 justify-center">
-                    {selectedItems.map((m) => (
-                      <Chip key={m.id} active onClick={() => toggleItem(m.id)}>
-                        <span className="inline-flex items-center gap-1.5">
-                          {m.name}
-                          <CloseIcon className="w-3 h-3" />
-                        </span>
-                      </Chip>
-                    ))}
-                  </div>
-                )}
-                {menuItems.length > VISIBLE_ITEM_COUNT && (
-                  <div className="relative">
-                    <SearchIcon className="w-4 h-4 text-fg-quaternary absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    <input
-                      type="text"
-                      value={itemSearch}
-                      onChange={(e) => setItemSearch(e.target.value)}
-                      placeholder="Search the menu…"
-                      className="w-full rounded-xl border border-border bg-surface pl-10 pr-3 py-2.5 text-sm text-fg placeholder:text-fg-quaternary outline-none focus:border-brand/50 transition-colors"
-                    />
-                  </div>
-                )}
-                <div className="flex flex-wrap gap-2 justify-center">
-                  {suggestions.map((m) => (
-                    <Chip key={m.id} active={false} onClick={() => toggleItem(m.id)}>
+                <div className="relative">
+                  <SearchIcon className="w-4 h-4 text-fg-quaternary absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={itemSearch}
+                    onChange={(e) => setItemSearch(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key !== "Enter") return;
+                      e.preventDefault();
+                      const term = itemSearch.trim();
+                      if (!term) return;
+                      const exact = menuItems.find((m) => m.name.toLowerCase() === term.toLowerCase());
+                      if (exact) toggleItem(exact.id);
+                      else setFreeTextItem(term);
+                      setItemSearch("");
+                    }}
+                    placeholder="Search the menu or type your own…"
+                    className="w-full rounded-xl border border-border bg-surface pl-10 pr-3 py-2.5 text-sm text-fg placeholder:text-fg-quaternary outline-none focus:border-brand/50 transition-colors"
+                  />
+                </div>
+                <div className="flex flex-wrap gap-2 justify-center min-h-11 transition-[min-height] duration-200 ease-out">
+                  {visibleItems.map((m) => (
+                    <Chip key={m.id} active={selectedItemIds.includes(m.id)} onClick={() => toggleItem(m.id)}>
                       {m.name}
                     </Chip>
                   ))}
-                  {!suggestions.length && itemSearch.trim() && <p className="text-sm text-fg-quaternary py-2">No matching items.</p>}
+                  {freeTextItem.trim() && (
+                    <Chip active onClick={() => setFreeTextItem("")}>
+                      <span className="inline-flex items-center gap-1.5">
+                        {freeTextItem.trim()}
+                        <CloseIcon className="w-3 h-3" />
+                      </span>
+                    </Chip>
+                  )}
+                  {debouncedSearch.trim() && !hasExactMatch && (
+                    <Chip active={false} onClick={() => { setFreeTextItem(debouncedSearch.trim()); setItemSearch(""); }}>
+                      + Add &quot;{debouncedSearch.trim()}&quot;
+                    </Chip>
+                  )}
+                  {!visibleItems.length && !freeTextItem.trim() && !debouncedSearch.trim() && (
+                    <p className="text-sm text-fg-quaternary py-2">No menu items yet - your own words work too.</p>
+                  )}
                 </div>
-                <input
-                  type="text"
-                  value={freeTextItem}
-                  onChange={(e) => setFreeTextItem(e.target.value)}
-                  placeholder="Something else? Type it here"
-                  className="w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm text-fg placeholder:text-fg-quaternary outline-none focus:border-brand/50 transition-colors"
-                />
                 <div className="flex items-center justify-between gap-3 pt-1">
                   <button onClick={goToRating} className="text-sm font-medium text-fg-tertiary hover:text-fg transition-colors cursor-pointer">
                     Skip
@@ -374,8 +392,8 @@ export default function ReviewPage({ params }: { params: Promise<{ code: string 
                 ref={reviewTextareaRef}
                 value={draftText}
                 onChange={(e) => setDraftText(e.target.value)}
-                rows={5}
-                className="w-full rounded-2xl border border-border bg-surface px-4 py-3.5 text-sm text-fg leading-relaxed outline-none focus:border-brand/50 transition-colors resize-none"
+                rows={draftText.length > 220 ? 8 : draftText.length > 120 ? 6 : 5}
+                className="w-full rounded-2xl border border-border bg-surface px-4 py-3.5 text-sm text-fg leading-relaxed outline-none focus:border-brand/50 transition-[height,border-color] duration-200 resize-none"
               />
               <button
                 onClick={handleCopyAndGo}
