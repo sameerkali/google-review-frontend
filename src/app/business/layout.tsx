@@ -16,6 +16,7 @@ import { IconButton } from "@/components/ui/Button";
 
 const NAV = [
   { href: "/business/dashboard", label: "Dashboard" },
+  { href: "/business/menu", label: "Menu" },
 ];
 
 export default function BusinessLayout({ children }: { children: React.ReactNode }) {

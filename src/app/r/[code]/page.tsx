@@ -4,7 +4,7 @@ import { use, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api, ApiError } from "@/lib/api";
 import { buildDraft, type Aspect } from "@/lib/buildDraft";
-import { AlertIcon, SearchIcon, StarFillIcon, StarIcon } from "@/components/icons";
+import { AlertIcon, CloseIcon, SearchIcon, StarFillIcon, StarIcon } from "@/components/icons";
 import { Spinner } from "@/components/Loaders";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
@@ -98,11 +98,19 @@ export default function ReviewPage({ params }: { params: Promise<{ code: string 
     meta: { silent: true },
   });
 
-  const filteredItems = useMemo(() => {
+  // Menu items already arrive sorted by sortOrder from the backend, so the
+  // top VISIBLE_ITEM_COUNT is whatever the business dragged to the front -
+  // its bestsellers, not an arbitrary DB-insertion order.
+  const selectedItems = useMemo(
+    () => selectedItemIds.map((id) => menuItems.find((m) => m.id === id)).filter((m): m is MenuItem => !!m),
+    [menuItems, selectedItemIds]
+  );
+  const suggestions = useMemo(() => {
     const term = itemSearch.trim().toLowerCase();
-    const list = term ? menuItems.filter((m) => m.name.toLowerCase().includes(term)) : menuItems;
+    const unselected = menuItems.filter((m) => !selectedItemIds.includes(m.id));
+    const list = term ? unselected.filter((m) => m.name.toLowerCase().includes(term)) : unselected;
     return list.slice(0, term ? list.length : VISIBLE_ITEM_COUNT);
-  }, [menuItems, itemSearch]);
+  }, [menuItems, itemSearch, selectedItemIds]);
 
   const toggleItem = (id: string) =>
     setSelectedItemIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -254,6 +262,18 @@ export default function ReviewPage({ params }: { params: Promise<{ code: string 
               <div className="flex justify-center py-8"><Spinner size="md" /></div>
             ) : (
               <div className="space-y-4">
+                {selectedItems.length > 0 && (
+                  <div className="flex flex-wrap gap-2 justify-center">
+                    {selectedItems.map((m) => (
+                      <Chip key={m.id} active onClick={() => toggleItem(m.id)}>
+                        <span className="inline-flex items-center gap-1.5">
+                          {m.name}
+                          <CloseIcon className="w-3 h-3" />
+                        </span>
+                      </Chip>
+                    ))}
+                  </div>
+                )}
                 {menuItems.length > VISIBLE_ITEM_COUNT && (
                   <div className="relative">
                     <SearchIcon className="w-4 h-4 text-fg-quaternary absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -267,12 +287,12 @@ export default function ReviewPage({ params }: { params: Promise<{ code: string 
                   </div>
                 )}
                 <div className="flex flex-wrap gap-2 justify-center">
-                  {filteredItems.map((m) => (
-                    <Chip key={m.id} active={selectedItemIds.includes(m.id)} onClick={() => toggleItem(m.id)}>
+                  {suggestions.map((m) => (
+                    <Chip key={m.id} active={false} onClick={() => toggleItem(m.id)}>
                       {m.name}
                     </Chip>
                   ))}
-                  {!filteredItems.length && <p className="text-sm text-fg-quaternary py-2">No matching items.</p>}
+                  {!suggestions.length && itemSearch.trim() && <p className="text-sm text-fg-quaternary py-2">No matching items.</p>}
                 </div>
                 <input
                   type="text"

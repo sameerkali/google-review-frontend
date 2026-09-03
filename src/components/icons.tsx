@@ -44,6 +44,8 @@ import {
   ForkKnife,
   EyeSlashIcon as PhosphorEyeSlash,
   DownloadSimpleIcon as PhosphorDownloadSimple,
+  CaretUp,
+  CaretDown,
   type Icon,
 } from "@phosphor-icons/react";
 
@@ -95,6 +97,8 @@ export const SparkleIcon = make(Sparkle, "bold");
 export const MenuFoodIcon = make(ForkKnife);
 export const EyeSlashIcon = make(PhosphorEyeSlash);
 export const DownloadIcon = make(PhosphorDownloadSimple, "bold");
+export const CaretUpIcon = make(CaretUp, "bold");
+export const CaretDownIcon = make(CaretDown, "bold");
 
 export const TAB_ICONS = {
   overview: OverviewIcon,

@@ -1,0 +1,10 @@
+/** Swaps `id` with its neighbor in `direction`; a no-op at either end. */
+export function moveId(ids: string[], id: string, direction: "up" | "down"): string[] {
+  const i = ids.indexOf(id);
+  if (i === -1) return ids;
+  const j = direction === "up" ? i - 1 : i + 1;
+  if (j < 0 || j >= ids.length) return ids;
+  const next = ids.slice();
+  [next[i], next[j]] = [next[j], next[i]];
+  return next;
+}

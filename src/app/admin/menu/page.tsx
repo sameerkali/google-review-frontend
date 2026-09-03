@@ -4,14 +4,15 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAdmin } from "../_lib/context";
 import type { Row, ToastFn } from "@/lib/types";
-import { DataTable } from "@/components/DataTable";
+import { MenuItemManager, type MenuManagerRow } from "@/components/MenuItemManager";
 import { BulkMenuUploadModal } from "../_components/BulkMenuUploadModal";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
-import { AlertIcon, PlusIcon, TrashIcon, UploadIcon } from "@/components/icons";
+import { AlertIcon, PlusIcon, UploadIcon } from "@/components/icons";
 import { api } from "@/lib/api";
 import { Skeleton } from "@/components/Loaders";
-import { Button, IconButton } from "@/components/ui/Button";
+import { Button } from "@/components/ui/Button";
 import { Input, Label } from "@/components/ui/Input";
+import { moveId } from "@/lib/reorder";
 
 // ── Business list ────────────────────────────────────────────────────────────
 
@@ -188,6 +189,27 @@ function ItemList({
     },
   });
 
+  const toggleActiveMutation = useMutation({
+    mutationKey: ["admin", "menu-items", "toggle-active"],
+    mutationFn: ({ id, active }: { id: string; active: boolean }) => api(`/admin/menu-items/${id}`, { method: "PUT", token, body: { active } }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "menu-items", "list"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "menu-items", "businesses"] });
+    },
+  });
+
+  const reorderMutation = useMutation({
+    mutationKey: ["admin", "menu-items", "reorder"],
+    mutationFn: (orderedIds: string[]) => api("/admin/menu-items/reorder", { method: "PATCH", token, body: { businessId: biz._id, orderedIds } }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["admin", "menu-items", "list"] }),
+    onError: () => toast("error", "Could not save the new order"),
+  });
+
+  const onMove = (row: MenuManagerRow, direction: "up" | "down") => {
+    const ids = moveId(rows.map((r) => String(r._id)), String(row._id), direction);
+    reorderMutation.mutate(ids);
+  };
+
   const addItem = () => {
     if (!newName.trim()) { setAddErr("Item name is required"); return; }
     if (newPrice.trim() && isNaN(Number(newPrice))) { setAddErr("Price must be a number"); return; }
@@ -254,17 +276,16 @@ function ItemList({
         </div>
       )}
 
-      <DataTable
-        rows={rows}
-        cols={["name", "price", "category", "active", "createdAt"]}
+      <MenuItemManager
+        items={rows.map((r) => ({ _id: String(r._id), name: r.name, price: r.price, category: r.category, active: r.active }))}
         loading={loading}
-        toast={toast}
-        renderActions={(row) => (
-          <IconButton onClick={() => setDeleteRow(row)} aria-label={`Delete ${row.name}`} title="Delete" tone="danger">
-            <TrashIcon className="w-4 h-4" />
-          </IconButton>
-        )}
+        reordering={reorderMutation.isPending}
+        onMove={onMove}
+        onToggleActive={(row, active) => toggleActiveMutation.mutate({ id: row._id, active })}
+        onDelete={(row) => setDeleteRow(row)}
+        emptyMessage="No menu items yet - upload a JSON file or add one above."
       />
+      <p className="text-xs text-fg-quaternary">Order here is what shows first as chips on the review page - drag isn&apos;t available yet, use the arrows to reorder.</p>
 
       <ConfirmDialog
         open={!!deleteRow}

@@ -9,9 +9,13 @@ import { AlertIcon, CheckIcon, CloseIcon, CopyIcon } from "@/components/icons";
 import { generatePassword } from "../_lib/generatePassword";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
 import { QrCard } from "@/components/QrCard";
+import { MenuJsonInput } from "@/components/MenuJsonInput";
+import { parseMenuJson, type ParsedMenuItem } from "@/lib/parseMenuJson";
 import { Modal, ModalHeader } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Field, Input, Select, Label } from "@/components/ui/Input";
+
+type MenuMode = "type" | "json";
 
 /* ─── Onboarding Wizard ──────────────────────────────────────────────
    Single guided flow that replaces the old "register hardware, then
@@ -64,8 +68,11 @@ export function OnboardWizard({
   // (not synced via an effect) so there's nothing to keep in sync.
   const [codeInput, setCodeInput] = useState("");
   const [codeTouched, setCodeTouched] = useState(false);
+  const [menuMode, setMenuMode] = useState<MenuMode>("type");
   const [menuItems, setMenuItems] = useState<string[]>([]);
   const [menuDraft, setMenuDraft] = useState("");
+  const [menuJsonText, setMenuJsonText] = useState("");
+  const [menuJsonError, setMenuJsonError] = useState("");
   const [serverError, setServerError] = useState("");
   const [result, setResult] = useState<{ businessName: string; reviewUrl: string; codeNotConfirmed?: boolean } | null>(null);
   const [copiedCreds, setCopiedCreds] = useState(false);
@@ -96,15 +103,18 @@ export function OnboardWizard({
     setPlanId("");
     setPortalPassword("");
     setPasswordErr("");
+    setMenuMode("type");
     setMenuItems([]);
     setMenuDraft("");
+    setMenuJsonText("");
+    setMenuJsonError("");
     setServerError("");
     setResult(null);
   };
 
   const onboardMutation = useMutation({
     mutationKey: ["admin", "businesses", "onboard"],
-    mutationFn: async () => {
+    mutationFn: async (menuItemsPayload: ParsedMenuItem[]) => {
       const created = await api<Row>("/admin/business", {
         method: "POST",
         token,
@@ -122,23 +132,26 @@ export function OnboardWizard({
         },
       });
 
-      // Menu items are best-effort follow-ups: a failure here must not fail
-      // (or retry) the business that was just successfully created. Include
-      // whatever's still sitting in the draft field (typed but never
-      // terminated with a comma) so it isn't silently dropped on submit.
-      const names = [...menuItems, menuDraft].map((r) => r.trim()).filter(Boolean);
-      let failedItemCount = 0;
-      for (const name of names) {
+      // Menu items are a best-effort follow-up: a failure here must not fail
+      // (or retry) the business that was just successfully created. One bulk
+      // call instead of one request per item - also gets the items their
+      // initial display order for free, from array position.
+      let itemResult: { created: number; skipped: number } | null = null;
+      if (menuItemsPayload.length) {
         try {
-          await api("/admin/menu-items", { method: "POST", token, body: { businessId: created._id, name } });
+          itemResult = await api("/admin/menu-items/bulk", {
+            method: "POST",
+            token,
+            body: { items: menuItemsPayload.map((it) => ({ ...it, businessId: created._id })) },
+          });
         } catch {
-          failedItemCount++;
+          itemResult = { created: 0, skipped: menuItemsPayload.length };
         }
       }
-      return { business: created, failedItemCount };
+      return { business: created, itemResult };
     },
     meta: { toastOnError: false }, // inline serverError banner below
-    onSuccess: ({ business: created, failedItemCount }) => {
+    onSuccess: ({ business: created, itemResult }) => {
       queryClient.invalidateQueries({ queryKey: ["admin", "businesses", "list"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "businesses", "all"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "overview"] });
@@ -146,8 +159,8 @@ export function OnboardWizard({
       queryClient.invalidateQueries({ queryKey: ["admin", "hardware", "list"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "menu-items", "businesses"] });
 
-      if (failedItemCount > 0) {
-        toast("error", `Business created, but ${failedItemCount} menu item${failedItemCount > 1 ? "s" : ""} failed to save - add ${failedItemCount > 1 ? "them" : "it"} again from the Menu tab`);
+      if (itemResult && itemResult.skipped > 0) {
+        toast("error", `Business created, but ${itemResult.skipped} menu item${itemResult.skipped > 1 ? "s" : ""} failed to save - add ${itemResult.skipped > 1 ? "them" : "it"} again from the Menu tab`);
       }
 
       // Don't celebrate a QR that isn't actually live - only show it once the
@@ -216,6 +229,18 @@ export function OnboardWizard({
     }
   };
   const removeMenuItem = (i: number) => setMenuItems((r) => r.filter((_, idx) => idx !== i));
+
+  const finish = () => {
+    if (menuMode === "json") {
+      if (!menuJsonText.trim()) { onboardMutation.mutate([]); return; }
+      const result = parseMenuJson(menuJsonText);
+      if (!result.items) { setMenuJsonError(result.error); return; }
+      onboardMutation.mutate(result.items);
+      return;
+    }
+    const names = [...menuItems, menuDraft].map((r) => r.trim()).filter(Boolean);
+    onboardMutation.mutate(names.map((name) => ({ name })));
+  };
 
   const stepIndex = WIZARD_STEPS.findIndex((s) => s.key === step);
 
@@ -371,33 +396,60 @@ export function OnboardWizard({
             <div className="space-y-3">
               <p className="text-sm text-fg-tertiary">
                 Menu items shown as chips on screen one of the review flow - optional, but the customer needs
-                at least a few to pick from. Type a name and a comma to add it, then keep typing the next one.
-                You can add more later too.
+                at least a few to pick from. You can add more later too.
               </p>
-              <div className="rounded-xl border border-border-strong bg-background px-3 py-2.5 flex flex-wrap gap-2 items-center focus-within:border-brand/50 transition-colors">
-                {menuItems.map((item, i) => (
-                  <span key={`${item}-${i}`} className="inline-flex items-center gap-1.5 rounded-full bg-brand/15 text-brand border border-brand/30 pl-3 pr-1.5 py-1 text-xs font-medium">
-                    {item}
-                    <button
-                      type="button"
-                      onClick={() => removeMenuItem(i)}
-                      aria-label={`Remove ${item}`}
-                      className="rounded-full p-0.5 hover:bg-brand/20 transition-colors cursor-pointer"
-                    >
-                      <CloseIcon className="w-3 h-3" />
-                    </button>
-                  </span>
+
+              <div className="inline-flex rounded-lg border border-border p-0.5 bg-surface">
+                {([["type", "Type items"], ["json", "Upload JSON"]] as [MenuMode, string][]).map(([m, label]) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setMenuMode(m)}
+                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
+                      menuMode === m ? "bg-brand text-white" : "text-fg-tertiary hover:text-fg"
+                    }`}
+                  >
+                    {label}
+                  </button>
                 ))}
-                <input
-                  autoFocus
-                  value={menuDraft}
-                  onChange={(e) => onMenuDraftChange(e.target.value)}
-                  onKeyDown={onMenuDraftKeyDown}
-                  placeholder={menuItems.length ? "Add another…" : 'e.g. "chips, coke, chicken fry"'}
-                  className="flex-1 min-w-32 bg-transparent text-sm text-fg placeholder:text-fg-quaternary outline-none py-1"
-                />
               </div>
-              <p className="text-xs text-fg-quaternary">{menuItems.length}/30 items added</p>
+
+              {menuMode === "type" ? (
+                <>
+                  <div className="rounded-xl border border-border-strong bg-background px-3 py-2.5 flex flex-wrap gap-2 items-center focus-within:border-brand/50 transition-colors">
+                    {menuItems.map((item, i) => (
+                      <span key={`${item}-${i}`} className="inline-flex items-center gap-1.5 rounded-full bg-brand/15 text-brand border border-brand/30 pl-3 pr-1.5 py-1 text-xs font-medium">
+                        {item}
+                        <button
+                          type="button"
+                          onClick={() => removeMenuItem(i)}
+                          aria-label={`Remove ${item}`}
+                          className="rounded-full p-0.5 hover:bg-brand/20 transition-colors cursor-pointer"
+                        >
+                          <CloseIcon className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                    <input
+                      autoFocus
+                      value={menuDraft}
+                      onChange={(e) => onMenuDraftChange(e.target.value)}
+                      onKeyDown={onMenuDraftKeyDown}
+                      placeholder={menuItems.length ? "Add another…" : 'e.g. "chips, coke, chicken fry"'}
+                      className="flex-1 min-w-32 bg-transparent text-sm text-fg placeholder:text-fg-quaternary outline-none py-1"
+                    />
+                  </div>
+                  <p className="text-xs text-fg-quaternary">{menuItems.length}/30 items added. Type a name and a comma to add it, then keep typing the next one.</p>
+                </>
+              ) : (
+                <MenuJsonInput
+                  id="wiz-menu-json"
+                  value={menuJsonText}
+                  onChange={(v) => { setMenuJsonText(v); if (menuJsonError) setMenuJsonError(""); }}
+                  error={menuJsonError}
+                  rows={6}
+                />
+              )}
             </div>
           )}
 
@@ -468,7 +520,7 @@ export function OnboardWizard({
           {step === "menu" && (
             <>
               <Button onClick={() => setStep("code")} variant="secondary" disabled={onboardMutation.isPending}>Back</Button>
-              <Button onClick={() => onboardMutation.mutate()} variant="primary" loading={onboardMutation.isPending} loadingText="Creating…" className="ml-auto">
+              <Button onClick={finish} variant="primary" loading={onboardMutation.isPending} loadingText="Creating…" className="ml-auto">
                 Finish &amp; Generate QR
               </Button>
             </>
