@@ -8,7 +8,7 @@ import { AlertIcon, CloseIcon, SearchIcon, StarFillIcon, StarIcon } from "@/comp
 import { Spinner } from "@/components/Loaders";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
-type MenuItem = { id: string; name: string; category: string | null };
+type MenuItem = { id: string; name: string; category: string | null; featured?: boolean };
 type SessionData = { token: string; business: { name: string; logoUrl: string | null; googleReviewUrl: string | null } };
 
 type Step = "items" | "rating" | "aspects" | "review";
@@ -107,16 +107,22 @@ export default function ReviewPage({ params }: { params: Promise<{ code: string 
     return () => clearTimeout(t);
   }, [itemSearch]);
 
-  // Menu items already arrive sorted by sortOrder from the backend, so the
-  // top VISIBLE_ITEM_COUNT (with no search typed) is whatever the business
-  // dragged to the front - its bestsellers, not an arbitrary DB-insertion
-  // order. Selected items stay in this same list and are just highlighted,
+  // Menu items already arrive sorted by sortOrder from the backend. With no
+  // search typed, the default chips are whatever the business explicitly
+  // dragged into "Featured" in the menu manager - not just the top N of the
+  // whole list, so a long tail of uncurated items never crowds out the
+  // items actually chosen. A business that hasn't curated anything yet
+  // (every item's `featured` still false) falls back to the first
+  // VISIBLE_ITEM_COUNT exactly as before, so this is a no-op until they opt
+  // in. Selected items stay in this same list and are just highlighted,
   // never pulled out into a separate section.
+  const featuredItems = useMemo(() => menuItems.filter((m) => m.featured), [menuItems]);
   const visibleItems = useMemo(() => {
     const term = debouncedSearch.trim().toLowerCase();
-    const list = term ? menuItems.filter((m) => m.name.toLowerCase().includes(term)) : menuItems;
-    return list.slice(0, term ? list.length : VISIBLE_ITEM_COUNT);
-  }, [menuItems, debouncedSearch]);
+    if (term) return menuItems.filter((m) => m.name.toLowerCase().includes(term));
+    const defaults = featuredItems.length ? featuredItems : menuItems;
+    return defaults.slice(0, VISIBLE_ITEM_COUNT);
+  }, [menuItems, featuredItems, debouncedSearch]);
   const hasExactMatch = useMemo(
     () => menuItems.some((m) => m.name.toLowerCase() === debouncedSearch.trim().toLowerCase()),
     [menuItems, debouncedSearch]

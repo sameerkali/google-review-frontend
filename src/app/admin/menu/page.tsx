@@ -214,6 +214,26 @@ function ItemList({
     },
   });
 
+  // Same optimistic shape as toggleActiveMutation above, for the one other
+  // per-item boolean field - `PUT` is already a generic passthrough, so
+  // this needs no new endpoint, just the `featured` key in the body.
+  const setFeaturedMutation = useMutation({
+    mutationKey: ["admin", "menu-items", "set-featured"],
+    mutationFn: ({ id, featured }: { id: string; featured: boolean }) => api(`/admin/menu-items/${id}`, { method: "PUT", token, body: { featured } }),
+    meta: { toastOnError: false },
+    onMutate: async ({ id, featured }) => {
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData<Row[]>(queryKey);
+      queryClient.setQueryData<Row[]>(queryKey, (old) => old?.map((r) => (String(r._id) === id ? { ...r, featured } : r)));
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData(queryKey, context.previous);
+      toast("error", "Could not update that item - try again");
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey }),
+  });
+
   const reorderMutation = useMutation({
     mutationKey: ["admin", "menu-items", "reorder"],
     mutationFn: (orderedIds: string[]) => api("/admin/menu-items/reorder", { method: "PATCH", token, body: { businessId: biz._id, orderedIds } }),
@@ -301,14 +321,18 @@ function ItemList({
       )}
 
       <MenuItemManager
-        items={rows.map((r) => ({ _id: String(r._id), name: r.name, price: r.price, category: r.category, active: r.active }))}
+        items={rows.map((r) => ({ _id: String(r._id), name: r.name, price: r.price, category: r.category, active: r.active, featured: r.featured }))}
         loading={loading}
         onReorder={onReorder}
+        onSetFeatured={(row, featured) => setFeaturedMutation.mutate({ id: row._id, featured })}
         onToggleActive={(row, active) => toggleActiveMutation.mutate({ id: row._id, active })}
         onDelete={(row) => setDeleteRow(row)}
         emptyMessage="No menu items yet - upload a JSON file or add one above."
       />
-      <p className="text-xs text-fg-quaternary">Order here is what shows first as chips on the review page - drag a row by its handle to reorder.</p>
+      <p className="text-xs text-fg-quaternary">
+        Featured items are the default chips a customer sees first on the review page - drag any item into that
+        section to feature it, or drag a row by its handle to reorder.
+      </p>
 
       <ConfirmDialog
         open={!!deleteRow}
