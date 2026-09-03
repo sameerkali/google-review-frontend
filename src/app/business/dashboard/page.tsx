@@ -198,7 +198,7 @@ function FreeTierView({ business, reviewUrl, posterHref, totalScans, toast }: { 
           <InfoIcon className="w-4 h-4 text-warning shrink-0 mt-0.5" />
           <div>
             <p className="text-sm text-fg-secondary">Your reports are paused. Data is still being collected - you&apos;re just not seeing it.</p>
-            <p className="text-xs text-fg-tertiary mt-1">Restart for ₹299/month to see ratings, trends and your funnel again.</p>
+            <p className="text-xs text-fg-tertiary mt-1">Restart for ₹499/month to see ratings, trends and your funnel again.</p>
           </div>
         </div>
         <button className="rounded-xl bg-brand hover:bg-brand-hover px-4 py-2.5 text-sm font-semibold text-white transition-colors cursor-pointer">

@@ -220,20 +220,49 @@ export default function Home() {
         <section className="border-t border-border">
           <div className="max-w-5xl mx-auto px-6 py-16 lg:py-24">
             <h2 className="text-2xl md:text-3xl font-semibold text-fg text-center mb-2">Pricing</h2>
-            <p className="text-fg-tertiary text-sm text-center max-w-[52ch] mx-auto mb-12">
-              Setup - ₹500 one time, first month included. Cancel any month - your QR keeps working for 30 days after you stop.
+            <p className="text-fg-tertiary text-sm text-center max-w-[52ch] mx-auto mb-10">
+              ₹999 one-time setup. Cancel any month - your QR keeps working for 30 days after you stop.
             </p>
+
+            {/* Founding Partner callout - first 20 businesses only, Full
+                plan at the Basic price, locked for a fixed 12 months (not
+                "for life," so it never becomes an un-fixable promise). */}
+            <div className="rounded-2xl border border-brand/30 bg-brand/5 p-6 sm:p-8 mb-10 max-w-3xl mx-auto text-center space-y-3">
+              <span className="inline-block text-xs font-semibold tracking-wide uppercase text-brand bg-brand/10 rounded-full px-3 py-1">
+                Founding Partner - first 20 businesses
+              </span>
+              <p className="text-2xl sm:text-3xl font-bold text-fg">
+                Full plan at ₹499<span className="text-sm font-normal text-fg-tertiary">/mo</span>
+              </p>
+              <p className="text-sm text-fg-secondary max-w-[46ch] mx-auto">
+                Locked for 12 months. Setup fee waived. Every Full feature, at the Basic price.
+              </p>
+              <div className="pt-1">
+                <HoverBorderGradient
+                  as="a"
+                  href="/business/login"
+                  className="inline-flex items-center gap-2 text-sm font-semibold px-5 py-2.5"
+                >
+                  Claim a founding spot
+                  <ArrowRightIcon className="w-4 h-4" />
+                </HoverBorderGradient>
+              </div>
+            </div>
+
             <div className="grid sm:grid-cols-2 gap-6 max-w-3xl mx-auto">
               <PricingCard
                 name="Basic"
-                price="₹299"
+                price="₹499"
                 period="/mo"
+                subprice="or ₹4,999/yr"
                 features={["Ratings over time", "Scan and post numbers", "Weekly WhatsApp summary"]}
+                note="By invite only during launch"
               />
               <PricingCard
                 name="Full"
-                price="₹499"
+                price="₹1,499"
                 period="/mo"
+                subprice="or ₹14,999/yr"
                 features={["Menu-item breakdown", "Low-rating themes", "Shift view", "Monthly report"]}
               />
             </div>
@@ -326,7 +355,7 @@ function HonestyPoint({ text }: { text: string }) {
   );
 }
 
-function PricingCard({ name, price, period, features }: { name: string; price: string; period: string; features: string[] }) {
+function PricingCard({ name, price, period, subprice, features, note }: { name: string; price: string; period: string; subprice?: string; features: string[]; note?: string }) {
   return (
     <div className="rounded-2xl border border-border bg-surface p-6 space-y-4">
       <div>
@@ -334,6 +363,7 @@ function PricingCard({ name, price, period, features }: { name: string; price: s
         <p className="text-2xl font-bold text-fg mt-1">
           {price}<span className="text-sm font-normal text-fg-tertiary">{period}</span>
         </p>
+        {subprice && <p className="text-xs text-fg-tertiary mt-0.5">{subprice}</p>}
       </div>
       <div className="space-y-2">
         {features.map((f) => (
@@ -343,6 +373,7 @@ function PricingCard({ name, price, period, features }: { name: string; price: s
           </div>
         ))}
       </div>
+      {note && <p className="text-xs text-fg-quaternary pt-1 border-t border-border">{note}</p>}
     </div>
   );
 }
