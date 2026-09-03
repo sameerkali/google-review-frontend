@@ -10,6 +10,7 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { AlertIcon, PlusIcon } from "@/components/icons";
 import { Button } from "@/components/ui/Button";
 import { Input, Label } from "@/components/ui/Input";
+import { useBusinessMenuItems } from "@/hooks/useBusinessMenuItems";
 
 export default function BusinessMenuPage() {
   const { token, authChecked, toast } = useBusiness();
@@ -22,12 +23,7 @@ export default function BusinessMenuPage() {
   const [addErr, setAddErr] = useState("");
   const [deleteRow, setDeleteRow] = useState<Row | null>(null);
 
-  const queryKey = ["business", "me", "menu-items"];
-  const { data: rows = [], isPending: loading } = useQuery({
-    queryKey,
-    queryFn: () => api<Row[]>("/business/me/menu-items", { token }),
-    enabled,
-  });
+  const { rows, loading, queryKey, reorder, toggleActive, setFeatured } = useBusinessMenuItems(token, enabled, toast);
 
   const addMutation = useMutation({
     mutationKey: ["business", "menu-items", "add"],
@@ -52,69 +48,6 @@ export default function BusinessMenuPage() {
       queryClient.invalidateQueries({ queryKey });
     },
   });
-
-  // Both mutations below update the cache immediately in onMutate (so the
-  // toggle/drag feels instant, no waiting on the round trip) and only touch
-  // the network after the UI already reflects the change. onError rolls
-  // back to the exact snapshot taken before the optimistic write, rather
-  // than an invalidate-and-refetch, so a failed request visibly un-does
-  // itself instead of just eventually resyncing.
-  const toggleActiveMutation = useMutation({
-    mutationKey: ["business", "menu-items", "toggle-active"],
-    mutationFn: ({ id, active }: { id: string; active: boolean }) => api(`/business/me/menu-items/${id}`, { method: "PATCH", token, body: { active } }),
-    meta: { toastOnError: false }, // onError below shows its own, more specific message
-    onMutate: async ({ id, active }) => {
-      await queryClient.cancelQueries({ queryKey });
-      const previous = queryClient.getQueryData<Row[]>(queryKey);
-      queryClient.setQueryData<Row[]>(queryKey, (old) => old?.map((r) => (String(r._id) === id ? { ...r, active } : r)));
-      return { previous };
-    },
-    onError: (_err, _vars, context) => {
-      if (context?.previous) queryClient.setQueryData(queryKey, context.previous);
-      toast("error", "Could not update that item - try again");
-    },
-    onSettled: () => queryClient.invalidateQueries({ queryKey }),
-  });
-
-  // Same optimistic shape as toggleActiveMutation above, for the one other
-  // per-item boolean field - the business PATCH route is already a generic
-  // passthrough, so this needs no new endpoint, just the `featured` key.
-  const setFeaturedMutation = useMutation({
-    mutationKey: ["business", "menu-items", "set-featured"],
-    mutationFn: ({ id, featured }: { id: string; featured: boolean }) => api(`/business/me/menu-items/${id}`, { method: "PATCH", token, body: { featured } }),
-    meta: { toastOnError: false },
-    onMutate: async ({ id, featured }) => {
-      await queryClient.cancelQueries({ queryKey });
-      const previous = queryClient.getQueryData<Row[]>(queryKey);
-      queryClient.setQueryData<Row[]>(queryKey, (old) => old?.map((r) => (String(r._id) === id ? { ...r, featured } : r)));
-      return { previous };
-    },
-    onError: (_err, _vars, context) => {
-      if (context?.previous) queryClient.setQueryData(queryKey, context.previous);
-      toast("error", "Could not update that item - try again");
-    },
-    onSettled: () => queryClient.invalidateQueries({ queryKey }),
-  });
-
-  const reorderMutation = useMutation({
-    mutationKey: ["business", "menu-items", "reorder"],
-    mutationFn: (orderedIds: string[]) => api("/business/me/menu-items/reorder", { method: "PATCH", token, body: { orderedIds } }),
-    meta: { toastOnError: false }, // onError below shows its own, more specific message
-    onMutate: async (orderedIds) => {
-      await queryClient.cancelQueries({ queryKey });
-      const previous = queryClient.getQueryData<Row[]>(queryKey);
-      const byId = new Map((previous || []).map((r) => [String(r._id), r]));
-      queryClient.setQueryData<Row[]>(queryKey, () => orderedIds.map((id) => byId.get(id)).filter((r): r is Row => !!r));
-      return { previous };
-    },
-    onError: (_err, _vars, context) => {
-      if (context?.previous) queryClient.setQueryData(queryKey, context.previous);
-      toast("error", "Could not save the new order - try again");
-    },
-    onSettled: () => queryClient.invalidateQueries({ queryKey }),
-  });
-
-  const onReorder = (orderedIds: string[]) => reorderMutation.mutate(orderedIds);
 
   const addItem = () => {
     if (!newName.trim()) { setAddErr("Item name is required"); return; }
@@ -185,9 +118,9 @@ export default function BusinessMenuPage() {
       <MenuItemManager
         items={rows.map((r) => ({ _id: String(r._id), name: r.name, price: r.price, category: r.category, active: r.active, featured: r.featured }))}
         loading={loading}
-        onReorder={onReorder}
-        onSetFeatured={(row, featured) => setFeaturedMutation.mutate({ id: row._id, featured })}
-        onToggleActive={(row, active) => toggleActiveMutation.mutate({ id: row._id, active })}
+        onReorder={reorder}
+        onSetFeatured={(row, featured) => setFeatured(row._id, featured)}
+        onToggleActive={(row, active) => toggleActive(row._id, active)}
         onDelete={(row) => setDeleteRow(row)}
         emptyMessage="No menu items yet - add your first one above."
       />
