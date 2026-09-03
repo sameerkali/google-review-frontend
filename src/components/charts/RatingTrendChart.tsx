@@ -19,17 +19,25 @@ export function RatingTrendChart({ points }: { points: RatingPoint[] }) {
   const colors = getCategoricalColors(theme);
 
   const series = [
-    { id: "Daily average", data: points.map((p) => ({ x: p.date, y: p.avg })) },
-    { id: "7-day rolling average", data: points.map((p) => ({ x: p.date, y: p.rolling7d })) },
+    { id: "Daily avg", data: points.map((p) => ({ x: p.date, y: p.avg })) },
+    { id: "7-day avg", data: points.map((p) => ({ x: p.date, y: p.rolling7d })) },
   ];
 
   // nivo's "point" x-scale ignores a numeric tickValues (that only works on
   // linear/time scales) and falls back to rendering every point — with 30-90
   // days of data that's every date crammed onto the axis. Pick an explicit,
-  // evenly-spaced subset of actual date values instead.
-  const maxTicks = 8;
-  const tickStep = Math.max(1, Math.ceil(points.length / maxTicks));
-  const tickValues = points.filter((_, i) => i % tickStep === 0 || i === points.length - 1).map((p) => p.date);
+  // evenly-spaced subset of actual date values instead — indices spaced by
+  // even fractional steps (not a fixed modulo stride with the last point
+  // always forced in), so the last two ticks never land a day apart.
+  const maxTicks = 6;
+  const n = points.length;
+  const tickValues = Array.from(
+    new Set(
+      n <= maxTicks
+        ? points.map((p) => p.date)
+        : Array.from({ length: maxTicks }, (_, k) => points[Math.round((k * (n - 1)) / (maxTicks - 1))].date)
+    )
+  );
 
   return (
     <div style={{ height: 260 }}>
@@ -58,7 +66,7 @@ export function RatingTrendChart({ points }: { points: RatingPoint[] }) {
             anchor: "top-left",
             direction: "row",
             translateY: -18,
-            itemWidth: 150,
+            itemWidth: 90,
             itemHeight: 16,
             symbolSize: 8,
             symbolShape: "circle",

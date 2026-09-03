@@ -122,7 +122,7 @@ function StatCard({ label, value, delta, note }: { label: string; value: string;
   const valueSizeClass = value.length > 7 ? "text-lg" : "text-3xl";
   return (
     <div className="rounded-2xl border border-border bg-surface p-5 space-y-2 min-w-0">
-      <p className="text-xs font-medium text-fg-tertiary uppercase tracking-wider truncate">{label}</p>
+      <p className="text-xs font-medium text-fg-tertiary uppercase tracking-wider leading-snug line-clamp-2">{label}</p>
       <p className={`${valueSizeClass} font-bold text-fg font-mono tabular-nums truncate`}>{value}</p>
       {delta && <p className={`text-xs font-medium ${toneClass}`}>{delta.text} vs previous period</p>}
       {note && <p className="text-xs text-warning">{note}</p>}
@@ -237,35 +237,61 @@ function MenuBreakdownSection({ token, range }: { token: string; range: Range })
       ) : !data?.items.length ? (
         <EmptyChart message="Menu breakdown appears once customers start mentioning items in their ratings." />
       ) : (
-        <div className="overflow-x-auto -mx-1">
-          <table className="w-full text-left text-sm min-w-120">
-            <thead>
-              <tr className="border-b border-border">
-                {["Dish", "Mentions", "Avg rating", "Trend", "5★ share", "≤3★ share"].map((h) => (
-                  <th key={h} className="px-3 py-2 text-xs font-semibold text-fg-tertiary uppercase tracking-wider whitespace-nowrap">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {data.items.map((row) => (
-                <tr key={row.menuItemId} className="border-b border-border last:border-0">
-                  <td className="px-3 py-2.5 font-medium text-fg-secondary whitespace-nowrap">{row.name}</td>
-                  <td className="px-3 py-2.5 text-fg-tertiary">{row.mentions}</td>
-                  <td className="px-3 py-2.5 text-fg-secondary">
-                    {row.lowData ? <span className="text-fg-quaternary">not enough data</span> : row.avgRating?.toFixed(1)}
-                  </td>
-                  <td className="px-3 py-2.5">
-                    <span className={row.trend === "up" ? "text-success" : row.trend === "down" ? "text-danger" : "text-fg-quaternary"}>
-                      {row.trend === "up" ? "↑" : row.trend === "down" ? "↓" : "–"}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2.5 text-fg-tertiary">{row.fiveStarShare}%</td>
-                  <td className="px-3 py-2.5 text-fg-tertiary">{row.threeOrBelowShare}%</td>
+        <>
+          {/* Card layout — small screens, where the 6-column table would force
+              horizontal scrolling on every single row. */}
+          <div className="space-y-2.5 sm:hidden">
+            {data.items.map((row) => (
+              <div key={row.menuItemId} className="rounded-xl border border-border p-3.5 space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm font-medium text-fg-secondary min-w-0 truncate">{row.name}</span>
+                  <span className={`text-sm font-semibold shrink-0 ${row.trend === "up" ? "text-success" : row.trend === "down" ? "text-danger" : "text-fg-quaternary"}`}>
+                    {row.trend === "up" ? "↑" : row.trend === "down" ? "↓" : "–"}
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-fg-tertiary">
+                  <span className="shrink-0 whitespace-nowrap">{row.mentions} mentions</span>
+                  <span className="shrink-0 whitespace-nowrap">
+                    {row.lowData ? <span className="text-fg-quaternary">not enough data</span> : `${row.avgRating?.toFixed(1)} avg`}
+                  </span>
+                  <span className="shrink-0 whitespace-nowrap">{row.fiveStarShare}% 5★</span>
+                  <span className="shrink-0 whitespace-nowrap">{row.threeOrBelowShare}% ≤3★</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Table layout — sm and up */}
+          <div className="hidden sm:block overflow-x-auto -mx-1">
+            <table className="w-full text-left text-sm min-w-120">
+              <thead>
+                <tr className="border-b border-border">
+                  {["Dish", "Mentions", "Avg rating", "Trend", "5★ share", "≤3★ share"].map((h) => (
+                    <th key={h} className="px-3 py-2 text-xs font-semibold text-fg-tertiary uppercase tracking-wider whitespace-nowrap">{h}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {data.items.map((row) => (
+                  <tr key={row.menuItemId} className="border-b border-border last:border-0">
+                    <td className="px-3 py-2.5 font-medium text-fg-secondary whitespace-nowrap">{row.name}</td>
+                    <td className="px-3 py-2.5 text-fg-tertiary">{row.mentions}</td>
+                    <td className="px-3 py-2.5 text-fg-secondary">
+                      {row.lowData ? <span className="text-fg-quaternary">not enough data</span> : row.avgRating?.toFixed(1)}
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <span className={row.trend === "up" ? "text-success" : row.trend === "down" ? "text-danger" : "text-fg-quaternary"}>
+                        {row.trend === "up" ? "↑" : row.trend === "down" ? "↓" : "–"}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2.5 text-fg-tertiary">{row.fiveStarShare}%</td>
+                    <td className="px-3 py-2.5 text-fg-tertiary">{row.threeOrBelowShare}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );

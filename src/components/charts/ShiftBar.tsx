@@ -23,7 +23,7 @@ export function ShiftBar({ bands }: { bands: { label: string; avgRating: number 
         borderRadius={4}
         colors={colors[3]}
         theme={getNivoTheme(theme)}
-        axisBottom={{ tickSize: 0, tickPadding: 8 }}
+        axisBottom={{ tickSize: 0, tickPadding: 8, format: (v) => String(v).split(" (")[0] }}
         axisLeft={{ tickSize: 0, tickPadding: 8, tickValues: 5 }}
         enableGridX={false}
         gridYValues={5}
