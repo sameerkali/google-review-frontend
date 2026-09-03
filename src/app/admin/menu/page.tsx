@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAdmin } from "../_lib/context";
 import type { Row, ToastFn, Business } from "@/lib/types";
-import { MenuItemManager, type MenuManagerRow } from "@/components/MenuItemManager";
+import { MenuItemManager } from "@/components/MenuItemManager";
 import { BulkMenuUploadModal } from "../_components/BulkMenuUploadModal";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { AlertIcon, PlusIcon, UploadIcon } from "@/components/icons";
@@ -12,7 +12,6 @@ import { api } from "@/lib/api";
 import { Skeleton } from "@/components/Loaders";
 import { Button } from "@/components/ui/Button";
 import { Input, Label } from "@/components/ui/Input";
-import { moveId } from "@/lib/reorder";
 
 // ── Business list ────────────────────────────────────────────────────────────
 
@@ -189,11 +188,28 @@ function ItemList({
     },
   });
 
+  // Both mutations below update the cache immediately in onMutate (so the
+  // toggle/drag feels instant, no waiting on the round trip) and only touch
+  // the network after the UI already reflects the change. onError rolls
+  // back to the exact snapshot taken before the optimistic write, rather
+  // than an invalidate-and-refetch, so a failed request visibly un-does
+  // itself instead of just eventually resyncing.
   const toggleActiveMutation = useMutation({
     mutationKey: ["admin", "menu-items", "toggle-active"],
     mutationFn: ({ id, active }: { id: string; active: boolean }) => api(`/admin/menu-items/${id}`, { method: "PUT", token, body: { active } }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin", "menu-items", "list"] });
+    meta: { toastOnError: false }, // onError below shows its own, more specific message
+    onMutate: async ({ id, active }) => {
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData<Row[]>(queryKey);
+      queryClient.setQueryData<Row[]>(queryKey, (old) => old?.map((r) => (String(r._id) === id ? { ...r, active } : r)));
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData(queryKey, context.previous);
+      toast("error", "Could not update that item - try again");
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey });
       queryClient.invalidateQueries({ queryKey: ["admin", "menu-items", "businesses"] });
     },
   });
@@ -201,14 +217,22 @@ function ItemList({
   const reorderMutation = useMutation({
     mutationKey: ["admin", "menu-items", "reorder"],
     mutationFn: (orderedIds: string[]) => api("/admin/menu-items/reorder", { method: "PATCH", token, body: { businessId: biz._id, orderedIds } }),
-    onSettled: () => queryClient.invalidateQueries({ queryKey: ["admin", "menu-items", "list"] }),
-    onError: () => toast("error", "Could not save the new order"),
+    meta: { toastOnError: false }, // onError below shows its own, more specific message
+    onMutate: async (orderedIds) => {
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData<Row[]>(queryKey);
+      const byId = new Map((previous || []).map((r) => [String(r._id), r]));
+      queryClient.setQueryData<Row[]>(queryKey, () => orderedIds.map((id) => byId.get(id)).filter((r): r is Row => !!r));
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData(queryKey, context.previous);
+      toast("error", "Could not save the new order - try again");
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey }),
   });
 
-  const onMove = (row: MenuManagerRow, direction: "up" | "down") => {
-    const ids = moveId(rows.map((r) => String(r._id)), String(row._id), direction);
-    reorderMutation.mutate(ids);
-  };
+  const onReorder = (orderedIds: string[]) => reorderMutation.mutate(orderedIds);
 
   const addItem = () => {
     if (!newName.trim()) { setAddErr("Item name is required"); return; }
@@ -279,13 +303,12 @@ function ItemList({
       <MenuItemManager
         items={rows.map((r) => ({ _id: String(r._id), name: r.name, price: r.price, category: r.category, active: r.active }))}
         loading={loading}
-        reordering={reorderMutation.isPending}
-        onMove={onMove}
+        onReorder={onReorder}
         onToggleActive={(row, active) => toggleActiveMutation.mutate({ id: row._id, active })}
         onDelete={(row) => setDeleteRow(row)}
         emptyMessage="No menu items yet - upload a JSON file or add one above."
       />
-      <p className="text-xs text-fg-quaternary">Order here is what shows first as chips on the review page - drag isn&apos;t available yet, use the arrows to reorder.</p>
+      <p className="text-xs text-fg-quaternary">Order here is what shows first as chips on the review page - drag a row by its handle to reorder.</p>
 
       <ConfirmDialog
         open={!!deleteRow}

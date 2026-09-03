@@ -5,12 +5,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useBusiness } from "../_lib/context";
 import type { Row } from "@/lib/types";
 import { api } from "@/lib/api";
-import { MenuItemManager, type MenuManagerRow } from "@/components/MenuItemManager";
+import { MenuItemManager } from "@/components/MenuItemManager";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { AlertIcon, PlusIcon } from "@/components/icons";
 import { Button } from "@/components/ui/Button";
 import { Input, Label } from "@/components/ui/Input";
-import { moveId } from "@/lib/reorder";
 
 export default function BusinessMenuPage() {
   const { token, authChecked, toast } = useBusiness();
@@ -54,23 +53,48 @@ export default function BusinessMenuPage() {
     },
   });
 
+  // Both mutations below update the cache immediately in onMutate (so the
+  // toggle/drag feels instant, no waiting on the round trip) and only touch
+  // the network after the UI already reflects the change. onError rolls
+  // back to the exact snapshot taken before the optimistic write, rather
+  // than an invalidate-and-refetch, so a failed request visibly un-does
+  // itself instead of just eventually resyncing.
   const toggleActiveMutation = useMutation({
     mutationKey: ["business", "menu-items", "toggle-active"],
     mutationFn: ({ id, active }: { id: string; active: boolean }) => api(`/business/me/menu-items/${id}`, { method: "PATCH", token, body: { active } }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey }),
+    meta: { toastOnError: false }, // onError below shows its own, more specific message
+    onMutate: async ({ id, active }) => {
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData<Row[]>(queryKey);
+      queryClient.setQueryData<Row[]>(queryKey, (old) => old?.map((r) => (String(r._id) === id ? { ...r, active } : r)));
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData(queryKey, context.previous);
+      toast("error", "Could not update that item - try again");
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey }),
   });
 
   const reorderMutation = useMutation({
     mutationKey: ["business", "menu-items", "reorder"],
     mutationFn: (orderedIds: string[]) => api("/business/me/menu-items/reorder", { method: "PATCH", token, body: { orderedIds } }),
+    meta: { toastOnError: false }, // onError below shows its own, more specific message
+    onMutate: async (orderedIds) => {
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData<Row[]>(queryKey);
+      const byId = new Map((previous || []).map((r) => [String(r._id), r]));
+      queryClient.setQueryData<Row[]>(queryKey, () => orderedIds.map((id) => byId.get(id)).filter((r): r is Row => !!r));
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData(queryKey, context.previous);
+      toast("error", "Could not save the new order - try again");
+    },
     onSettled: () => queryClient.invalidateQueries({ queryKey }),
-    onError: () => toast("error", "Could not save the new order"),
   });
 
-  const onMove = (row: MenuManagerRow, direction: "up" | "down") => {
-    const ids = moveId(rows.map((r) => String(r._id)), String(row._id), direction);
-    reorderMutation.mutate(ids);
-  };
+  const onReorder = (orderedIds: string[]) => reorderMutation.mutate(orderedIds);
 
   const addItem = () => {
     if (!newName.trim()) { setAddErr("Item name is required"); return; }
@@ -141,15 +165,14 @@ export default function BusinessMenuPage() {
       <MenuItemManager
         items={rows.map((r) => ({ _id: String(r._id), name: r.name, price: r.price, category: r.category, active: r.active }))}
         loading={loading}
-        reordering={reorderMutation.isPending}
-        onMove={onMove}
+        onReorder={onReorder}
         onToggleActive={(row, active) => toggleActiveMutation.mutate({ id: row._id, active })}
         onDelete={(row) => setDeleteRow(row)}
         emptyMessage="No menu items yet - add your first one above."
       />
       <p className="text-xs text-fg-quaternary">
-        The switch controls whether an item is offered to customers at all. Use the arrows to reorder - the first
-        few items become the default suggestions on the review page.
+        The switch controls whether an item is offered to customers at all. Drag a row by its handle to reorder -
+        the first few items become the default suggestions on the review page.
       </p>
 
       <ConfirmDialog
