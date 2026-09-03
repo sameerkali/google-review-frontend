@@ -107,12 +107,6 @@ body {
   background: var(--color-background);
   color: var(--color-fg);
   font-family: var(--font-sans);
-  /* The landing page pins its hero with `position: fixed` (PinnedSection)
-     so later content can scroll up and over it. iOS Safari's rubber-band
-     bounce at the end of the page scrolls past the document's real bottom,
-     which briefly reveals that fixed hero peeking out below the footer.
-     Blocking vertical overscroll removes the bounce that exposes it. */
-  overscroll-behavior-y: none;
 }
 
 ::selection {

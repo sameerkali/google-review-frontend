@@ -291,8 +291,14 @@ export default function Home() {
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-border">
+      {/* Footer - explicitly `relative z-10 bg-background`, matching the
+          wrapper every other section sits in below the hero. Without it,
+          this is a plain static-flow element with no stacking order of its
+          own, and the hero's `position: fixed` layer (PinnedSection) paints
+          above static content regardless of DOM order - so the hero showed
+          through here specifically, being the one section left outside
+          that wrapper. */}
+      <footer className="relative z-10 bg-background border-t border-border">
         <div className="max-w-7xl mx-auto px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2.5">
             <Image src="/icon-512.png" alt="" width={24} height={24} className="w-6 h-6 rounded-md" />
