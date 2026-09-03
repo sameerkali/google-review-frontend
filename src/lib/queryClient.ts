@@ -30,14 +30,13 @@ function handleError(error: unknown, key: readonly unknown[] | undefined, silent
   // Not every business-portal 403 means that, though - the dashboard's
   // tier-gated endpoints (e.g. a "none"-tier business hitting the summary
   // route) also 403, on purpose, and the dashboard page already renders its
-  // own free-tier UI for that via `meta: { silent: true }`. That response
-  // carries a `totalScans` field the suspension response never does; that's
-  // the only reliable way to tell the two apart from here, so check for it
-  // rather than force-signing-out every free-tier business on page load.
+  // own free-tier UI for that via `meta: { silent: true }`. Both responses
+  // carry an explicit `reason` field (`"suspended"` vs `"tier"`, see
+  // middleware/auth.js and businessDashboard.js's requireTier()) so this
+  // checks that directly instead of inferring it from an incidental field.
   if (error instanceof ApiError && error.status === 403 && portal === "business") {
-    const body = error.body as { totalScans?: unknown } | null;
-    const isTierGate = !!body && typeof body === "object" && "totalScans" in body;
-    if (!isTierGate) {
+    const body = error.body as { reason?: string } | null;
+    if (body?.reason === "suspended") {
       triggerSignOut("business");
       notifyToast("business", "error", error.message || "This account is no longer active. Contact your platform admin.");
       return;
