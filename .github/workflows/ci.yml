@@ -18,19 +18,26 @@ jobs:
 
       - uses: actions/setup-node@v5
         with:
-          node-version: 22
+          # Must match the Node/npm version package-lock.json was generated
+          # with (npm ci fails "out of sync" otherwise - some optional
+          # platform-specific sub-deps resolve differently across npm
+          # major versions, even with the same package.json).
+          node-version: 24
           cache: npm
 
       - run: npm ci
 
-      - name: Type check
-        run: npx tsc --noEmit
+      - name: Unit tests
+        run: npm test
 
       - name: Lint
         run: npm run lint
 
-      - name: Unit tests
-        run: npm test
-
-      - name: Build
+      # Also the type check - Next's build already runs a full TypeScript
+      # pass internally, and doing it here (not as a separate `tsc --noEmit`
+      # step) matters: a standalone tsc run on a fresh checkout fails, since
+      # `LayoutProps` and friends are declared in .next/types/*.d.ts, which
+      # only exists once a build (or `next dev`) has generated it - .next/
+      # is gitignored, so a clean checkout never has it yet.
+      - name: Build (includes type check)
         run: npm run build
