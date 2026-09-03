@@ -8,9 +8,9 @@ type Direction = "TOP" | "LEFT" | "BOTTOM" | "RIGHT";
 
 /* Vendored from Aceternity UI - a pill button with a rotating gradient
    border that snaps to a bright highlight on hover. `as` lets it render as
-   a <button> or <a> (e.g. `as="a" href="..."`); `href` is typed explicitly
-   since it isn't part of HTMLAttributes but is the whole point of using
-   this as a nav link. */
+   a <button> or <a> (e.g. `as="a" href="..."`); `href`/`target`/`rel` are
+   typed explicitly since they aren't part of generic HTMLAttributes but are
+   the whole point of using this as a nav or external link. */
 export function HoverBorderGradient({
   children,
   containerClassName,
@@ -27,6 +27,8 @@ export function HoverBorderGradient({
     duration?: number;
     clockwise?: boolean;
     href?: string;
+    target?: string;
+    rel?: string;
   } & React.HTMLAttributes<HTMLElement>
 >) {
   const [hovered, setHovered] = useState(false);

@@ -35,26 +35,12 @@ const SERVICE_JSON_LD = {
   },
 };
 
-const FLOW_STEPS = [
-  {
-    title: "The operator sets up the business",
-    body: "A business is onboarded from the admin panel - plan, contact details, and a physical QR code assigned from tracked hardware stock.",
-    src: "/screenshots/admin-overview.png",
-    alt: "Admin panel overview showing total businesses, hardware stock, and recent scan activity",
-  },
-  {
-    title: "A print-ready poster is generated",
-    body: "Pick a size and a design - the QR is real and already embedded, previewed at full resolution exactly as it will print.",
-    src: "/screenshots/poster-designs.png",
-    alt: "Poster design picker showing six live QR poster templates for a Cafe",
-  },
-  {
-    title: "The business sees real conversion",
-    body: "Scans, copies, and Google clicks tracked as an actual funnel - not just a scan counter - plus device and browser breakdowns.",
-    src: "/screenshots/business-dashboard.png",
-    alt: "Business dashboard showing scan/click analytics charts and a conversion funnel",
-  },
-];
+// WhatsApp is the actual sales channel right now (doorknocking + a founder
+// closing the deal), not a self-serve signup form - so "claim a spot" hands
+// off to a real conversation with a prefilled opener instead of a form.
+const FOUNDING_PARTNER_WHATSAPP_URL =
+  "https://wa.me/919639356395?text=" +
+  encodeURIComponent("Hi! I'd like to claim a Founding Partner spot - Full plan at ₹499/month, locked for 12 months, setup waived.");
 
 export default function Home() {
   return (
@@ -84,6 +70,9 @@ export default function Home() {
             <div className="w-full">
               <div className="max-w-6xl mx-auto px-6 pt-16 pb-20 lg:pt-20 lg:pb-28 grid lg:grid-cols-[1.05fr_0.95fr] gap-14 items-center">
                 <div className="space-y-6">
+                  <span className="inline-block text-xs font-semibold tracking-wide uppercase text-white bg-white/10 border border-white/15 rounded-full px-3 py-1">
+                    Built for one goal - 200+ Google reviews in your first 60 days
+                  </span>
                   <h1 className="text-4xl md:text-5xl lg:text-[3.4rem] font-semibold tracking-tight leading-[1.08] text-white">
                     Find out what your customers actually think.
                   </h1>
@@ -147,53 +136,31 @@ export default function Home() {
           </div>
         </section>
 
-        {/* How it works */}
+        {/* How it works - three steps, nothing else. Deliberately just the
+            customer-facing flow (scan, answer, post) - the business-facing
+            payoff (what you see on your side) belongs to the pricing
+            section below, not here, so this stays skimmable in one glance. */}
         <section className="border-t border-border">
-          <div className="max-w-6xl mx-auto px-6 py-16 lg:py-24">
+          <div className="max-w-5xl mx-auto px-6 py-16 lg:py-24">
             <h2 className="text-2xl md:text-3xl font-semibold text-fg text-center mb-12">
               From QR code to Google review
             </h2>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="grid sm:grid-cols-3 gap-8">
               <Step
                 icon={<QrIcon className="w-5 h-5 text-brand" />}
-                title="Put the code on the table"
-                body="We print it, you place it."
+                title="1. Scan"
+                body="One QR code on the table. No app, no login."
               />
               <Step
                 icon={<ChatIcon className="w-5 h-5 text-brand" />}
-                title="Three quick questions"
-                body="What did you have, how was it, anything worth mentioning. Taps, not typing."
-              />
-              <Step
-                icon={<SparkleIcon className="w-5 h-5 text-brand" />}
-                title="They see their own words"
-                body="Their answers become a short draft they can edit before it goes anywhere."
+                title="2. Answer"
+                body="Three taps - what they had, how it was, anything worth mentioning."
               />
               <Step
                 icon={<GoogleLogoIcon className="w-5 h-5 text-brand" />}
-                title="You see what people are saying"
-                body="Which dishes get mentioned, what the complaints are, which days are strong."
+                title="3. Post"
+                body="A short draft in their own words. They can edit it, then post it to Google."
               />
-            </div>
-          </div>
-        </section>
-
-        {/* Full flow, in screenshots - real product UI, not stock photos or
-            mockups. Each caption states plainly what's happening, so the
-            section is legible from its text alone (to a screen reader, a
-            crawler, or an agent parsing the page), not just the image. */}
-        <section className="border-t border-border">
-          <div className="max-w-6xl mx-auto px-6 py-16 lg:py-24">
-            <h2 className="text-2xl md:text-3xl font-semibold text-fg max-w-[28ch] mb-2">
-              How a review actually gets collected.
-            </h2>
-            <p className="text-fg-tertiary text-sm max-w-[52ch] mb-10">
-              Real screens from the product, in order - from setup to a posted review.
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {FLOW_STEPS.map((step, i) => (
-                <FlowCard key={step.title} index={i + 1} {...step} />
-              ))}
             </div>
           </div>
         </section>
@@ -240,7 +207,9 @@ export default function Home() {
               <div className="pt-1">
                 <HoverBorderGradient
                   as="a"
-                  href="/business/login"
+                  href={FOUNDING_PARTNER_WHATSAPP_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 text-sm font-semibold px-5 py-2.5"
                 >
                   Claim a founding spot
@@ -255,7 +224,12 @@ export default function Home() {
                 price="₹499"
                 period="/mo"
                 subprice="or ₹4,999/yr"
-                features={["Ratings over time", "Scan and post numbers", "Weekly WhatsApp summary"]}
+                features={[
+                  "Your own QR code, ready to print",
+                  "Ratings over time",
+                  "Scan-to-review conversion numbers",
+                  "Weekly WhatsApp summary",
+                ]}
                 note="By invite only during launch"
               />
               <PricingCard
@@ -263,7 +237,15 @@ export default function Home() {
                 price="₹1,499"
                 period="/mo"
                 subprice="or ₹14,999/yr"
-                features={["Menu-item breakdown", "Low-rating themes", "Shift view", "Monthly report"]}
+                intro="Everything in Basic, plus:"
+                features={[
+                  "Menu-item breakdown",
+                  "Complaint & praise themes",
+                  "Shift view - rating by time of day",
+                  "Growth suggestions from your own numbers",
+                  "Compare across time periods",
+                  "Monthly report",
+                ]}
               />
             </div>
           </div>
@@ -355,7 +337,7 @@ function HonestyPoint({ text }: { text: string }) {
   );
 }
 
-function PricingCard({ name, price, period, subprice, features, note }: { name: string; price: string; period: string; subprice?: string; features: string[]; note?: string }) {
+function PricingCard({ name, price, period, subprice, intro, features, note }: { name: string; price: string; period: string; subprice?: string; intro?: string; features: string[]; note?: string }) {
   return (
     <div className="rounded-2xl border border-border bg-surface p-6 space-y-4">
       <div>
@@ -365,6 +347,7 @@ function PricingCard({ name, price, period, subprice, features, note }: { name: 
         </p>
         {subprice && <p className="text-xs text-fg-tertiary mt-0.5">{subprice}</p>}
       </div>
+      {intro && <p className="text-xs font-medium text-fg-tertiary">{intro}</p>}
       <div className="space-y-2">
         {features.map((f) => (
           <div key={f} className="flex items-center gap-2 text-sm text-fg-secondary">
@@ -387,21 +370,3 @@ function Benefit({ icon, text }: { icon: React.ReactNode; text: string }) {
   );
 }
 
-function FlowCard({ index, title, body, src, alt }: { index: number; title: string; body: string; src: string; alt: string }) {
-  return (
-    <figure className="rounded-2xl border border-border bg-surface overflow-hidden">
-      <div className="relative h-64 bg-surface-inset flex items-center justify-center p-4">
-        <Image src={src} alt={alt} fill sizes="(min-width: 640px) 50vw, 90vw" className="object-contain p-4" />
-      </div>
-      <figcaption className="p-5 space-y-1.5">
-        <div className="flex items-center gap-2.5">
-          <span className="w-6 h-6 rounded-full bg-brand/15 text-brand text-xs font-semibold flex items-center justify-center shrink-0">
-            {index}
-          </span>
-          <h3 className="text-sm font-semibold text-fg">{title}</h3>
-        </div>
-        <p className="text-sm text-fg-tertiary leading-relaxed">{body}</p>
-      </figcaption>
-    </figure>
-  );
-}
