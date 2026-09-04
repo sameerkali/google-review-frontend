@@ -4,15 +4,20 @@ import { use, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api, ApiError } from "@/lib/api";
 import { buildDraft, type Aspect } from "@/lib/buildDraft";
-import { AlertIcon, CloseIcon, SearchIcon, StarFillIcon, StarIcon } from "@/components/icons";
+import { AlertIcon, ArrowLeftIcon, CloseIcon, SearchIcon, StarFillIcon, StarIcon } from "@/components/icons";
 import { Spinner } from "@/components/Loaders";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 type MenuItem = { id: string; name: string; category: string | null; featured?: boolean };
 type SessionData = { token: string; business: { name: string; logoUrl: string | null; googleReviewUrl: string | null } };
 
-type Step = "items" | "rating" | "aspects" | "review";
-const STEPS: Step[] = ["items", "rating", "aspects", "review"];
+// Aspects come before rating so the customer names what stood out before
+// being asked to score it - and rating comes last (as two separate star
+// rows: food, then everything else) so a bad meal with great staff, or the
+// reverse, can actually be expressed instead of both being forced onto one
+// number. See buildDraft's experienceRating param.
+type Step = "items" | "aspects" | "rating" | "review";
+const STEPS: Step[] = ["items", "aspects", "rating", "review"];
 
 const ASPECTS: { key: Aspect; label: string }[] = [
   { key: "staff", label: "Staff" },
@@ -61,6 +66,23 @@ function ScreenShell({ title, subtitle, children }: { title: string; subtitle?: 
   );
 }
 
+function StarRow({ value, onSelect }: { value: number; onSelect: (n: number) => void }) {
+  return (
+    <div className="flex items-center justify-center gap-2">
+      {[1, 2, 3, 4, 5].map((n) => (
+        <button
+          key={n}
+          onClick={() => onSelect(n)}
+          aria-label={`${n} star${n > 1 ? "s" : ""}`}
+          className="p-1.5 cursor-pointer active:scale-90 transition-transform duration-100"
+        >
+          {n <= value ? <StarFillIcon className="w-9 h-9 text-warning" /> : <StarIcon className="w-9 h-9 text-fg-quaternary" />}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export default function ReviewPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = use(params);
 
@@ -69,6 +91,7 @@ export default function ReviewPage({ params }: { params: Promise<{ code: string 
   const [itemSearch, setItemSearch] = useState("");
   const [freeTextItem, setFreeTextItem] = useState("");
   const [rating, setRating] = useState(0);
+  const [experienceRating, setExperienceRating] = useState(0);
   const [aspects, setAspects] = useState<Aspect[]>([]);
   const [draftText, setDraftText] = useState("");
   const [originalDraft, setOriginalDraft] = useState("");
@@ -139,28 +162,53 @@ export default function ReviewPage({ params }: { params: Promise<{ code: string 
     void api(`/api/v1/feedback/${token}`, { method: "PATCH", body });
   };
 
-  const goToRating = () => {
-    patchSession({ menuItemIds: selectedItemIds, freeTextItem: freeTextItem.trim() });
-    setStep("rating");
+  const goBack = () => {
+    const i = STEPS.indexOf(step);
+    if (i > 0) setStep(STEPS[i - 1]);
   };
 
-  const selectRating = (n: number) => {
-    setRating(n);
-    patchSession({ rating: n });
+  const goToAspects = () => {
+    patchSession({ menuItemIds: selectedItemIds, freeTextItem: freeTextItem.trim() });
     setStep("aspects");
   };
 
-  const goToReview = () => {
+  const goToRating = () => {
     patchSession({ aspects });
+    setStep("rating");
+  };
+
+  const generateAndGoToReview = (foodR: number, expR: number) => {
     const selectedNames = menuItems.filter((m) => selectedItemIds.includes(m.id)).map((m) => m.name);
     const items = selectedNames.length ? selectedNames : freeTextItem.trim() ? [freeTextItem.trim()] : [];
     // Seed defaults to Math.random() inside buildDraft - safe here since this
-    // runs in a click handler, not during render.
-    const draft = buildDraft({ rating, items, aspects });
+    // runs in a click handler, not during render. experienceRating is
+    // harmless to pass even when no aspect was picked - buildDraft only
+    // reads it to phrase aspect clauses, and there are none to phrase.
+    const draft = buildDraft({ rating: foodR, items, aspects, experienceRating: expR });
     setDraftText(draft);
     setOriginalDraft(draft);
     if (token) void api(`/api/v1/feedback/${token}/draft`, { method: "POST", body: { draftGenerated: draft } });
     setStep("review");
+  };
+
+  // Both rows are always on screen (so going back from review or aspects
+  // never makes a row disappear mid-flow), and whichever star is tapped
+  // last advances - no separate Continue button needed.
+  const maybeAdvanceFromRating = (foodR: number, expR: number) => {
+    if (!foodR || !expR) return;
+    generateAndGoToReview(foodR, expR);
+  };
+
+  const selectFoodRating = (n: number) => {
+    setRating(n);
+    patchSession({ rating: n });
+    maybeAdvanceFromRating(n, experienceRating);
+  };
+
+  const selectExperienceRating = (n: number) => {
+    setExperienceRating(n);
+    patchSession({ experienceRating: n });
+    maybeAdvanceFromRating(rating, n);
   };
 
   useEffect(() => {
@@ -253,6 +301,15 @@ export default function ReviewPage({ params }: { params: Promise<{ code: string 
     // opening the keyboard just crops the bottom instead of moving anything.
     <div className="min-h-dvh flex flex-col items-center p-6 pt-10 sm:pt-16 relative bg-background">
       <ThemeToggle className="fixed top-4 right-4" />
+      {stepIndex > 0 && (
+        <button
+          onClick={goBack}
+          aria-label="Back"
+          className="fixed top-4 left-4 w-9 h-9 rounded-full bg-surface border border-border flex items-center justify-center text-fg-secondary hover:text-fg hover:border-border-strong transition-colors duration-150 cursor-pointer"
+        >
+          <ArrowLeftIcon className="w-4 h-4" />
+        </button>
+      )}
 
       <div className="w-full max-w-sm space-y-6">
         {/* Business identity + progress */}
@@ -326,11 +383,11 @@ export default function ReviewPage({ params }: { params: Promise<{ code: string 
                   )}
                 </div>
                 <div className="flex items-center justify-between gap-3 pt-1">
-                  <button onClick={goToRating} className="text-sm font-medium text-fg-tertiary hover:text-fg transition-colors cursor-pointer">
+                  <button onClick={goToAspects} className="text-sm font-medium text-fg-tertiary hover:text-fg transition-colors cursor-pointer">
                     Skip
                   </button>
                   <button
-                    onClick={goToRating}
+                    onClick={goToAspects}
                     className="rounded-full bg-brand hover:bg-brand-hover px-6 py-2.5 text-sm font-semibold text-white transition-colors duration-150 cursor-pointer"
                   >
                     Continue
@@ -341,29 +398,7 @@ export default function ReviewPage({ params }: { params: Promise<{ code: string 
           </ScreenShell>
         )}
 
-        {/* Screen 2 - How was it? One tap advances, no branching. */}
-        {step === "rating" && (
-          <ScreenShell title="How was it?">
-            <div className="flex items-center justify-center gap-2 py-4">
-              {[1, 2, 3, 4, 5].map((n) => (
-                <button
-                  key={n}
-                  onClick={() => selectRating(n)}
-                  aria-label={`${n} star${n > 1 ? "s" : ""}`}
-                  className="p-1.5 cursor-pointer active:scale-90 transition-transform duration-100"
-                >
-                  {n <= rating ? (
-                    <StarFillIcon className="w-9 h-9 text-warning" />
-                  ) : (
-                    <StarIcon className="w-9 h-9 text-fg-quaternary" />
-                  )}
-                </button>
-              ))}
-            </div>
-          </ScreenShell>
-        )}
-
-        {/* Screen 3 - Anything stand out? */}
+        {/* Screen 2 - Anything stand out? */}
         {step === "aspects" && (
           <ScreenShell title="Anything stand out?" subtitle="Pick what applies - or skip this.">
             <div className="space-y-4">
@@ -375,15 +410,35 @@ export default function ReviewPage({ params }: { params: Promise<{ code: string 
                 ))}
               </div>
               <div className="flex items-center justify-between gap-3 pt-1">
-                <button onClick={goToReview} className="text-sm font-medium text-fg-tertiary hover:text-fg transition-colors cursor-pointer">
+                <button onClick={goToRating} className="text-sm font-medium text-fg-tertiary hover:text-fg transition-colors cursor-pointer">
                   Skip
                 </button>
                 <button
-                  onClick={goToReview}
+                  onClick={goToRating}
                   className="rounded-full bg-brand hover:bg-brand-hover px-6 py-2.5 text-sm font-semibold text-white transition-colors duration-150 cursor-pointer"
                 >
                   Continue
                 </button>
+              </div>
+            </div>
+          </ScreenShell>
+        )}
+
+        {/* Screen 3 - How was it? Both rows are always on screen - so
+            backing out from review, or from aspects with a chip toggled,
+            never makes a row appear/disappear underneath the customer.
+            Whichever star is tapped last advances - no separate Continue
+            button needed. */}
+        {step === "rating" && (
+          <ScreenShell title="How was it?" subtitle="Rate the food, then everything else.">
+            <div className="space-y-5 py-2">
+              <div className="space-y-2">
+                <p className="text-center text-xs font-medium text-fg-tertiary">Food</p>
+                <StarRow value={rating} onSelect={selectFoodRating} />
+              </div>
+              <div className="space-y-2">
+                <p className="text-center text-xs font-medium text-fg-tertiary">Everything else</p>
+                <StarRow value={experienceRating} onSelect={selectExperienceRating} />
               </div>
             </div>
           </ScreenShell>

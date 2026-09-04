@@ -23,7 +23,7 @@ describe("buildDraft", () => {
   it("falls back to a generic sentence with no items selected", () => {
     expect(buildDraft({ rating: 5 }, 0)).toBe("Good experience here.");
     expect(buildDraft({ rating: 3 }, 0)).toBe("It was okay.");
-    expect(buildDraft({ rating: 1 }, 0)).toBe("Not a good experience.");
+    expect(buildDraft({ rating: 1 }, 0)).toBe("Room for improvement here.");
   });
 
   it("appends the aspect clause to the fallback when no item is selected", () => {
@@ -76,7 +76,17 @@ describe("buildDraft", () => {
 
   it("uses band-appropriate phrasing for a low rating with multiple items", () => {
     const text = buildDraft({ rating: 1, items: ["Butter Chicken", "Garlic Naan"] }, 0);
-    expect(text).toBe("Had the butter chicken and it was not good. Also had the garlic naan, no better.");
+    expect(text).toBe("Had the butter chicken, but it didn't quite hit the mark. Also tried the garlic naan, hoping for better next time.");
+  });
+
+  it("uses experienceRating (not rating) to pick aspect sentiment when given", () => {
+    const text = buildDraft({ rating: 1, items: ["Butter Chicken"], aspects: ["staff"], experienceRating: 5 }, 0);
+    expect(text).toBe("Had the butter chicken, but it didn't quite hit the mark. Staff were friendly.");
+  });
+
+  it("falls back to the food rating's band for aspects when no experienceRating is given", () => {
+    const text = buildDraft({ rating: 1, items: ["Butter Chicken"], aspects: ["staff"] }, 0);
+    expect(text).toBe("Had the butter chicken, but it didn't quite hit the mark. Staff could be friendlier.");
   });
 
   it("is longer for a rich selection than a minimal one", () => {

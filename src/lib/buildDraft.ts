@@ -1,7 +1,10 @@
 /* Pure draft-assembly engine - no API call, no model. Given what the
    customer actually tapped, it snaps together one honest, editable sentence
-   or two. Nothing appears here that the customer didn't select; low ratings
-   are never softened. See review-expendifii-final-plan.md section 3.2. */
+   or two. Nothing appears here that the customer didn't select. Low ratings
+   stay honest about the problem but are phrased as constructive feedback
+   (what fell short, hoping it improves) rather than a rant - a business
+   reading it should come away knowing what to fix, not just that someone
+   was upset. See review-expendifii-final-plan.md section 3.2. */
 
 export type Band = "high" | "mid" | "low";
 export type Aspect = "staff" | "speed" | "taste" | "portion" | "price" | "cleanliness" | "ambience" | "music";
@@ -30,14 +33,14 @@ const SKELETONS: Record<Band, ((item: string, aspect: string) => string)[]> = {
     (i, a) => `Had the ${i} here. Mixed feelings.${a}`,
   ],
   low: [
-    (i, a) => `Had the ${i} and it was not good.${a}`,
-    (i, a) => `Ordered the ${i}, would not again.${a}`,
-    (i, a) => `The ${i} was disappointing.${a}`,
-    (i, a) => `${cap(i)} was poor.${a}`,
-    (i, a) => `Not happy with the ${i}.${a}`,
-    (i, a) => `Came for the ${i}. Bad experience.${a}`,
-    (i, a) => `The ${i} was not worth it.${a}`,
-    (i, a) => `Had the ${i}, would not recommend.${a}`,
+    (i, a) => `Had the ${i}, but it didn't quite hit the mark.${a}`,
+    (i, a) => `Ordered the ${i} - there's room for improvement.${a}`,
+    (i, a) => `The ${i} fell a bit short this time.${a}`,
+    (i, a) => `${cap(i)} could use some work.${a}`,
+    (i, a) => `Wasn't fully satisfied with the ${i}, but open to trying again.${a}`,
+    (i, a) => `Came for the ${i} - a rough visit, hoping it gets better.${a}`,
+    (i, a) => `The ${i} needs some improvement.${a}`,
+    (i, a) => `Had the ${i}; wouldn't recommend it as is, but hoping it improves.${a}`,
   ],
 };
 
@@ -63,14 +66,14 @@ const ASPECT_TEXT: Record<Band, Record<Aspect, string>> = {
     music: " Music was loud.",
   },
   low: {
-    staff: " Staff were rude.",
-    speed: " Waited far too long.",
-    taste: " Food did not taste good.",
-    portion: " Portions were too small.",
-    price: " Overpriced.",
-    cleanliness: " Not clean.",
-    ambience: " Uncomfortable place to sit.",
-    music: " Music was far too loud.",
+    staff: " Staff could be friendlier.",
+    speed: " Service could be quicker.",
+    taste: " Taste could use some work.",
+    portion: " Portions could be a bit bigger.",
+    price: " A little pricey for what you get.",
+    cleanliness: " Cleanliness could be better.",
+    ambience: " Seating could be more comfortable.",
+    music: " Music could be turned down a bit.",
   },
 };
 
@@ -85,7 +88,7 @@ const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const EXTRA_ITEMS_TEXT: Record<Band, (joined: string, tail: string) => string> = {
   high: (joined, tail) => ` Also had the ${joined}${tail} - good too.`,
   mid: (joined, tail) => ` Also tried the ${joined}${tail}.`,
-  low: (joined, tail) => ` Also had the ${joined}${tail}, no better.`,
+  low: (joined, tail) => ` Also tried the ${joined}${tail}, hoping for better next time.`,
 };
 
 function extraItemsClause(b: Band, extraItems: string[]): string {
@@ -97,11 +100,23 @@ function extraItemsClause(b: Band, extraItems: string[]): string {
 }
 
 export function buildDraft(
-  { rating, items = [], aspects = [] }: { rating: number; items?: string[]; aspects?: Aspect[] },
+  {
+    rating,
+    items = [],
+    aspects = [],
+    experienceRating,
+  }: { rating: number; items?: string[]; aspects?: Aspect[]; experienceRating?: number },
   seed: number = Math.random()
 ): string {
   if (!rating) return "";
   const b = band(rating);
+  // Staff/speed/cleanliness etc. are about the experience, not the food -
+  // a bad meal with great service (or the reverse) is common and the two
+  // shouldn't be forced to share one sentiment. When the customer gave a
+  // separate experience rating, aspect clauses use that band; otherwise
+  // (no aspects picked, or an older session with no second rating) they
+  // fall back to the food band, same as before.
+  const aspectBand = experienceRating ? band(experienceRating) : b;
 
   const lowerItems = items.map((i) => i.toLowerCase());
   const item = lowerItems.length ? lowerItems[0] : null;
@@ -111,13 +126,13 @@ export function buildDraft(
   // chaining several reads as an ordinary multi-sentence review rather than
   // a list - capped so picking every aspect doesn't run on forever.
   const usedAspects = aspects.slice(0, 4);
-  const aspect = usedAspects.map((a) => ASPECT_TEXT[b][a] || "").join("");
+  const aspect = usedAspects.map((a) => ASPECT_TEXT[aspectBand][a] || "").join("");
 
   if (!item) {
     const fallback: Record<Band, string> = {
       high: `Good experience here.${aspect}`,
       mid: `It was okay.${aspect}`,
-      low: `Not a good experience.${aspect}`,
+      low: `Room for improvement here.${aspect}`,
     };
     return fallback[b];
   }
